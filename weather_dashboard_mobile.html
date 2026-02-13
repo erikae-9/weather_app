@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<title>Weather Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+* { 
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.container { 
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 12px;
+    overflow-x: hidden;
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.subtitle {
+    color: #94a3b8;
+    margin-bottom: 15px;
+    font-size: 0.85rem;
+}
+
+.location-section {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.preset-cities {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.city-btn {
+    padding: 12px 8px;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    text-align: center;
+    touch-action: manipulation;
+}
+
+.city-btn:active {
+    transform: scale(0.95);
+}
+
+.city-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+.custom-location-toggle {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 2px dashed #475569;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 10px;
+    touch-action: manipulation;
+}
+
+.custom-inputs {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.custom-inputs.visible {
+    display: grid;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.input-group input {
+    padding: 10px;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.fetch-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #3b82f6;
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+
+.fetch-btn:active {
+    transform: scale(0.95);
+}
+
+.fetch-btn:disabled {
+    background: #475569;
+    cursor: not-allowed;
+}
+
+.geolocation-btn {
+    padding: 12px;
+    border: 2px solid #10b981;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+
+.geolocation-btn:active {
+    transform: scale(0.95);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.loading {
+    text-align: center;
+    padding: 30px;
+    font-size: 1.1rem;
+    color: #94a3b8;
+}
+
+.error {
+    background: #7f1d1d;
+    border: 2px solid #991b1b;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    color: #fecaca;
+    font-size: 0.9rem;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.controls button {
+    padding: 10px 8px;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    touch-action: manipulation;
+}
+
+.controls button:active {
+    transform: scale(0.95);
+}
+
+.controls button.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+.risk-panel-horizontal {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    margin-bottom: 15px;
+}
+
+.risk-panel-horizontal h2 {
+    margin: 0 0 12px 0;
+    font-size: 1.1rem;
+    color: #f1f5f9;
+    border-bottom: 2px solid #475569;
+    padding-bottom: 8px;
+}
+
+.risk-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.risk-item {
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.risk-item.low { border-left-color: #22c55e; }
+.risk-item.medium { border-left-color: #f59e0b; }
+.risk-item.high { border-left-color: #ef4444; }
+
+.risk-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.risk-icon {
+    font-size: 1.1rem;
+}
+
+.risk-time {
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    font-weight: 500;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.summary-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #f1f5f9;
+}
+
+.summary-range {
+    font-size: 0.75rem;
+    color: #cbd5e1;
+}
+
+.summary-range span {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.sparkline {
+    height: 60px;
+    margin-top: 12px;
+    min-height: 60px;
+    overflow: visible;
+    position: relative;
+}
+
+.sparkline > div {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+#content {
+    display: none;
+}
+
+#content.visible {
+    display: block;
+}
+
+/* Optimize for very small screens */
+@media (max-width: 380px) {
+    .controls {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .risk-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Force better layout on medium-small screens */
+@media (max-width: 500px) {
+    .summary-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🌤️ Weather Dashboard</h1>
+<div class="subtitle">MET.NO Forecast</div>
+
+<div class="location-section">
+    <div class="preset-cities">
+        <button class="city-btn active" onclick="selectCity('Skellefteå', 64.762519, 20.923440)">
+            🇸🇪 Skellefteå
+        </button>
+        <button class="city-btn" onclick="selectCity('Stockholm', 59.334591, 18.063240)">
+            🇸🇪 Stockholm
+        </button>
+        <button class="city-btn" onclick="selectCity('London', 51.507351, -0.127758)">
+            🇬🇧 London
+        </button>
+        <button class="geolocation-btn" onclick="useGeolocation()" id="geoBtn">
+            📍 My Location
+        </button>
+    </div>
+    
+    <button class="custom-location-toggle" onclick="toggleCustomInputs()">
+        ➕ Custom Location
+    </button>
+    
+    <div class="custom-inputs" id="customInputs">
+        <div class="input-group">
+            <label>Latitude</label>
+            <input type="number" id="latInput" step="0.000001" placeholder="64.762519">
+        </div>
+        <div class="input-group">
+            <label>Longitude</label>
+            <input type="number" id="lonInput" step="0.000001" placeholder="20.923440">
+        </div>
+    </div>
+    
+    <div class="action-buttons" id="actionButtons" style="display:none;">
+        <button class="fetch-btn" onclick="fetchCustomLocation()" id="fetchBtn">
+            Fetch Weather
+        </button>
+        <button class="geolocation-btn" onclick="toggleCustomInputs()">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<div id="loading" class="loading" style="display:none;">
+    ⏳ Fetching weather data...
+</div>
+
+<div id="error" class="error" style="display:none;"></div>
+
+<div id="content">
+
+<div class="controls">
+    <button onclick="setRange(6)" id="btn-6">6h</button>
+    <button onclick="setRange(12)" id="btn-12">12h</button>
+    <button onclick="setRange(24)" id="btn-24" class="active">24h</button>
+    <button onclick="setRange(48)" id="btn-48">48h</button>
+    <button onclick="setRange(9999)" id="btn-all">All</button>
+</div>
+
+<div class="risk-panel-horizontal" id="riskPanel">
+    <h2 id="riskTitle">⚠️ 24h Risk</h2>
+    
+    <div class="risk-grid">
+        <div class="risk-item low" id="riskFreeze">
+            <div class="risk-label">
+                <span class="risk-icon">🧊</span>
+                <span>Freezing</span>
+            </div>
+            <div class="risk-time" id="riskFreezeTime">...</div>
+        </div>
+        
+        <div class="risk-item low" id="riskWind">
+            <div class="risk-label">
+                <span class="risk-icon">💨</span>
+                <span>Wind >12m/s</span>
+            </div>
+            <div class="risk-time" id="riskWindTime">...</div>
+        </div>
+        
+        <div class="risk-item low" id="riskPrecip">
+            <div class="risk-label">
+                <span class="risk-icon">🌧️</span>
+                <span>Heavy Rain</span>
+            </div>
+            <div class="risk-time" id="riskPrecipTime">...</div>
+        </div>
+        
+        <div class="risk-item low" id="riskSnow">
+            <div class="risk-label">
+                <span class="risk-icon">❄️</span>
+                <span>Snow</span>
+            </div>
+            <div class="risk-time" id="riskSnowTime">...</div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <div id="tempChart"></div>
+</div>
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <h3>☁️ Cloud Coverage</h3>
+        <div class="summary-value" id="cloudAvg">--</div>
+        <div class="summary-range">
+            <span id="cloudMin">Min: --</span>
+            <span id="cloudMax">Max: --</span>
+        </div>
+        <div class="sparkline" id="cloudSpark"></div>
+    </div>
+    
+    <div class="summary-card">
+        <h3>💧 Humidity</h3>
+        <div class="summary-value" id="humidityAvg">--</div>
+        <div class="summary-range">
+            <span id="humidityMin">Min: --</span>
+            <span id="humidityMax">Max: --</span>
+        </div>
+        <div class="sparkline" id="humiditySpark"></div>
+    </div>
+    
+    <div class="summary-card">
+        <h3>🌡️ Pressure</h3>
+        <div class="summary-value" id="pressureAvg">--</div>
+        <div class="summary-range">
+            <span id="pressureMin">Min: --</span>
+            <span id="pressureMax">Max: --</span>
+        </div>
+        <div class="sparkline" id="pressureSpark"></div>
+    </div>
+    
+    <div class="summary-card">
+        <h3>☀️ UV Index</h3>
+        <div class="summary-value" id="uvMax">--</div>
+        <div class="summary-range">
+            <span id="uvAvg">Avg: --</span>
+            <span id="uvPeak">Peak: --</span>
+        </div>
+        <div class="sparkline" id="uvSpark"></div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <div id="windChart"></div>
+</div>
+
+<div class="chart-container">
+    <div id="precipChart"></div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let weatherData = null;
+let currentRange = 24;
+let currentCity = 'Skellefteå';
+
+// Calculate "feels like" temperature using wind chill and heat index
+function calculateFeelsLike(temp, windSpeed, humidity) {
+    if (temp === null || windSpeed === null) return temp;
+    
+    if (temp <= 10 && windSpeed > 1.3) {
+        const windKmh = windSpeed * 3.6;
+        const windChill = 13.12 + 0.6215 * temp - 11.37 * Math.pow(windKmh, 0.16) + 0.3965 * temp * Math.pow(windKmh, 0.16);
+        return windChill;
+    }
+    
+    if (temp >= 27 && humidity !== null) {
+        const rh = humidity;
+        const heatIndex = -8.78469475556 + 
+                         1.61139411 * temp + 
+                         2.33854883889 * rh + 
+                         -0.14611605 * temp * rh + 
+                         -0.012308094 * temp * temp + 
+                         -0.0164248277778 * rh * rh + 
+                         0.002211732 * temp * temp * rh + 
+                         0.00072546 * temp * rh * rh + 
+                         -0.000003582 * temp * temp * rh * rh;
+        return heatIndex;
+    }
+    
+    return temp;
+}
+
+function toggleCustomInputs() {
+    const inputs = document.getElementById('customInputs');
+    const actions = document.getElementById('actionButtons');
+    
+    if (inputs.classList.contains('visible')) {
+        inputs.classList.remove('visible');
+        actions.style.display = 'none';
+    } else {
+        inputs.classList.add('visible');
+        actions.style.display = 'grid';
+    }
+}
+
+function selectCity(name, lat, lon) {
+    // Update active button
+    document.querySelectorAll('.city-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    currentCity = name;
+    fetchAndDisplay(lat, lon, name);
+}
+
+function fetchCustomLocation() {
+    const lat = document.getElementById('latInput').value;
+    const lon = document.getElementById('lonInput').value;
+    
+    if (!lat || !lon) {
+        showError('Please enter both latitude and longitude');
+        return;
+    }
+    
+    currentCity = `${lat}, ${lon}`;
+    fetchAndDisplay(parseFloat(lat), parseFloat(lon), currentCity);
+    toggleCustomInputs();
+}
+
+function useGeolocation() {
+    if (!navigator.geolocation) {
+        showError('Geolocation is not supported by your browser');
+        return;
+    }
+    
+    const btn = document.getElementById('geoBtn');
+    btn.textContent = '📍 Getting location...';
+    btn.disabled = true;
+    
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            currentCity = 'My Location';
+            
+            // Clear active city buttons
+            document.querySelectorAll('.city-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            fetchAndDisplay(lat, lon, currentCity);
+            btn.textContent = '📍 My Location';
+            btn.disabled = false;
+        },
+        (error) => {
+            showError('Could not get your location: ' + error.message);
+            btn.textContent = '📍 My Location';
+            btn.disabled = false;
+        }
+    );
+}
+
+async function fetchAndDisplay(lat, lon, location) {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('content').classList.remove('visible');
+    
+    try {
+        const response = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`, {
+            headers: {
+                'User-Agent': 'WeatherDashboard/1.0 (github.com/yourrepo)'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        processWeatherData(data, location);
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').classList.add('visible');
+        
+    } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        showError(`Failed to fetch weather data: ${error.message}`);
+    }
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function processWeatherData(data, location) {
+    const ts = data.properties.timeseries;
+    
+    weatherData = {
+        location: location,
+        times: [],
+        data: {
+            temp: [], temp_p10: [], temp_p90: [],
+            wind: [], wind_p10: [], wind_p90: [], gust: [],
+            precip: [], precip_min: [], precip_max: [],
+            humidity: [], pressure: [], cloud: [], uv: [],
+            precip_prob: [],
+            feels_like: []
+        }
+    };
+    
+    for (const item of ts) {
+        weatherData.times.push(item.time);
+        
+        const d = item.data.instant.details;
+        
+        const temp = d.air_temperature ?? null;
+        const wind = d.wind_speed ?? null;
+        const humidity = d.relative_humidity ?? null;
+        
+        weatherData.data.temp.push(temp);
+        weatherData.data.temp_p10.push(d.air_temperature_percentile_10 ?? null);
+        weatherData.data.temp_p90.push(d.air_temperature_percentile_90 ?? null);
+        
+        weatherData.data.wind.push(wind);
+        weatherData.data.wind_p10.push(d.wind_speed_percentile_10 ?? null);
+        weatherData.data.wind_p90.push(d.wind_speed_percentile_90 ?? null);
+        weatherData.data.gust.push(d.wind_speed_of_gust ?? null);
+        
+        weatherData.data.humidity.push(humidity);
+        weatherData.data.pressure.push(d.air_pressure_at_sea_level ?? null);
+        weatherData.data.cloud.push(d.cloud_area_fraction ?? null);
+        weatherData.data.uv.push(d.ultraviolet_index_clear_sky ?? null);
+        
+        weatherData.data.feels_like.push(calculateFeelsLike(temp, wind, humidity));
+        
+        if (item.data.next_1_hours) {
+            const n = item.data.next_1_hours.details;
+            weatherData.data.precip.push(n.precipitation_amount ?? null);
+            weatherData.data.precip_min.push(n.precipitation_amount_min ?? null);
+            weatherData.data.precip_max.push(n.precipitation_amount_max ?? null);
+            weatherData.data.precip_prob.push(n.probability_of_precipitation ?? null);
+        } else {
+            weatherData.data.precip.push(null);
+            weatherData.data.precip_min.push(null);
+            weatherData.data.precip_max.push(null);
+            weatherData.data.precip_prob.push(null);
+        }
+    }
+    
+    updateSummaryCards();
+    updateRiskPanel(24);
+    drawCharts();
+}
+
+function computeStats(data, hours = 24) {
+    const values = data.slice(0, hours).filter(v => v !== null);
+    if (values.length === 0) return { min: 0, max: 0, avg: 0 };
+    return {
+        min: Math.min(...values).toFixed(1),
+        max: Math.max(...values).toFixed(1),
+        avg: (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
+    };
+}
+
+function updateSummaryCards() {
+    const cloudStats = computeStats(weatherData.data.cloud);
+    const humidityStats = computeStats(weatherData.data.humidity);
+    const pressureStats = computeStats(weatherData.data.pressure);
+    const uvStats = computeStats(weatherData.data.uv);
+    
+    document.getElementById('cloudAvg').textContent = `${cloudStats.avg}%`;
+    document.getElementById('cloudMin').textContent = `Min: ${cloudStats.min}%`;
+    document.getElementById('cloudMax').textContent = `Max: ${cloudStats.max}%`;
+    
+    document.getElementById('humidityAvg').textContent = `${humidityStats.avg}%`;
+    document.getElementById('humidityMin').textContent = `Min: ${humidityStats.min}%`;
+    document.getElementById('humidityMax').textContent = `Max: ${humidityStats.max}%`;
+    
+    document.getElementById('pressureAvg').textContent = pressureStats.avg;
+    document.getElementById('pressureMin').textContent = `Min: ${pressureStats.min}`;
+    document.getElementById('pressureMax').textContent = `Max: ${pressureStats.max}`;
+    
+    document.getElementById('uvMax').textContent = uvStats.max;
+    document.getElementById('uvAvg').textContent = `Avg: ${uvStats.avg}`;
+    document.getElementById('uvPeak').textContent = `Peak: ${uvStats.max}`;
+}
+
+function computeRiskForRange(hours) {
+    const horizon = Math.min(hours === 9999 ? weatherData.times.length : hours, weatherData.times.length);
+    
+    const freeze = [];
+    const wind = [];
+    const rain = [];
+    
+    for (let i = 0; i < horizon; i++) {
+        const date = new Date(weatherData.times[i]);
+        const hour = date.getHours().toString().padStart(2, '0');
+        
+        if (weatherData.data.temp_p10[i] !== null && weatherData.data.temp_p10[i] <= 0) {
+            freeze.push(hour);
+        }
+        
+        if (weatherData.data.gust[i] !== null && weatherData.data.gust[i] >= 12) {
+            wind.push(hour);
+        }
+        
+        if (weatherData.data.precip[i] !== null && weatherData.data.precip[i] >= 2) {
+            rain.push(hour);
+        }
+    }
+    
+    const window = (arr) => {
+        if (arr.length === 0) return "LOW";
+        return `${arr[0]}–${arr[arr.length - 1]}`;
+    };
+    
+    const precipProbs = weatherData.data.precip_prob.slice(0, horizon).filter(p => p !== null);
+    const snowProb = precipProbs.length > 0 ? Math.max(...precipProbs) : 0;
+    
+    const getSeverity = (count) => {
+        if (count > 6) return "high";
+        if (count > 0) return "medium";
+        return "low";
+    };
+    
+    const getProbSeverity = (prob) => {
+        if (prob > 70) return "high";
+        if (prob > 30) return "medium";
+        return "low";
+    };
+    
+    return {
+        freeze: { time: window(freeze), severity: getSeverity(freeze.length) },
+        wind: { time: window(wind), severity: getSeverity(wind.length) },
+        precip: { time: window(rain), severity: getSeverity(rain.length) },
+        snow: { prob: Math.round(snowProb), severity: getProbSeverity(snowProb) }
+    };
+}
+
+function updateRiskPanel(hours) {
+    const risk = computeRiskForRange(hours);
+    const label = hours === 9999 ? 'All' : `${hours}h`;
+    
+    document.getElementById('riskTitle').textContent = `⚠️ ${label} Risk`;
+    
+    const freezeItem = document.getElementById('riskFreeze');
+    freezeItem.className = `risk-item ${risk.freeze.severity}`;
+    document.getElementById('riskFreezeTime').textContent = risk.freeze.time;
+    
+    const windItem = document.getElementById('riskWind');
+    windItem.className = `risk-item ${risk.wind.severity}`;
+    document.getElementById('riskWindTime').textContent = risk.wind.time;
+    
+    const precipItem = document.getElementById('riskPrecip');
+    precipItem.className = `risk-item ${risk.precip.severity}`;
+    document.getElementById('riskPrecipTime').textContent = risk.precip.time;
+    
+    const snowItem = document.getElementById('riskSnow');
+    snowItem.className = `risk-item ${risk.snow.severity}`;
+    document.getElementById('riskSnowTime').textContent = `${risk.snow.prob}%`;
+}
+
+function sliceData(hours) {
+    const maxPoints = hours === 9999 ? weatherData.times.length : hours;
+    return {
+        times: weatherData.times.slice(0, maxPoints),
+        data: Object.fromEntries(
+            Object.entries(weatherData.data).map(([k, v]) => [k, v.slice(0, maxPoints)])
+        )
+    };
+}
+
+function updateButtonStates(hours) {
+    document.querySelectorAll('.controls button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const btnId = hours === 9999 ? 'btn-all' : `btn-${hours}`;
+    const btn = document.getElementById(btnId);
+    if (btn) btn.classList.add('active');
+}
+
+function drawCharts() {
+    const s = sliceData(currentRange);
+    
+    const config = {
+        responsive: true,
+        displayModeBar: false,
+        scrollZoom: false,
+        doubleClick: false,
+        dragMode: false,
+        staticPlot: false,
+        modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d', 'resetScale2d']
+    };
+    
+    // Temperature Chart
+    const currentTemp = s.data.temp[0];
+    const currentFeelsLike = s.data.feels_like[0];
+    
+    Plotly.newPlot('tempChart', [
+        {
+            x: s.times,
+            y: s.data.temp_p10,
+            type: 'scatter',
+            mode: 'lines',
+            line: { width: 0 },
+            showlegend: false,
+            fill: 'none',
+            hoverinfo: 'skip'
+        },
+        {
+            x: s.times,
+            y: s.data.temp_p90,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tonexty',
+            fillcolor: 'rgba(59, 130, 246, 0.15)',
+            line: { width: 1, color: 'rgba(59, 130, 246, 0.3)' },
+            name: 'P10-P90',
+            hovertemplate: 'P90: %{y:.1f}°C<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.temp_p10,
+            type: 'scatter',
+            mode: 'lines',
+            line: { width: 1, color: 'rgba(59, 130, 246, 0.3)' },
+            name: 'P10',
+            hovertemplate: 'P10: %{y:.1f}°C<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.temp,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#3b82f6', width: 3 },
+            name: 'Temp',
+            hovertemplate: 'Temp: %{y:.1f}°C<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.feels_like,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#8b5cf6', width: 2, dash: 'dot' },
+            name: 'Feels',
+            hovertemplate: 'Feels: %{y:.1f}°C<extra></extra>'
+        }
+    ], {
+        margin: { t: 50, r: 20, b: 40, l: 45 },
+        height: 280,
+        autosize: true,
+        hovermode: 'x unified',
+        plot_bgcolor: '#f8fafc',
+        paper_bgcolor: 'white',
+        font: { family: 'system-ui', size: 11 },
+        title: { 
+            text: `🌡️ ${currentTemp?.toFixed(1) || 'N/A'}°C (feels ${currentFeelsLike?.toFixed(1) || 'N/A'}°C)`, 
+            font: { size: 14, color: '#1e293b' },
+            x: 0.05,
+            xanchor: 'left'
+        },
+        xaxis: {
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        yaxis: {
+            title: { text: '°C', font: { size: 11 } },
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        legend: {
+            orientation: 'h',
+            y: -0.15,
+            x: 0.5,
+            xanchor: 'center',
+            font: { size: 10 }
+        },
+        dragmode: false
+    }, config);
+    
+    // Wind Chart
+    const currentWind = s.data.wind[0];
+    const currentGust = s.data.gust[0];
+    
+    Plotly.newPlot('windChart', [
+        {
+            x: s.times,
+            y: s.data.wind_p10,
+            type: 'scatter',
+            mode: 'lines',
+            line: { width: 0 },
+            showlegend: false,
+            fill: 'none',
+            hoverinfo: 'skip'
+        },
+        {
+            x: s.times,
+            y: s.data.wind_p90,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tonexty',
+            fillcolor: 'rgba(16, 185, 129, 0.15)',
+            line: { width: 1, color: 'rgba(16, 185, 129, 0.3)' },
+            name: 'P10-P90',
+            hovertemplate: 'P90: %{y:.1f} m/s<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.wind_p10,
+            type: 'scatter',
+            mode: 'lines',
+            line: { width: 1, color: 'rgba(16, 185, 129, 0.3)' },
+            name: 'P10',
+            hovertemplate: 'P10: %{y:.1f} m/s<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.wind,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#10b981', width: 3 },
+            name: 'Wind',
+            hovertemplate: 'Wind: %{y:.1f} m/s<extra></extra>'
+        },
+        {
+            x: s.times,
+            y: s.data.gust,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#f59e0b', width: 2, dash: 'dash' },
+            name: 'Gust',
+            hovertemplate: 'Gust: %{y:.1f} m/s<extra></extra>'
+        }
+    ], {
+        margin: { t: 50, r: 20, b: 40, l: 45 },
+        height: 280,
+        autosize: true,
+        hovermode: 'x unified',
+        plot_bgcolor: '#f8fafc',
+        paper_bgcolor: 'white',
+        font: { family: 'system-ui', size: 11 },
+        title: { 
+            text: `💨 ${currentWind?.toFixed(1) || 'N/A'} m/s (gust ${currentGust?.toFixed(1) || 'N/A'} m/s)`, 
+            font: { size: 14, color: '#1e293b' },
+            x: 0.05,
+            xanchor: 'left'
+        },
+        xaxis: {
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        yaxis: {
+            title: { text: 'm/s', font: { size: 11 } },
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        legend: {
+            orientation: 'h',
+            y: -0.15,
+            x: 0.5,
+            xanchor: 'center',
+            font: { size: 10 }
+        },
+        dragmode: false
+    }, config);
+    
+    // Precipitation Chart
+    const currentPrecip = s.data.precip[0];
+    const validPrecipData = s.times.map((time, i) => ({
+        time: time,
+        precip: s.data.precip[i] !== null ? s.data.precip[i] : 0
+    }));
+    
+    Plotly.newPlot('precipChart', [
+        {
+            x: validPrecipData.map(d => d.time),
+            y: validPrecipData.map(d => d.precip),
+            type: 'bar',
+            marker: { color: '#06b6d4' },
+            name: 'Precip',
+            hovertemplate: '%{y:.1f} mm<extra></extra>'
+        }
+    ], {
+        margin: { t: 50, r: 20, b: 40, l: 45 },
+        height: 280,
+        autosize: true,
+        hovermode: 'x unified',
+        plot_bgcolor: '#f8fafc',
+        paper_bgcolor: 'white',
+        font: { family: 'system-ui', size: 11 },
+        title: { 
+            text: `🌧️ ${currentPrecip?.toFixed(1) || '0.0'} mm`, 
+            font: { size: 14, color: '#1e293b' },
+            x: 0.05,
+            xanchor: 'left'
+        },
+        xaxis: {
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        yaxis: {
+            title: { text: 'mm', font: { size: 11 } },
+            gridcolor: '#e2e8f0',
+            linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        dragmode: false
+    }, config);
+    
+    // Sparklines - now interactive on mobile
+    const sparkConfig = { 
+        displayModeBar: false,
+        staticPlot: false,
+        responsive: true
+    };
+    const sparkHours = Math.min(24, currentRange === 9999 ? 48 : currentRange);
+    const sparkLayout = {
+        margin: { t: 5, r: 5, b: 5, l: 5 },
+        xaxis: { visible: false, fixedrange: true },
+        yaxis: { visible: false, fixedrange: true },
+        showlegend: false,
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        height: 60,
+        width: null,
+        autosize: true,
+        hovermode: 'closest',
+        dragmode: false
+    };
+    
+    Plotly.newPlot('cloudSpark', [{
+        x: s.times.slice(0, sparkHours),
+        y: s.data.cloud.slice(0, sparkHours),
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy',
+        line: { color: '#94a3b8', width: 2 },
+        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}%<extra></extra>'
+    }], {...sparkLayout}, sparkConfig);
+    
+    Plotly.newPlot('humiditySpark', [{
+        x: s.times.slice(0, sparkHours),
+        y: s.data.humidity.slice(0, sparkHours),
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy',
+        line: { color: '#94a3b8', width: 2 },
+        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}%<extra></extra>'
+    }], {...sparkLayout}, sparkConfig);
+    
+    Plotly.newPlot('pressureSpark', [{
+        x: s.times.slice(0, sparkHours),
+        y: s.data.pressure.slice(0, sparkHours),
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy',
+        line: { color: '#94a3b8', width: 2 },
+        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f} hPa<extra></extra>'
+    }], {...sparkLayout}, sparkConfig);
+    
+    Plotly.newPlot('uvSpark', [{
+        x: s.times.slice(0, sparkHours),
+        y: s.data.uv.slice(0, sparkHours),
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy',
+        line: { color: '#94a3b8', width: 2 },
+        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}<extra></extra>'
+    }], {...sparkLayout}, sparkConfig);
+}
+
+function setRange(hours) {
+    currentRange = hours;
+    updateButtonStates(hours);
+    updateRiskPanel(hours);
+    drawCharts();
+}
+
+// Load default location on page load
+window.addEventListener('load', () => {
+    selectCity('Skellefteå', 64.762519, 20.923440);
+});
+
+</script>
+</body>
+</html>
