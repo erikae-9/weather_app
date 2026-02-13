@@ -768,40 +768,50 @@ function updateSummaryCards() {
 function computeRiskForRange(hours) {
     const horizon = Math.min(hours === 9999 ? weatherData.times.length : hours, weatherData.times.length);
     
-    const freeze = [];
-    const wind = [];
-    const rain = [];
+    let freezeCount = 0;
+    let windCount = 0;
+    let rainCount = 0;
     
     for (let i = 0; i < horizon; i++) {
-        const date = new Date(weatherData.times[i]);
-        const hour = date.getHours().toString().padStart(2, '0');
-        
         if (weatherData.data.temp_p10[i] !== null && weatherData.data.temp_p10[i] <= 0) {
-            freeze.push(hour);
+            freezeCount++;
         }
         
         if (weatherData.data.gust[i] !== null && weatherData.data.gust[i] >= 12) {
-            wind.push(hour);
+            windCount++;
         }
         
         if (weatherData.data.precip[i] !== null && weatherData.data.precip[i] >= 2) {
-            rain.push(hour);
+            rainCount++;
         }
     }
     
-    const window = (arr) => {
-        if (arr.length === 0) return "LOW";
-        return `${arr[0]}–${arr[arr.length - 1]}`;
+    const formatRisk = (count, total) => {
+        if (count === 0) return { text: "LOW", severity: "low" };
+        
+        const percentage = (count / total) * 100;
+        let severity, level;
+        
+        if (percentage >= 70) {
+            severity = "high";
+            level = "HIGH";
+        } else if (percentage >= 30) {
+            severity = "medium";
+            level = "MED";
+        } else {
+            severity = "low";
+            level = "LOW";
+        }
+        
+        // Show hours for clarity
+        return {
+            text: `${level} - ${count}h`,
+            severity: severity
+        };
     };
     
     const precipProbs = weatherData.data.precip_prob.slice(0, horizon).filter(p => p !== null);
     const snowProb = precipProbs.length > 0 ? Math.max(...precipProbs) : 0;
-    
-    const getSeverity = (count) => {
-        if (count > 6) return "high";
-        if (count > 0) return "medium";
-        return "low";
-    };
     
     const getProbSeverity = (prob) => {
         if (prob > 70) return "high";
@@ -809,11 +819,19 @@ function computeRiskForRange(hours) {
         return "low";
     };
     
+    const freezeRisk = formatRisk(freezeCount, horizon);
+    const windRisk = formatRisk(windCount, horizon);
+    const precipRisk = formatRisk(rainCount, horizon);
+    
     return {
-        freeze: { time: window(freeze), severity: getSeverity(freeze.length) },
-        wind: { time: window(wind), severity: getSeverity(wind.length) },
-        precip: { time: window(rain), severity: getSeverity(rain.length) },
-        snow: { prob: Math.round(snowProb), severity: getProbSeverity(snowProb) }
+        freeze: { time: freezeRisk.text, severity: freezeRisk.severity },
+        wind: { time: windRisk.text, severity: windRisk.severity },
+        precip: { time: precipRisk.text, severity: precipRisk.severity },
+        snow: { 
+            prob: Math.round(snowProb), 
+            severity: getProbSeverity(snowProb),
+            time: `${Math.round(snowProb)}%`
+        }
     };
 }
 
@@ -837,7 +855,7 @@ function updateRiskPanel(hours) {
     
     const snowItem = document.getElementById('riskSnow');
     snowItem.className = `risk-item ${risk.snow.severity}`;
-    document.getElementById('riskSnowTime').textContent = `${risk.snow.prob}%`;
+    document.getElementById('riskSnowTime').textContent = risk.snow.time;
 }
 
 function sliceData(hours) {
