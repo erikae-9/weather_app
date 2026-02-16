@@ -1361,7 +1361,7 @@ function drawCharts() {
             mode: 'lines',
             line: { color: '#06b6d4', width: 3 },
             name: 'Nederbörd',
-            hovertemplate: 'Precip: %{y:.1f} mm<extra></extra>'
+            hovertemplate: 'Nederb: %{y:.1f} mm<extra></extra>'
         }
     ], {
         margin: { t: 50, r: 20, b: 40, l: 45 },
@@ -1420,8 +1420,8 @@ function drawCharts() {
     };
     
     Plotly.newPlot('cloudSpark', [{
-        x: s.times.slice(0, sparkHours),
-        y: s.data.cloud.slice(0, sparkHours),
+        x: s.times,
+        y: s.data.cloud,
         type: 'scatter',
         mode: 'lines',
         fill: 'tozeroy',
@@ -1430,8 +1430,8 @@ function drawCharts() {
     }], {...sparkLayout}, sparkConfig);
     
     Plotly.newPlot('humiditySpark', [{
-        x: s.times.slice(0, sparkHours),
-        y: s.data.humidity.slice(0, sparkHours),
+        x: s.times,
+        y: s.data.humidity,
         type: 'scatter',
         mode: 'lines',
         fill: 'tozeroy',
@@ -1440,8 +1440,8 @@ function drawCharts() {
     }], {...sparkLayout}, sparkConfig);
     
     Plotly.newPlot('pressureSpark', [{
-        x: s.times.slice(0, sparkHours),
-        y: s.data.pressure.slice(0, sparkHours),
+        x: s.times,
+        y: s.data.pressure,
         type: 'scatter',
         mode: 'lines',
         fill: 'tozeroy',
@@ -1450,8 +1450,8 @@ function drawCharts() {
     }], {...sparkLayout}, sparkConfig);
     
     Plotly.newPlot('uvSpark', [{
-        x: s.times.slice(0, sparkHours),
-        y: s.data.uv.slice(0, sparkHours),
+        x: s.times,
+        y: s.data.uv,
         type: 'scatter',
         mode: 'lines',
         fill: 'tozeroy',
