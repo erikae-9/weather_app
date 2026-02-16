@@ -454,8 +454,8 @@ h1 {
 </head>
 <body>
 <div class="container">
-    <h1>🌤️ Eriks väderapp</h1>
-    <div class="subtitle">Realtidsväderprognos</div>
+    <h1>🌤️ Weather Dashboard</h1>
+    <div class="subtitle">Real-time weather forecast with interactive charts</div>
     
     <div class="location-section">
         <div class="city-search-section">
@@ -564,6 +564,7 @@ h1 {
                             <th>Temp (°C)</th>
                             <th>Känns (°C)</th>
                             <th>Medelvind (m/s)</th>
+                            <th>Vindrikt.</th>
                             <th>Byvind (m/s)</th>
                             <th>Nederb (mm)</th>
                             <th>Moln (%)</th>
@@ -743,6 +744,14 @@ async function fetchWeather() {
     }
 }
 
+function getWindDirection(degrees) {
+    if (degrees === null || degrees === undefined) return '-';
+    
+    const directions = ['N', 'NNÖ', 'NÖ', 'ÖNÖ', 'Ö', 'ÖSÖ', 'SÖ', 'SSÖ', 'S', 'SSV', 'SV', 'VSV', 'V', 'VNV', 'NV', 'NNV'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+}
+
 function calculateFeelsLike(temp, windSpeed, humidity) {
     if (temp === null || windSpeed === null) return temp;
     
@@ -772,7 +781,7 @@ function calculateFeelsLike(temp, windSpeed, humidity) {
 function processWeatherData(data) {
     const times = [];
     const temp = [], temp_p10 = [], temp_p90 = [], feels_like = [];
-    const wind = [], wind_p10 = [], wind_p90 = [], gust = [];
+    const wind = [], wind_p10 = [], wind_p90 = [], gust = [], wind_direction = [];
     const precip = [], precip_p10 = [], precip_p90 = [];
     const cloud = [], humidity = [], pressure = [], uv = [];
     const symbols = []; // Store weather symbols
@@ -794,6 +803,7 @@ function processWeatherData(data) {
         wind_p10.push(inst.wind_speed_percentile_10 || inst.wind_speed);
         wind_p90.push(inst.wind_speed_percentile_90 || inst.wind_speed);
         gust.push(inst.wind_speed_of_gust || inst.wind_speed * 1.5);
+        wind_direction.push(inst.wind_from_direction);
         
         // Precipitation with percentiles
         if (next1h) {
@@ -820,7 +830,7 @@ function processWeatherData(data) {
         times,
         data: {
             temp, temp_p10, temp_p90, feels_like,
-            wind, wind_p10, wind_p90, gust,
+            wind, wind_p10, wind_p90, gust, wind_direction,
             precip, precip_p10, precip_p90,
             cloud, humidity, pressure, uv,
             symbols
@@ -958,6 +968,10 @@ function updateDataTable() {
         
         // Wind
         row.insertCell().textContent = s.data.wind[i]?.toFixed(1) || '-';
+        
+        // Wind Direction
+        const windDir = s.data.wind_direction[i];
+        row.insertCell().textContent = getWindDirection(windDir);
         
         // Gust
         row.insertCell().textContent = s.data.gust[i]?.toFixed(1) || '-';
@@ -1193,6 +1207,27 @@ function drawCharts() {
     // Wind Chart
     const currentWind = s.data.wind[0];
     const currentGust = s.data.gust[0];
+    const currentWindDir = s.data.wind_direction[0];
+    
+    // Create annotations for wind direction arrows (show every 3rd point to avoid clutter)
+    const windAnnotations = [];
+    const showEveryN = Math.max(1, Math.floor(s.times.length / 12)); // Show max 12 arrows
+    for (let i = 0; i < s.times.length; i += showEveryN) {
+        if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
+            // Convert wind direction to arrow rotation (wind blows FROM direction, arrow points TO)
+            const arrowRotation = (s.data.wind_direction[i]) % 360;
+            windAnnotations.push({
+                x: s.times[i],
+                y: s.data.wind[i],
+                text: '↓',
+                showarrow: false,
+                font: { size: 28, color: '#222423' },
+                textangle: arrowRotation,
+                xanchor: 'center',
+                yanchor: 'middle'
+            });
+        }
+    }
     
     Plotly.newPlot('windChart', [
         {
@@ -1252,7 +1287,7 @@ function drawCharts() {
         paper_bgcolor: 'white',
         font: { family: 'system-ui', size: 11 },
         title: { 
-            text: `💨 ${currentWind?.toFixed(1) || 'N/A'} m/s (byar ${currentGust?.toFixed(1) || 'N/A'} m/s)`, 
+            text: `💨 ${currentWind?.toFixed(1) || 'N/A'} m/s (byar ${currentGust?.toFixed(1) || 'N/A'} m/s) ${getWindDirection(currentWindDir)}`, 
             font: { size: 14, color: '#1e293b' },
             x: 0.05,
             xanchor: 'left'
@@ -1275,6 +1310,7 @@ function drawCharts() {
             xanchor: 'center',
             font: { size: 10 }
         },
+        annotations: windAnnotations,
         dragmode: false
     }, config);
     
