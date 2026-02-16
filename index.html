@@ -1357,9 +1357,10 @@ function drawCharts() {
         {
             x: validPrecipData.map(d => d.time),
             y: validPrecipData.map(d => d.precip),
-            type: 'bar',
-            marker: { color: '#06b6d4' },
-            name: 'Precip',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#06b6d4', width: 3 },
+            name: 'Nederbörd',
             hovertemplate: 'Precip: %{y:.1f} mm<extra></extra>'
         }
     ], {
