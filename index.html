@@ -454,8 +454,8 @@ h1 {
 </head>
 <body>
 <div class="container">
-    <h1>🌤️ Weather Dashboard</h1>
-    <div class="subtitle">Real-time weather forecast with interactive charts</div>
+    <h1>🌤️ Eriks väderapp</h1>
+    <div class="subtitle">Detaljerade väderprognoser</div>
     
     <div class="location-section">
         <div class="city-search-section">
@@ -474,9 +474,9 @@ h1 {
         <div class="preset-cities">
             <button class="city-btn" onclick="selectCity('Skellefteå', 64.762519, 20.923440)">Skellefteå</button>
             <button class="city-btn" onclick="selectCity('Stockholm', 59.3293, 18.0686)">Stockholm</button>
-            <button class="city-btn" onclick="selectCity('Oslo', 59.9139, 10.7522)">Oslo</button>
-            <button class="city-btn" onclick="selectCity('Copenhagen', 55.6761, 12.5683)">Copenhagen</button>
-            <button class="city-btn" onclick="selectCity('London', 51.5074, -0.1278)">London</button>
+            <button class="city-btn" onclick="selectCity('Skarja, Sarek', 67.377503, 17.644642)">Skarja, Sarek</button>
+            <button class="city-btn" onclick="selectCity('Sjungande dalen', 64.762528, 20.923429)">Sjungande dalen</button>
+            <button class="city-btn" onclick="selectCity('Longyearbyen', 78.224083,15.62873)">Longyearbyen</button>
         </div>
         
         <button class="custom-location-toggle" onclick="toggleCustomInputs()">
@@ -501,7 +501,7 @@ h1 {
     </div>
     
     <div id="error"></div>
-    <div id="loading" class="loading" style="display:none;">Loading weather data...</div>
+    <div id="loading" class="loading" style="display:none;">Laddar väderdata...</div>
     
     <div id="content" style="display:none;">
         <div class="controls">
@@ -635,7 +635,7 @@ async function searchCity() {
         await selectCity(displayName, lat, lon);
         
         // Clear the search input
-        document.getElementById('citySearchInput').value = '';
+        //document.getElementById('citySearchInput').value = '';
         
     } catch (error) {
         console.error('City search error:', error);
