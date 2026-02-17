@@ -707,14 +707,12 @@ body {
                 <th>Väder</th>
                 <th>Temp (°C)</th>
                 <th>Känns (°C)</th>
-                <th>Medelvind (m/s)</th>
-                <th>Vindrikt.</th>
-                <th>Byvind (m/s)</th>
+                <th>Vind (m/s)</th>
                 <th>Nederb (mm)</th>
                 <th>Moln (%)</th>
+                <th>UV</th>
                 <th>Luftfukt. (%)</th>
                 <th>Tryck (hPa)</th>
-                <th>UV</th>
               </tr>
             </thead>
             <tbody id="weatherDataBody"></tbody>
@@ -1143,23 +1141,24 @@ function updateTable() {
     else flCell.textContent = '—';
 
     // Wind
-    const wv = s.data.wind[i];
+    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]) ;
     const wCell = row.insertCell();
     if (wv != null) {
       wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.textContent = wv.toFixed(1);
+      wCell.innerHTML = `<span class="${wCell}">${wv.toFixed(1)}</span> <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
+      // wCell.textContent = wv.toFixed(1);
     } else { wCell.textContent = '—'; }
 
     // Wind direction
-    row.insertCell().textContent = getWindDirection(s.data.wind_direction[i]);
+    // row.insertCell().textContent = getWindDirection(s.data.wind_direction[i]);
 
     // Gust
-    const gv = s.data.gust[i];
-    const gCell = row.insertCell();
-    if (gv != null) {
-      gCell.className = gv > 20 ? 'wind-high' : gv > 15 ? 'wind-med' : '';
-      gCell.textContent = gv.toFixed(1);
-    } else { gCell.textContent = '—'; }
+    // const gv = s.data.gust[i];
+    // const gCell = row.insertCell();
+    // if (gv != null) {
+    //   gCell.className = gv > 20 ? 'wind-high' : gv > 15 ? 'wind-med' : '';
+    //   gCell.textContent = gv.toFixed(1);
+    // } else { gCell.textContent = '—'; }
 
     // Precip
     const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i], pprob = s.data.precip_prob[i];
