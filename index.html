@@ -1133,7 +1133,7 @@ function updateTable() {
     tempCell.className = 'highlight';
     if (tv != null) {
       const cls = tv > 25 ? 'temp-hot' : tv < 0 ? 'temp-cold' : 'temp-norm';
-      tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">(${tp10.toFixed(1)}–${tp90.toFixed(1)})</span>`;
+      tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">[${tp10.toFixed(1)}, ${tp90.toFixed(1)}]</span>`;
     } else { tempCell.textContent = '—'; }
 
     // Feels like
@@ -1167,7 +1167,7 @@ function updateTable() {
     if (pv != null) {
       pCell.className = pv > 0.1 ? 'precip-wet' : '';
       const probStr = pprob != null ? ` ${pprob.toFixed(0)}%` : '';
-      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">(${pp10.toFixed(1)}–${pp90.toFixed(1)})${probStr}</span>`;
+      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]${probStr}</span>`;
     } else { pCell.textContent = '—'; }
 
     // Cloud
