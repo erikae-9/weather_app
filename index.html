@@ -462,6 +462,21 @@ body {
   font-size: 0.68rem !important;
 }
 
+/* ── STICKY TIME COLUMN ── */
+.timeline-table th:first-child,
+.timeline-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 1;
+  border-right: 1px solid var(--border);
+}
+
+.timeline-table th:first-child {
+  background: var(--surface2);
+  z-index: 2;
+}
+
 .cond-cell {
   display: flex;
   align-items: center;
@@ -980,16 +995,16 @@ function updateCurrentCards() {
     fill: 'tozeroy',
     line: { color, width: 1.5 },
     fillcolor: color.replace(')', ',0.15)').replace('rgb','rgba'),
-    hovertemplate: `%{y:.1f}${unit}<extra></extra>`
+    hovertemplate: `%{x|%b %d %H:%M}<br>%{y:.1f}${unit}<extra></extra>`
   }];
 
-  Plotly.newPlot('sparkTemp',     mk('--accent)',  s.data.temp,     ' °C'), sl, sc);
-  Plotly.newPlot('sparkWind',     mk('rgb(52,211,153)',  s.data.wind,     ' m/s'), sl, sc);
-  Plotly.newPlot('sparkPrecip',     mk('(--cyan)',  s.data.precip,     ' mm'), sl, sc);
-  Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%'),    sl, sc);
-  Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%'),    sl, sc);
-  Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa'),sl, sc);
-  Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       ''),    sl, sc);
+  Plotly.newPlot('sparkTemp',     mk('--accent)',  s.data.temp,     ' °C',), sl, sc,);
+  Plotly.newPlot('sparkWind',     mk('rgb(52,211,153)',  s.data.wind,     ' m/s',), sl, sc,);
+  Plotly.newPlot('sparkPrecip',     mk('(--cyan)',  s.data.precip,     ' mm',), sl, sc,);
+  Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%',),    sl, sc,);
+  Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%',),    sl, sc,);
+  Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa',),sl, sc,);
+  Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       '',),    sl, sc,);
 }
 
 // ── RISK BADGES ───────────────────────────────────────────────────────────────
