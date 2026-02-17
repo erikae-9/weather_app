@@ -782,7 +782,7 @@ function processWeatherData(data) {
     const times = [];
     const temp = [], temp_p10 = [], temp_p90 = [], feels_like = [];
     const wind = [], wind_p10 = [], wind_p90 = [], gust = [], wind_direction = [];
-    const precip = [], precip_p10 = [], precip_p90 = [];
+    const precip = [], precip_p10 = [], precip_p90 = [], precip_prob = [];
     const cloud = [], humidity = [], pressure = [], uv = [];
     const symbols = []; // Store weather symbols
     
@@ -810,10 +810,12 @@ function processWeatherData(data) {
             precip.push(next1h.details.precipitation_amount);
             precip_p10.push(next1h.details.precipitation_amount_min || next1h.details.precipitation_amount);
             precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
+            precip_prob.push(next1h.details.probability_of_precipitation ?? null);
         } else {
             precip.push(null);
             precip_p10.push(null);
             precip_p90.push(null);
+            precip_prob.push(null);
         }
         
         cloud.push(inst.cloud_area_fraction);
@@ -831,7 +833,7 @@ function processWeatherData(data) {
         data: {
             temp, temp_p10, temp_p90, feels_like,
             wind, wind_p10, wind_p90, gust, wind_direction,
-            precip, precip_p10, precip_p90,
+            precip, precip_p10, precip_p90,precip_prob,
             cloud, humidity, pressure, uv,
             symbols
         }
@@ -980,8 +982,10 @@ function updateDataTable() {
         const precipVal = s.data.precip[i];
         const precipP10 = s.data.precip_p10[i];
         const precipP90 = s.data.precip_p90[i];
+        const precipProb = s.data.precip_prob[i];
         if (precipVal !== null && precipVal !== undefined) {
-            row.insertCell().textContent = `${precipVal.toFixed(1)} (${precipP10.toFixed(1)} – ${precipP90.toFixed(1)})`;
+            const probStr = precipProb !== null && precipProb !== undefined ? ` ${precipProb.toFixed(0)}%` : '';
+            row.insertCell().textContent = `${precipVal.toFixed(1)} (${precipP10.toFixed(1)} – ${precipP90.toFixed(1)})${probStr}`;
         } else {
             row.insertCell().textContent = '-';
         }
@@ -1320,7 +1324,8 @@ function drawCharts() {
         time: time,
         precip: s.data.precip[i] !== null ? s.data.precip[i] : 0,
         precip_p10: s.data.precip_p10[i] !== null ? s.data.precip_p10[i] : 0,
-        precip_p90: s.data.precip_p90[i] !== null ? s.data.precip_p90[i] : 0
+        precip_p90: s.data.precip_p90[i] !== null ? s.data.precip_p90[i] : 0,
+        precip_prob: s.data.precip_prob[i] !== null ? s.data.precip_prob[i] : null
     }));
     
     Plotly.newPlot('precipChart', [
@@ -1334,6 +1339,16 @@ function drawCharts() {
             fill: 'none',
             hoverinfo: 'skip'
         },
+        {
+            x: validPrecipData.map(d => d.time),
+            y: validPrecipData.map(d => d.precip_prob),
+            type: 'scatter',
+            mode: 'lines',
+            yaxis: 'y2',
+            line: { color: '#f97316', width: 2, dash: 'dot' },
+            name: 'Sannolikhet',
+            hovertemplate: 'Sannolikhet: %{y:.0f}%<extra></extra>'
+         },
         {
             x: validPrecipData.map(d => d.time),
             y: validPrecipData.map(d => d.precip_p90),
@@ -1386,6 +1401,17 @@ function drawCharts() {
             title: { text: 'mm', font: { size: 11 } },
             gridcolor: '#e2e8f0',
             linecolor: '#cbd5e1',
+            fixedrange: true
+        },
+        yaxis2: {
+            title: { text: '%', font: { size: 11 }, standoff: 5 },
+            overlaying: 'y',
+            side: 'right',
+            range: [0, 100],
+            gridcolor: 'rgba(0,0,0,0)',
+            linecolor: '#cbd5e1',
+            tickfont: { color: '#f97316', size: 10 },
+            titlefont: { color: '#f97316' },
             fixedrange: true
         },
         legend: {
