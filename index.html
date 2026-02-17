@@ -503,6 +503,7 @@ body {
   font-size: 0.8rem;
 }
 
+
 .loading-box {
   text-align: center;
   padding: 40px;
@@ -525,6 +526,18 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 0.2; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.blink {
+  animation: blink 1.5s ease-in-out infinite;
+  color: var(--accent);
+  font-size: 0.9em;
+  display: inline-block;
 }
 
 /* ── SECTION DIVIDER ── */
@@ -1053,8 +1066,8 @@ function drawCharts() {
   };
 
   // ── TEMP ──
-  document.getElementById('chartTempLive').textContent =
-    `${s.data.temp[0]?.toFixed(1)||'—'}°C · Känns ${s.data.feels_like[0]?.toFixed(1)||'—'}°C`;
+  document.getElementById('chartTempLive').innerHTML =
+   `<span class="blink">●</span> ${s.data.temp[0]?.toFixed(1)||'—'}°C · Känns ${s.data.feels_like[0]?.toFixed(1)||'—'}°C`;
 
   Plotly.newPlot('tempChart', [
     { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
@@ -1065,8 +1078,8 @@ function drawCharts() {
 
   // ── WIND ──
   const windDir0 = s.data.wind_direction[0];
-  document.getElementById('chartWindLive').textContent =
-    `${s.data.wind[0]?.toFixed(1)||'—'} m/s · Byar ${s.data.gust[0]?.toFixed(1)||'—'} m/s · ${getWindDirection(windDir0)}`;
+  document.getElementById('chartWindLive').innerHTML =
+   `<span class="blink">●</span>${s.data.wind[0]?.toFixed(1)||'—'} m/s · Byar ${s.data.gust[0]?.toFixed(1)||'—'} m/s · ${getWindDirection(windDir0)}`;
 
   const showEveryN = Math.max(1, Math.floor(s.times.length / 12));
   const windAnnotations = [];
@@ -1084,8 +1097,8 @@ function drawCharts() {
   ], { ...base, annotations:windAnnotations, yaxis:{...base.yaxis, title:{text:'m/s', font:{size:11, color:'#4a6080'}}} }, cfg);
 
   // ── PRECIP ──
-  document.getElementById('chartPrecipLive').textContent =
-    `${s.data.precip[0]?.toFixed(1)||'0.0'} mm`;
+  document.getElementById('chartPrecipLive').innerHTML =
+   `<span class="blink">●</span>${s.data.precip[0]?.toFixed(1)||'0.0'} mm`;
 
   const pd = s.times.map((_,i) => ({
     t:s.times[i], p:s.data.precip[i]||0, p10:s.data.precip_p10[i]||0,
