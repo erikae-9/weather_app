@@ -5,1500 +5,1171 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f172a">
-<title>Weather Dashboard</title>
+<meta name="theme-color" content="#090e1a">
+<title>Eriks väderapp</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
 
 <style>
-* { 
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
+:root {
+  --bg:        #090e1a;
+  --surface:   #111827;
+  --surface2:  #1a2438;
+  --border:    #1f2e47;
+  --muted:     #4a6080;
+  --text:      #e2eaf7;
+  --text-dim:  #7a94b8;
+  --accent:    #38bdf8;
+  --green:     #34d399;
+  --amber:     #fbbf24;
+  --red:       #f87171;
+  --purple:    #a78bfa;
+  --cyan:      #67e8f9;
 }
 
-body { 
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.container { 
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 12px;
-    overflow-x: hidden;
+/* ── HEADER ── */
+.header {
+  padding: 20px 20px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-h1 {
-    font-size: 1.5rem;
-    margin: 0 0 8px 0;
-    font-weight: 600;
+.header-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
 }
 
-.subtitle {
-    color: #94a3b8;
-    margin-bottom: 15px;
-    font-size: 0.85rem;
+.header-title span { color: var(--accent); }
+
+.header-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.location-section {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+/* ── MAIN GRID ── */
+.app { padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 1200px; margin: 0 auto; }
+
+/* ── CONTROL BAR ── */
+.control-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.city-search-section {
-    margin-bottom: 12px;
+.location-pill {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 240px;
 }
 
-.city-search-wrapper {
-    display: flex;
-    gap: 8px;
+.location-pill input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  padding: 9px 12px;
+  outline: none;
 }
 
-.city-search-input {
-    flex: 1;
-    padding: 12px;
-    border: 2px solid #334155;
-    border-radius: 8px;
-    background: #1e293b;
-    color: #e2e8f0;
-    font-size: 0.9rem;
-    font-family: inherit;
+.location-pill input::placeholder { color: var(--muted); }
+
+.pill-btn {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  padding: 9px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.pill-btn:hover { background: var(--surface2); }
+.pill-btn:active { background: var(--border); }
+
+.preset-strip {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.city-search-input:focus {
-    outline: none;
-    border-color: #3b82f6;
+.preset-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
+.preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.preset-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 
-.city-search-btn {
-    padding: 12px 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #3b82f6;
-    color: white;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    touch-action: manipulation;
-    white-space: nowrap;
+/* Coord toggle */
+.coord-row {
+  display: none;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
-
-.city-search-btn:active {
-    transform: scale(0.95);
+.coord-row.visible { display: flex; }
+.coord-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; font-weight: 500; }
+.coord-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  padding: 7px 10px;
+  width: 130px;
+  outline: none;
 }
+.coord-input:focus { border-color: var(--accent); }
 
-.city-search-btn:disabled {
-    background: #475569;
-    cursor: not-allowed;
-}
-
-.preset-cities {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.city-btn {
-    padding: 12px 8px;
-    border: 2px solid #334155;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #1e293b;
-    color: #e2e8f0;
-    font-weight: 500;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-    text-align: center;
-    touch-action: manipulation;
-}
-
-.city-btn:active {
-    transform: scale(0.95);
-}
-
-.city-btn.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
-}
-
-.custom-location-toggle {
-    width: 100%;
-    padding: 10px;
-    background: transparent;
-    border: 2px dashed #475569;
-    border-radius: 8px;
-    color: #94a3b8;
-    font-size: 0.85rem;
-    cursor: pointer;
-    margin-bottom: 10px;
-    touch-action: manipulation;
-}
-
-.custom-inputs {
-    display: none;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.custom-inputs.visible {
-    display: grid;
-}
-
-.input-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.input-group label {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.input-group input {
-    padding: 10px;
-    border: 2px solid #334155;
-    border-radius: 8px;
-    background: #1e293b;
-    color: #e2e8f0;
-    font-size: 0.9rem;
-    font-family: inherit;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.action-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+.action-strip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .fetch-btn {
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #3b82f6;
-    color: white;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    touch-action: manipulation;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  min-height: 38px;
+}
+.fetch-btn:hover { background: #7dd3fc; }
+.fetch-btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+.geo-btn {
+  background: transparent;
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  color: var(--green);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  min-height: 38px;
+  white-space: nowrap;
+}
+.geo-btn:hover { background: rgba(52,211,153,0.08); }
+.geo-btn:active { background: rgba(52,211,153,0.15); }
+
+.coord-toggle-btn {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  touch-action: manipulation;
+}
+.coord-toggle-btn:hover { border-color: var(--muted); color: var(--text-dim); }
+
+/* ── RANGE TABS ── */
+.range-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  width: fit-content;
 }
 
-.fetch-btn:active {
-    transform: scale(0.95);
+.range-tab {
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  min-height: 34px;
+}
+.range-tab:hover { color: var(--text); }
+.range-tab.active { background: var(--surface2); color: var(--accent); border: 1px solid var(--border); }
+
+/* ── CURRENT CONDITIONS ROW ── */
+.current-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
 }
 
-.fetch-btn:disabled {
-    background: #475569;
-    cursor: not-allowed;
+.current-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 14px 10px;
+  position: relative;
+  overflow: hidden;
 }
 
-.geolocation-btn {
-    padding: 12px;
-    border: 2px solid #10b981;
-    border-radius: 8px;
-    cursor: pointer;
-    background: transparent;
-    color: #10b981;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    touch-action: manipulation;
+.current-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--card-color, var(--accent));
 }
 
-.geolocation-btn:active {
-    transform: scale(0.95);
-    background: rgba(16, 185, 129, 0.1);
+.current-card-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 500;
 }
 
-.loading {
-    text-align: center;
-    padding: 30px;
-    font-size: 1.1rem;
-    color: #94a3b8;
+.current-card-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--card-color, var(--text));
+  margin-bottom: 4px;
 }
 
-.error {
-    background: #7f1d1d;
-    border: 2px solid #991b1b;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 15px;
-    color: #fecaca;
-    font-size: 0.9rem;
+.current-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  font-weight: 400;
 }
 
-.controls {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    margin-bottom: 15px;
+.current-card-spark {
+  margin-top: 8px;
+  height: 40px;
 }
 
-.controls button {
-    padding: 10px 8px;
-    border: 2px solid #334155;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #1e293b;
-    color: #e2e8f0;
-    font-weight: 500;
-    transition: all 0.2s;
-    font-size: 0.85rem;
-    touch-action: manipulation;
+/* ── SUMMARY STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
 }
 
-.controls button:active {
-    transform: scale(0.95);
+.stat-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.controls button.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
+.stat-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.risk-panel-horizontal {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    margin-bottom: 15px;
+.stat-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
-.risk-panel-horizontal h2 {
-    margin: 0 0 12px 0;
-    font-size: 1.1rem;
-    color: #f1f5f9;
-    border-bottom: 2px solid #475569;
-    padding-bottom: 8px;
+.stat-range {
+  font-size: 0.65rem;
+  color: var(--text-dim);
 }
 
-.risk-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+/* ── RISK BADGES ROW ── */
+.risk-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.risk-item {
-    padding: 10px;
-    background: rgba(15, 23, 42, 0.6);
-    border-radius: 8px;
-    border-left: 4px solid;
+.risk-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  border: 1px solid;
 }
 
-.risk-item.low { border-left-color: #22c55e; }
-.risk-item.medium { border-left-color: #f59e0b; }
-.risk-item.high { border-left-color: #ef4444; }
+.risk-badge.low  { border-color: var(--green);  color: var(--green);  background: rgba(52,211,153,0.07); }
+.risk-badge.medium { border-color: var(--amber); color: var(--amber); background: rgba(251,191,36,0.07); }
+.risk-badge.high { border-color: var(--red);   color: var(--red);   background: rgba(248,113,113,0.07); }
 
-.risk-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
-    font-weight: 600;
+.risk-badge-icon { font-size: 0.9rem; }
+.risk-section-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  align-self: center;
+  white-space: nowrap;
 }
 
-.risk-icon {
-    font-size: 1.1rem;
+/* ── CHART PANEL ── */
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.risk-time {
-    font-size: 0.95rem;
-    color: #e2e8f0;
-    font-weight: 500;
+.chart-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
 }
 
-.chart-container {
-    background: white;
-    border-radius: 12px;
-    padding: 0;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    overflow: hidden;
-    margin-bottom: 15px;
+.chart-panel-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.summary-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-bottom: 15px;
-    width: 100%;
+.chart-panel-live {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
-.summary-card {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    min-width: 0;
-    overflow: hidden;
+/* ── TIMELINE TABLE ── */
+.timeline-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.summary-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.timeline-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.summary-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #f1f5f9;
+.timeline-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.summary-range {
-    font-size: 0.75rem;
-    color: #cbd5e1;
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
-/* Data Table Styles */
-.data-table-section {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+.timeline-table th {
+  background: var(--surface2);
+  color: var(--muted);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 400;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
 }
 
-.data-table-section h2 {
-    margin: 0 0 12px 0;
-    font-size: 1.1rem;
-    color: #f1f5f9;
-    border-bottom: 2px solid #475569;
-    padding-bottom: 8px;
+.timeline-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(31,46,71,0.5);
+  color: var(--text-dim);
+  font-size: 0.73rem;
 }
 
-.table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+.timeline-table td.highlight {
+  color: var(--text);
+  font-weight: 500;
 }
 
-.weather-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    background: rgba(15, 23, 42, 0.6);
-    border-radius: 8px;
-    overflow: hidden;
+.timeline-table tr:hover td {
+  background: rgba(56,189,248,0.04);
+  color: var(--text);
 }
 
-.weather-table th {
-    background: rgba(59, 130, 246, 0.2);
-    color: #f1f5f9;
-    padding: 10px 8px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #475569;
-    position: sticky;
-    top: 0;
-    white-space: nowrap;
+.timeline-table tr:last-child td { border-bottom: none; }
+
+.time-cell {
+  color: var(--text-dim) !important;
+  font-size: 0.68rem !important;
 }
 
-.weather-table td {
-    padding: 8px;
-    border-bottom: 1px solid #334155;
-    color: #e2e8f0;
+.cond-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 130px;
 }
 
-.weather-table tr:last-child td {
-    border-bottom: none;
+.temp-hot  { color: var(--red) !important; }
+.temp-cold { color: var(--cyan) !important; }
+.temp-norm { color: var(--text) !important; }
+
+.wind-high { color: var(--red) !important; }
+.wind-med  { color: var(--amber) !important; }
+
+.precip-wet { color: var(--accent) !important; }
+
+/* ── ERRORS & LOADING ── */
+.error-box {
+  background: rgba(248,113,113,0.1);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--red);
+  font-size: 0.8rem;
 }
 
-.weather-table tr:hover {
-    background: rgba(59, 130, 246, 0.1);
+.loading-box {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
 }
 
-.weather-symbol {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.loading-box::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 8px;
+  animation: pulse 1s ease-in-out infinite;
 }
 
-.weather-icon {
-    font-size: 1.2rem;
+@keyframes pulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
-@media (max-width: 640px) {
-    .weather-table {
-        font-size: 0.75rem;
-    }
-    
-    .weather-table th,
-    .weather-table td {
-        padding: 6px 4px;
-    }
+/* ── SECTION DIVIDER ── */
+.section-title {
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 4px;
+}
+
+@media (max-width: 480px) {
+  .header-title { font-size: 1.4rem; }
+  .current-card-value { font-size: 1.25rem; }
+  .range-tab { padding: 6px 10px; font-size: 0.75rem; }
+  .current-row { grid-template-columns: repeat(2, 1fr); }
+  .location-pill { min-width: 0; }
+  .preset-strip { gap: 5px; }
+  .preset-btn { font-size: 0.75rem; padding: 6px 9px; }
+  .risk-badge { font-size: 0.68rem; padding: 5px 10px; }
+  .app { padding: 12px 12px 32px; gap: 10px; }
+}
+
+@media (max-width: 360px) {
+  .range-tab { padding: 6px 7px; font-size: 0.7rem; }
+  .current-card-value { font-size: 1.1rem; }
 }
 </style>
 </head>
 <body>
-<div class="container">
-    <h1>🌤️ Eriks väderapp</h1>
-    <div class="subtitle">Detaljerade väderprognoser</div>
-    
-    <div class="location-section">
-        <div class="city-search-section">
-            <div class="city-search-wrapper">
-                <input 
-                    type="text" 
-                    id="citySearchInput" 
-                    class="city-search-input" 
-                    placeholder="Sök stad"
-                    onkeypress="if(event.key === 'Enter') searchCity()"
-                />
-                <button class="city-search-btn" onclick="searchCity()">🔍 Sök</button>
-            </div>
-        </div>
-        
-        <div class="preset-cities">
-            <button class="city-btn" onclick="selectCity('Skellefteå', 64.762519, 20.923440)">Skellefteå</button>
-            <button class="city-btn" onclick="selectCity('Stockholm', 59.3293, 18.0686)">Stockholm</button>
-            <button class="city-btn" onclick="selectCity('Skarja, Sarek', 67.377503, 17.644642)">Skarja, Sarek</button>
-            <button class="city-btn" onclick="selectCity('Sjungande dalen', 64.762528, 20.923429)">Sjungande dalen</button>
-            <button class="city-btn" onclick="selectCity('Longyearbyen', 78.224083,15.62873)">Longyearbyen</button>
-        </div>
-        
-        <button class="custom-location-toggle" onclick="toggleCustomInputs()">
-            ⚙️ Eller skriv in koordinater manuellt
-        </button>
-        
-        <div id="customInputs" class="custom-inputs">
-            <div class="input-group">
-                <label for="lat">Latitude</label>
-                <input type="number" id="lat" step="0.0001" value="64.762519">
-            </div>
-            <div class="input-group">
-                <label for="lon">Longitude</label>
-                <input type="number" id="lon" step="0.0001" value="20.923440">
-            </div>
-        </div>
-        
-        <div class="action-buttons">
-            <button class="fetch-btn" onclick="fetchWeather()">📡 Hämta väder</button>
-            <button class="geolocation-btn" onclick="useGeolocation()">📍 Använd min plats</button>
-        </div>
-    </div>
-    
-    <div id="error"></div>
-    <div id="loading" class="loading" style="display:none;">Laddar väderdata...</div>
-    
-    <div id="content" style="display:none;">
-        <div class="controls">
-            <button id="btn-6" onclick="setRange(6)">6h</button>
-            <button id="btn-12" onclick="setRange(12)">12h</button>
-            <button id="btn-24" onclick="setRange(24)">24h</button>
-            <button id="btn-48" onclick="setRange(48)">48h</button>
-            <button id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        </div>
-        
-        <div id="riskPanel" class="risk-panel-horizontal"></div>
-        
-        <div class="chart-container">
-            <div id="tempChart"></div>
-        </div>
-        
-        <div class="chart-container">
-            <div id="windChart"></div>
-        </div>
-        
-        <div class="chart-container">
-            <div id="precipChart"></div>
-        </div>
-        
-        <div class="summary-cards">
-            <div class="summary-card">
-                <h3>☁️ Molntäcke</h3>
-                <div class="summary-value" id="cloudValue">-</div>
-                <div class="summary-range" id="cloudRange">-</div>
-                <div id="cloudSpark"></div>
-            </div>
-            <div class="summary-card">
-                <h3>💧 Luftfuktighet</h3>
-                <div class="summary-value" id="humidityValue">-</div>
-                <div class="summary-range" id="humidityRange">-</div>
-                <div id="humiditySpark"></div>
-            </div>
-            <div class="summary-card">
-                <h3>🌡️ Lufttryck</h3>
-                <div class="summary-value" id="pressureValue">-</div>
-                <div class="summary-range" id="pressureRange">-</div>
-                <div id="pressureSpark"></div>
-            </div>
-            <div class="summary-card">
-                <h3>☀️ UV Index</h3>
-                <div class="summary-value" id="uvValue">-</div>
-                <div class="summary-range" id="uvRange">-</div>
-                <div id="uvSpark"></div>
-            </div>
-        </div>
-        
-        <div class="data-table-section">
-            <h2>📊 Detaljer</h2>
-            <div class="table-wrapper">
-                <table class="weather-table" id="weatherDataTable">
-                    <thead>
-                        <tr>
-                            <th>Tid</th>
-                            <th>Väder</th>
-                            <th>Temp (°C)</th>
-                            <th>Känns (°C)</th>
-                            <th>Medelvind (m/s)</th>
-                            <th>Vindrikt.</th>
-                            <th>Byvind (m/s)</th>
-                            <th>Nederb (mm)</th>
-                            <th>Moln (%)</th>
-                            <th>Luftfukt. (%)</th>
-                            <th>Tryck (hPa)</th>
-                            <th>UV</th>
-                        </tr>
-                    </thead>
-                    <tbody id="weatherDataBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+
+<div class="header">
+  <div class="header-title">🌤 Eriks <span>väderapp</span></div>
+  <div class="header-sub">Detaljerade väderprognoser</div>
 </div>
+
+<div class="app">
+
+  <!-- LOCATION SEARCH -->
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <div class="location-pill">
+        <input type="text" id="citySearchInput" placeholder="Sök plats... (plats, kommun, län, postnr, land)" onkeypress="if(event.key==='Enter') searchCity()">
+        <button class="pill-btn" onclick="searchCity()">🔍 Sök</button>
+      </div>
+      <button class="geo-btn" onclick="useGeolocation()">📍 Min plats</button>
+    </div>
+
+    <div class="preset-strip">
+      <button class="preset-btn" onclick="selectCity('Skellefteå',64.762519,20.923440)">Skellefteå</button>
+      <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
+      <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
+      <button class="preset-btn" onclick="selectCity('Sjungande dalen',64.762528,20.923429)">Sjungande dalen</button>
+      <button class="preset-btn" onclick="selectCity('Longyearbyen',78.224083,15.62873)">Longyearbyen</button>
+      <button class="coord-toggle-btn" onclick="toggleCoords()">⚙ Koordinater</button>
+    </div>
+
+    <div id="coordRow" class="coord-row">
+      <span class="coord-label">LAT</span>
+      <input type="number" id="lat" class="coord-input" step="0.0001" value="64.762519">
+      <span class="coord-label">LON</span>
+      <input type="number" id="lon" class="coord-input" step="0.0001" value="20.923440">
+      <button class="fetch-btn" onclick="fetchWeather()">📡 Hämta</button>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="error" style="display:none;" class="error-box"></div>
+
+  <!-- LOADING -->
+  <div id="loading" class="loading-box" style="display:none;">Laddar väderdata</div>
+
+  <!-- CONTENT -->
+  <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
+
+    <!-- RANGE TABS -->
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div class="range-tabs">
+        <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
+        <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
+        <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
+        <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
+        <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
+      </div>
+      <div id="locationLabel" class="header-sub"></div>
+    </div>
+
+    <!-- RISK BADGES -->
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Sammanfattning</div>
+      <div id="riskRow" class="risk-row"></div>
+    </div>
+
+    <!-- CURRENT CONDITION CARDS (with sparklines) -->
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Just nu</div>
+      <div class="current-row">
+        <div class="current-card" style="--card-color:var(--accent)">
+          <div class="current-card-label">Temperatur</div>
+          <div class="current-card-value" id="cTemp">—</div>
+          <div class="current-card-sub" id="cFeels">—</div>
+          <div class="current-card-spark" id="sparkTemp"></div>
+        </div>
+        <div class="current-card" style="--card-color:var(--green)">
+          <div class="current-card-label">Medelvind</div>
+          <div class="current-card-value" id="cWind">—</div>
+          <div class="current-card-sub" id="cGust">—</div>
+          <div class="current-card-spark" id="sparkWind"></div>
+        </div>
+        <div class="current-card" style="--card-color:var(--cyan)">
+          <div class="current-card-label">Nederbörd</div>
+          <div class="current-card-value" id="cPrecip">—</div>
+          <div class="current-card-sub" id="cPrecipSub">—</div>
+          <div class="current-card-spark" id="sparkPrecip"></div>
+        </div>
+        <div class="current-card" style="--card-color:var(--muted)">
+          <div class="current-card-label">Molntäcke</div>
+          <div class="current-card-value" id="cCloud">—</div>
+          <div class="current-card-sub" id="cCloudRange">—</div>
+          <div class="current-card-spark" id="sparkCloud"></div>
+        </div>
+        <div class="current-card" style="--card-color:var(--purple)">
+          <div class="current-card-label">Luftfuktighet</div>
+          <div class="current-card-value" id="cHumidity">—</div>
+          <div class="current-card-sub" id="cHumidityRange">—</div>
+          <div class="current-card-spark" id="sparkHumidity"></div>
+        </div>
+        <div class="current-card" style="--card-color:var(--amber)">
+          <div class="current-card-label">Lufttryck</div>
+          <div class="current-card-value" id="cPressure">—</div>
+          <div class="current-card-sub" id="cPressureRange">—</div>
+          <div class="current-card-spark" id="sparkPressure"></div>
+        </div>
+        <div class="current-card" style="--card-color:#f97316">
+          <div class="current-card-label">UV Index</div>
+          <div class="current-card-value" id="cUV">—</div>
+          <div class="current-card-sub" id="cUVRange">—</div>
+          <div class="current-card-spark" id="sparkUV"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS STACKED -->
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Grafer</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Temperatur</span>
+            <span class="chart-panel-live" id="chartTempLive"></span>
+          </div>
+          <div id="tempChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Vind</span>
+            <span class="chart-panel-live" id="chartWindLive"></span>
+          </div>
+          <div id="windChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Nederbörd</span>
+            <span class="chart-panel-live" id="chartPrecipLive"></span>
+          </div>
+          <div id="precipChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE TABLE -->
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Detaljer</div>
+      <div class="timeline-section">
+        <div class="timeline-scroll">
+          <table class="timeline-table" id="weatherDataTable">
+            <thead>
+              <tr>
+                <th>Tid</th>
+                <th>Väder</th>
+                <th>Temp (°C)</th>
+                <th>Känns (°C)</th>
+                <th>Medelvind (m/s)</th>
+                <th>Vindrikt.</th>
+                <th>Byvind (m/s)</th>
+                <th>Nederb (mm)</th>
+                <th>Moln (%)</th>
+                <th>Luftfukt. (%)</th>
+                <th>Tryck (hPa)</th>
+                <th>UV</th>
+              </tr>
+            </thead>
+            <tbody id="weatherDataBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
 
 <script>
 let weatherData = null;
 let currentRange = 24;
 let currentCity = 'Skellefteå';
 
-function toggleCustomInputs() {
-    const inputs = document.getElementById('customInputs');
-    inputs.classList.toggle('visible');
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function toggleCoords() {
+  document.getElementById('coordRow').classList.toggle('visible');
 }
 
-async function searchCity() {
-    const cityName = document.getElementById('citySearchInput').value.trim();
-    if (!cityName) {
-        showError('Please enter a city name');
-        return;
-    }
-    
-    const searchBtn = document.querySelector('.city-search-btn');
-    searchBtn.disabled = true;
-    searchBtn.textContent = '🔍 Searching...';
-    
-    try {
-        // Use Nominatim API for geocoding
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=json&limit=1`,
-            {
-                headers: {
-                    'User-Agent': 'WeatherDashboard/1.0'
-                }
-            }
-        );
-        
-        if (!response.ok) throw new Error('Geocoding failed');
-        
-        const data = await response.json();
-        
-        if (data.length === 0) {
-            showError(`City "${cityName}" not found. Try a different name or spelling.`);
-            return;
-        }
-        
-        const location = data[0];
-        const lat = parseFloat(location.lat);
-        const lon = parseFloat(location.lon);
-        const displayName = location.display_name.split(',')[0]; // Get just the city name
-        
-        // Update coordinates in manual input fields
-        document.getElementById('lat').value = lat.toFixed(6);
-        document.getElementById('lon').value = lon.toFixed(6);
-        
-        // Fetch weather for this location
-        await selectCity(displayName, lat, lon);
-        
-        // Clear the search input
-        //document.getElementById('citySearchInput').value = '';
-        
-    } catch (error) {
-        console.error('City search error:', error);
-        showError('Failed to find city. Please try again or use coordinates.');
-    } finally {
-        searchBtn.disabled = false;
-        searchBtn.textContent = '🔍 Search';
-    }
-}
-
-async function selectCity(name, lat, lon) {
-    currentCity = name;
-    document.getElementById('lat').value = lat;
-    document.getElementById('lon').value = lon;
-    
-    document.querySelectorAll('.city-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const clickedBtn = event?.target;
-    if (clickedBtn?.classList.contains('city-btn')) {
-        clickedBtn.classList.add('active');
-    }
-    
-    await fetchWeather();
-}
-
-function useGeolocation() {
-    if (!navigator.geolocation) {
-        showError('Geolocation not supported by your browser');
-        return;
-    }
-    
-    const btn = event.target;
-    btn.textContent = '📍 Getting location...';
-    btn.disabled = true;
-    
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            document.getElementById('lat').value = position.coords.latitude.toFixed(6);
-            document.getElementById('lon').value = position.coords.longitude.toFixed(6);
-            currentCity = 'Your Location';
-            fetchWeather().finally(() => {
-                btn.textContent = '📍 Use My Location';
-                btn.disabled = false;
-            });
-        },
-        (error) => {
-            showError('Could not get your location: ' + error.message);
-            btn.textContent = '📍 Use My Location';
-            btn.disabled = false;
-        }
-    );
-}
-
-function showError(message) {
-    const errorDiv = document.getElementById('error');
-    errorDiv.className = 'error';
-    errorDiv.textContent = message;
-    setTimeout(() => {
-        errorDiv.textContent = '';
-        errorDiv.className = '';
-    }, 5000);
-}
-
-async function fetchWeather() {
-    const lat = parseFloat(document.getElementById('lat').value);
-    const lon = parseFloat(document.getElementById('lon').value);
-    
-    if (isNaN(lat) || isNaN(lon)) {
-        showError('Invalid coordinates');
-        return;
-    }
-    
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('content').style.display = 'none';
-    document.getElementById('error').textContent = '';
-    
-    try {
-        const response = await fetch(
-            `https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
-            {
-                headers: {
-                    'User-Agent': 'WeatherDashboard/1.0 (educational)'
-                }
-            }
-        );
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        processWeatherData(data);
-        
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
-        
-        updateButtonStates(currentRange);
-        updateRiskPanel(currentRange);
-        drawCharts();
-        updateDataTable();
-        
-    } catch (error) {
-        console.error('Fetch error:', error);
-        showError('Failed to fetch weather data: ' + error.message);
-        document.getElementById('loading').style.display = 'none';
-    }
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.style.display = 'block';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 function getWindDirection(degrees) {
-    if (degrees === null || degrees === undefined) return '-';
-    
-    const directions = ['N', 'NNÖ', 'NÖ', 'ÖNÖ', 'Ö', 'ÖSÖ', 'SÖ', 'SSÖ', 'S', 'SSV', 'SV', 'VSV', 'V', 'VNV', 'NV', 'NNV'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
+  if (degrees === null || degrees === undefined) return '—';
+  const dirs = ['N','NNÖ','NÖ','ÖNÖ','Ö','ÖSÖ','SÖ','SSÖ','S','SSV','SV','VSV','V','VNV','NV','NNV'];
+  return dirs[Math.round(degrees / 22.5) % 16];
 }
 
 function calculateFeelsLike(temp, windSpeed, humidity) {
-    if (temp === null || windSpeed === null) return temp;
-    
-    if (temp <= 10 && windSpeed > 1.3) {
-        const windKmh = windSpeed * 3.6;
-        const windChill = 13.12 + 0.6215 * temp - 11.37 * Math.pow(windKmh, 0.16) + 0.3965 * temp * Math.pow(windKmh, 0.16);
-        return windChill;
-    }
-    
-    if (temp >= 27 && humidity !== null) {
-        const rh = humidity;
-        const heatIndex = -8.78469475556 + 
-                         1.61139411 * temp + 
-                         2.33854883889 * rh + 
-                         -0.14611605 * temp * rh + 
-                         -0.012308094 * temp * temp + 
-                         -0.0164248277778 * rh * rh + 
-                         0.002211732 * temp * temp * rh + 
-                         0.00072546 * temp * rh * rh + 
-                         -0.000003582 * temp * temp * rh * rh;
-        return heatIndex;
-    }
-    
-    return temp;
-}
-
-function processWeatherData(data) {
-    const times = [];
-    const temp = [], temp_p10 = [], temp_p90 = [], feels_like = [];
-    const wind = [], wind_p10 = [], wind_p90 = [], gust = [], wind_direction = [];
-    const precip = [], precip_p10 = [], precip_p90 = [], precip_prob = [];
-    const cloud = [], humidity = [], pressure = [], uv = [];
-    const symbols = []; // Store weather symbols
-    
-    data.properties.timeseries.forEach(entry => {
-        const t = new Date(entry.time);
-        const inst = entry.data.instant.details;
-        const next1h = entry.data.next_1_hours;
-        
-        times.push(t);
-        temp.push(inst.air_temperature);
-        temp_p10.push(inst.air_temperature_percentile_10 || inst.air_temperature);
-        temp_p90.push(inst.air_temperature_percentile_90 || inst.air_temperature);
-        
-        
-        feels_like.push(calculateFeelsLike(inst.air_temperature, inst.wind_speed, inst.relative_humidity));
-        
-        wind.push(inst.wind_speed);
-        wind_p10.push(inst.wind_speed_percentile_10 || inst.wind_speed);
-        wind_p90.push(inst.wind_speed_percentile_90 || inst.wind_speed);
-        gust.push(inst.wind_speed_of_gust || inst.wind_speed * 1.5);
-        wind_direction.push(inst.wind_from_direction);
-        
-        // Precipitation with percentiles
-        if (next1h) {
-            precip.push(next1h.details.precipitation_amount);
-            precip_p10.push(next1h.details.precipitation_amount_min || next1h.details.precipitation_amount);
-            precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
-            precip_prob.push(next1h.details.probability_of_precipitation ?? null);
-        } else {
-            precip.push(null);
-            precip_p10.push(null);
-            precip_p90.push(null);
-            precip_prob.push(null);
-        }
-        
-        cloud.push(inst.cloud_area_fraction);
-        humidity.push(inst.relative_humidity);
-        pressure.push(inst.air_pressure_at_sea_level);
-        uv.push(inst.ultraviolet_index_clear_sky || 0);
-        
-        // Extract weather symbol
-        const symbolCode = next1h?.summary?.symbol_code || 'unknown';
-        symbols.push(symbolCode);
-    });
-    
-    weatherData = {
-        times,
-        data: {
-            temp, temp_p10, temp_p90, feels_like,
-            wind, wind_p10, wind_p90, gust, wind_direction,
-            precip, precip_p10, precip_p90,precip_prob,
-            cloud, humidity, pressure, uv,
-            symbols
-        }
-    };
-    
-    updateSummaryCards();
+  if (temp === null || windSpeed === null) return temp;
+  if (temp <= 10 && windSpeed > 1.3) {
+    const wk = windSpeed * 3.6;
+    return 13.12 + 0.6215*temp - 11.37*Math.pow(wk,0.16) + 0.3965*temp*Math.pow(wk,0.16);
+  }
+  if (temp >= 27 && humidity !== null) {
+    const rh = humidity;
+    return -8.78469475556 + 1.61139411*temp + 2.33854883889*rh
+      - 0.14611605*temp*rh - 0.012308094*temp*temp
+      - 0.0164248277778*rh*rh + 0.002211732*temp*temp*rh
+      + 0.00072546*temp*rh*rh - 0.000003582*temp*temp*rh*rh;
+  }
+  return temp;
 }
 
 function getWeatherEmoji(symbolCode) {
-    // Map met.no symbol codes to emojis
-    const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g, '');
-    
-    const emojiMap = {
-        'clearsky': '☀️',
-        'fair': '🌤️',
-        'partlycloudy': '⛅',
-        'cloudy': '☁️',
-        'fog': '🌫️',
-        'lightrainshowers': '🌦️',
-        'rainshowers': '🌧️',
-        'heavyrainshowers': '⛈️',
-        'lightrain': '🌦️',
-        'rain': '🌧️',
-        'heavyrain': '⛈️',
-        'lightsleetshowers': '🌨️',
-        'sleetshowers': '🌨️',
-        'heavysleetshowers': '🌨️',
-        'lightsleet': '🌨️',
-        'sleet': '🌨️',
-        'heavysleet': '🌨️',
-        'lightsnowshowers': '🌨️',
-        'snowshowers': '❄️',
-        'heavysnowshowers': '❄️',
-        'lightsnow': '🌨️',
-        'snow': '❄️',
-        'heavysnow': '❄️',
-        'rainandthunder': '⛈️',
-        'sleetandthunder': '⛈️',
-        'snowandthunder': '⛈️',
-        'lightrainandthunder': '⛈️',
-        'lightsleetandthunder': '⛈️',
-        'lightsnowandthunder': '⛈️',
-        'heavyrainandthunder': '⛈️',
-        'heavysleetandthunder': '⛈️',
-        'heavysnowandthunder': '⛈️'
-    };
-    
-    return emojiMap[code] || '🌡️';
+  const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g,'');
+  const map = {
+    clearsky:'☀️', fair:'🌤️', partlycloudy:'⛅', cloudy:'☁️', fog:'🌫️',
+    lightrainshowers:'🌦️', rainshowers:'🌧️', heavyrainshowers:'⛈️',
+    lightrain:'🌦️', rain:'🌧️', heavyrain:'⛈️',
+    lightsleetshowers:'🌨️', sleetshowers:'🌨️', heavysleetshowers:'🌨️',
+    lightsleet:'🌨️', sleet:'🌨️', heavysleet:'🌨️',
+    lightsnowshowers:'🌨️', snowshowers:'❄️', heavysnowshowers:'❄️',
+    lightsnow:'🌨️', snow:'❄️', heavysnow:'❄️',
+    rainandthunder:'⛈️', sleetandthunder:'⛈️', snowandthunder:'⛈️',
+    lightrainandthunder:'⛈️', lightsleetandthunder:'⛈️', lightsnowandthunder:'⛈️',
+    heavyrainandthunder:'⛈️', heavysleetandthunder:'⛈️', heavysnowandthunder:'⛈️'
+  };
+  return map[code] || '🌡️';
 }
 
 function getWeatherDescription(symbolCode) {
-    const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g, '');
-    
-    const descMap = {
-        'clearsky': 'Klart',
-        'fair': 'Mest klart',
-        'partlycloudy': 'Halvklart',
-        'cloudy': 'Mulet',
-        'fog': 'Dimma',
-        'lightrainshowers': 'Lätta regnskurar',
-        'rainshowers': 'Regnskurar',
-        'heavyrainshowers': 'Kraftiga regnskurar',
-        'lightrain': 'Duggregn',
-        'rain': 'Regn',
-        'heavyrain': 'Kraftigt regn',
-        'lightsleetshowers': 'Lätta skurar snöblandat regn',
-        'sleetshowers': 'Skurar snöblandat regn',
-        'heavysleetshowers': 'Kraftiga skurar snöblandat regn',
-        'lightsleet': 'Lätt snöblandat regn',
-        'sleet': 'Snöblandat regn',
-        'heavysleet': 'Kraftigt snöblandat regn',
-        'lightsnowshowers': 'Lätt snöfall',
-        'snowshowers': 'Snöfall',
-        'heavysnowshowers': 'Kraftigt snöfall',
-        'lightsnow': 'Light Snow',
-        'snow': 'Snöfall',
-        'heavysnow': 'Kraftigt snöfall',
-        'rainandthunder': 'Åska',
-        'sleetandthunder': 'Snöblandat & Åska',
-        'snowandthunder': 'Snö & Thunder',
-        'lightrainandthunder': 'Lätt regn & Åska',
-        'lightsleetandthunder': 'Light Sleet & Thunder',
-        'lightsnowandthunder': 'Light Snow & Thunder',
-        'heavyrainandthunder': 'Heavy Thunderstorm',
-        'heavysleetandthunder': 'Heavy Sleet & Thunder',
-        'heavysnowandthunder': 'Heavy Snow & Thunder'
-    };
-    
-    return descMap[code] || 'Okänt';
+  const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g,'');
+  const map = {
+    clearsky:'Klart', fair:'Mest klart', partlycloudy:'Halvklart', cloudy:'Mulet', fog:'Dimma',
+    lightrainshowers:'Lätta regnskurar', rainshowers:'Regnskurar', heavyrainshowers:'Kraftiga regnskurar',
+    lightrain:'Duggregn', rain:'Regn', heavyrain:'Kraftigt regn',
+    lightsleetshowers:'Lätta snöblandat skurar', sleetshowers:'Snöblandat regn', heavysleetshowers:'Kraftiga snöblandat skurar',
+    lightsleet:'Lätt snöblandat regn', sleet:'Snöblandat regn', heavysleet:'Kraftigt snöblandat regn',
+    lightsnowshowers:'Lätt snöfall', snowshowers:'Snöfall', heavysnowshowers:'Kraftigt snöfall',
+    lightsnow:'Lätt snö', snow:'Snöfall', heavysnow:'Kraftigt snöfall',
+    rainandthunder:'Åska', sleetandthunder:'Snöblandat & Åska', snowandthunder:'Snö & Åska',
+    lightrainandthunder:'Lätt regn & Åska', lightsleetandthunder:'Lätt snöblandat & Åska',
+    lightsnowandthunder:'Lätt snö & Åska', heavyrainandthunder:'Kraftigt åska',
+    heavysleetandthunder:'Kraftigt snöblandat & Åska', heavysnowandthunder:'Kraftigt snö & Åska'
+  };
+  return map[code] || 'Okänt';
 }
 
-function updateDataTable() {
-    const s = sliceData(currentRange);
-    const tbody = document.getElementById('weatherDataBody');
-    tbody.innerHTML = '';
-    
-    for (let i = 0; i < s.times.length; i++) {
-        const row = tbody.insertRow();
-        
-        // Time
-        const timeCell = row.insertCell();
-        const timeStr = s.times[i].toLocaleString('en-GB', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        timeCell.textContent = timeStr;
-        
-        // Weather Condition
-        const conditionCell = row.insertCell();
-        const symbolCode = s.data.symbols[i];
-        const emoji = getWeatherEmoji(symbolCode);
-        const description = getWeatherDescription(symbolCode);
-        conditionCell.innerHTML = `<div class="weather-symbol"><span class="weather-icon">${emoji}</span><span>${description}</span></div>`;
-        
-        // Temperature with percentiles
-        const tempVal = s.data.temp[i];
-        const tempP10 = s.data.temp_p10[i];
-        const tempP90 = s.data.temp_p90[i];
-        if (tempVal !== null && tempVal !== undefined) {
-            row.insertCell().textContent = `${tempVal.toFixed(1)} (${tempP10.toFixed(1)} <–> ${tempP90.toFixed(1)})`;
-        } else {
-            row.insertCell().textContent = '-';
-        }
-        
-        // Feels Like - ensure proper number formatting with sign
-        const feelsVal = s.data.feels_like[i];
-        if (feelsVal !== null && feelsVal !== undefined) {
-            row.insertCell().textContent = feelsVal.toFixed(1);
-        } else {
-            row.insertCell().textContent = '-';
-        }
-        
-        // Wind
-        row.insertCell().textContent = s.data.wind[i]?.toFixed(1) || '-';
-        
-        // Wind Direction
-        const windDir = s.data.wind_direction[i];
-        row.insertCell().textContent = getWindDirection(windDir);
-        
-        // Gust
-        row.insertCell().textContent = s.data.gust[i]?.toFixed(1) || '-';
-        
-        // Precipitation with percentiles
-        const precipVal = s.data.precip[i];
-        const precipP10 = s.data.precip_p10[i];
-        const precipP90 = s.data.precip_p90[i];
-        const precipProb = s.data.precip_prob[i];
-        if (precipVal !== null && precipVal !== undefined) {
-            const probStr = precipProb !== null && precipProb !== undefined ? ` ${precipProb.toFixed(0)}%` : '';
-            row.insertCell().textContent = `${precipVal.toFixed(1)} (${precipP10.toFixed(1)} – ${precipP90.toFixed(1)})${probStr}`;
-        } else {
-            row.insertCell().textContent = '-';
-        }
-        
-        // Cloud
-        row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) || '-';
-        
-        // Humidity
-        row.insertCell().textContent = s.data.humidity[i]?.toFixed(0) || '-';
-        
-        // Pressure
-        row.insertCell().textContent = s.data.pressure[i]?.toFixed(1) || '-';
-        
-        // UV
-        row.insertCell().textContent = s.data.uv[i]?.toFixed(1) || '-';
+// ── GEOCODING ─────────────────────────────────────────────────────────────────
+
+async function searchCity() {
+  const cityName = document.getElementById('citySearchInput').value.trim();
+  if (!cityName) { showError('Ange ett stadsnamn'); return; }
+  const btn = document.querySelector('.pill-btn');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=json&limit=1`,{ headers:{'User-Agent':'WeatherDashboard/1.0'} });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (!data.length) { showError(`Hittade inte "${cityName}"`); return; }
+    const loc = data[0];
+    const lat = parseFloat(loc.lat), lon = parseFloat(loc.lon);
+    document.getElementById('lat').value = lat.toFixed(6);
+    document.getElementById('lon').value = lon.toFixed(6);
+    await selectCity(loc.display_name, lat, lon);
+  } catch { showError('Sökning misslyckades. Försök igen.'); }
+  finally { btn.disabled = false; btn.textContent = '🔍 Sök'; }
+}
+
+async function selectCity(name, lat, lon) {
+  currentCity = name;
+  document.getElementById('lat').value = lat;
+  document.getElementById('lon').value = lon;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  if (event?.target?.classList.contains('preset-btn')) event.target.classList.add('active');
+  await fetchWeather();
+}
+
+function useGeolocation() {
+  if (!navigator.geolocation) { showError('Geolokalisering stöds inte'); return; }
+  const btn = event.target; btn.textContent = '📍 Hämtar…'; btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById('lat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('lon').value = pos.coords.longitude.toFixed(6);
+      currentCity = 'Min plats';
+      fetchWeather().finally(() => { btn.textContent = '📍 Min plats'; btn.disabled = false; });
+    },
+    err => { showError('Kunde inte hämta plats: ' + err.message); btn.textContent = '📍 Min plats'; btn.disabled = false; }
+  );
+}
+
+// ── DATA FETCH & PROCESS ──────────────────────────────────────────────────────
+
+async function fetchWeather() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  if (isNaN(lat)||isNaN(lon)) { showError('Ogiltiga koordinater'); return; }
+
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('error').style.display = 'none';
+
+  try {
+    const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,{ headers:{'User-Agent':'WeatherDashboard/1.0 (educational)'} });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    processWeatherData(data);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'flex';
+    document.getElementById('locationLabel').textContent = currentCity;
+    setRange(currentRange);
+  } catch(e) {
+    showError('Kunde inte hämta väderdata: ' + e.message);
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function processWeatherData(data) {
+  const times=[], temp=[], temp_p10=[], temp_p90=[], feels_like=[];
+  const wind=[], wind_p10=[], wind_p90=[], gust=[], wind_direction=[];
+  const precip=[], precip_p10=[], precip_p90=[], precip_prob=[];
+  const cloud=[], humidity=[], pressure=[], uv=[], symbols=[];
+
+  data.properties.timeseries.forEach(entry => {
+    const t = new Date(entry.time);
+    const inst = entry.data.instant.details;
+    const next1h = entry.data.next_1_hours;
+
+    times.push(t);
+    temp.push(inst.air_temperature);
+    temp_p10.push(inst.air_temperature_percentile_10 || inst.air_temperature);
+    temp_p90.push(inst.air_temperature_percentile_90 || inst.air_temperature);
+    feels_like.push(calculateFeelsLike(inst.air_temperature, inst.wind_speed, inst.relative_humidity));
+    wind.push(inst.wind_speed);
+    wind_p10.push(inst.wind_speed_percentile_10 || inst.wind_speed);
+    wind_p90.push(inst.wind_speed_percentile_90 || inst.wind_speed);
+    gust.push(inst.wind_speed_of_gust || inst.wind_speed * 1.5);
+    wind_direction.push(inst.wind_from_direction);
+
+    if (next1h) {
+      precip.push(next1h.details.precipitation_amount);
+      precip_p10.push(next1h.details.precipitation_amount_min || next1h.details.precipitation_amount);
+      precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
+      precip_prob.push(next1h.details.probability_of_precipitation ?? null);
+      symbols.push(next1h.summary?.symbol_code || 'unknown');
+    } else {
+      precip.push(null); precip_p10.push(null); precip_p90.push(null); precip_prob.push(null);
+      symbols.push('unknown');
     }
+    cloud.push(inst.cloud_area_fraction);
+    humidity.push(inst.relative_humidity);
+    pressure.push(inst.air_pressure_at_sea_level);
+    uv.push(inst.ultraviolet_index_clear_sky || 0);
+  });
+
+  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, cloud, humidity, pressure, uv, symbols } };
 }
 
-function updateSummaryCards() {
-    const current = weatherData.data;
-    
-    document.getElementById('cloudValue').textContent = `${current.cloud[0]?.toFixed(0) || '-'}%`;
-    document.getElementById('cloudRange').textContent = 
-        `${Math.min(...current.cloud).toFixed(0)}% - ${Math.max(...current.cloud).toFixed(0)}%`;
-    
-    document.getElementById('humidityValue').textContent = `${current.humidity[0]?.toFixed(0) || '-'}%`;
-    document.getElementById('humidityRange').textContent = 
-        `${Math.min(...current.humidity).toFixed(0)}% - ${Math.max(...current.humidity).toFixed(0)}%`;
-    
-    document.getElementById('pressureValue').textContent = `${current.pressure[0]?.toFixed(0) || '-'} hPa`;
-    document.getElementById('pressureRange').textContent = 
-        `${Math.min(...current.pressure).toFixed(0)} - ${Math.max(...current.pressure).toFixed(0)} hPa`;
-    
-    document.getElementById('uvValue').textContent = current.uv[0]?.toFixed(1) || '-';
-    document.getElementById('uvRange').textContent = 
-        `Max: ${Math.max(...current.uv).toFixed(1)}`;
-}
-
-function updateRiskPanel(hours) {
-    const s = sliceData(hours);
-    const panel = document.getElementById('riskPanel');
-    
-    const maxTemp = Math.max(...s.data.temp);
-    const minTemp = Math.min(...s.data.temp);
-    const maxWind = Math.max(...s.data.wind);
-    const maxGust = Math.max(...s.data.gust);
-    const maxUV = Math.max(...s.data.uv);
-    const totalPrecip = s.data.precip.reduce((a, b) => a + (b || 0), 0);
-    
-    let tempClass = maxTemp > 30 || minTemp < -10 ? 'high' : maxTemp > 25 || minTemp < 0 ? 'medium' : 'low';
-    let windClass = maxWind > 15 ? 'high' : maxWind > 10 ? 'medium' : 'low';
-    let gustClass = maxGust > 20 ? 'high' : maxGust > 15 ? 'medium' : 'low';
-    let uvClass = maxUV > 7 ? 'high' : maxUV > 3 ? 'medium' : 'low';
-    let precipClass = totalPrecip > 10 ? 'high' : totalPrecip > 2 ? 'medium' : 'low';
-    
-    const hoursLabel = hours === 9999 ? 'All Data' : `Kommande ${hours}h`;
-    
-    panel.innerHTML = `
-        <h2> Sammanfattning - ${hoursLabel}</h2>
-        <div class="risk-grid">
-            <div class="risk-item ${tempClass}">
-                <div class="risk-label">
-                    <span class="risk-icon">🌡️</span>
-                    <span>Temperatur</span>
-                </div>
-                <div class="risk-time">${minTemp.toFixed(1)}°C till ${maxTemp.toFixed(1)}°C</div>
-            </div>
-            <div class="risk-item ${windClass}">
-                <div class="risk-label">
-                    <span class="risk-icon">💨</span>
-                    <span>Vindhastighet</span>
-                </div>
-                <div class="risk-time">Max: ${maxWind.toFixed(1)} m/s</div>
-            </div>
-            <div class="risk-item ${gustClass}">
-                <div class="risk-label">
-                    <span class="risk-icon">🌪️</span>
-                    <span>Vindbyar</span>
-                </div>
-                <div class="risk-time">Max: ${maxGust.toFixed(1)} m/s</div>
-            </div>
-            <div class="risk-item ${uvClass}">
-                <div class="risk-label">
-                    <span class="risk-icon">☀️</span>
-                    <span>UV Index</span>
-                </div>
-                <div class="risk-time">Max: ${maxUV.toFixed(1)}</div>
-            </div>
-            <div class="risk-item ${precipClass}">
-                <div class="risk-label">
-                    <span class="risk-icon">🌧️</span>
-                    <span>Nederbörd</span>
-                </div>
-                <div class="risk-time">Total: ${totalPrecip.toFixed(1)} mm</div>
-            </div>
-        </div>
-    `;
-}
+// ── SLICE ─────────────────────────────────────────────────────────────────────
 
 function sliceData(hours) {
-    const maxPoints = hours === 9999 ? weatherData.times.length : 
-        Math.min(weatherData.times.length, hours);
-    
-    return {
-        times: weatherData.times.slice(0, maxPoints),
-        data: Object.fromEntries(
-            Object.entries(weatherData.data).map(([k, v]) => [k, v.slice(0, maxPoints)])
-        )
-    };
+  const n = hours === 9999 ? weatherData.times.length : Math.min(weatherData.times.length, hours);
+  return {
+    times: weatherData.times.slice(0, n),
+    data: Object.fromEntries(Object.entries(weatherData.data).map(([k,v]) => [k, v.slice(0,n)]))
+  };
 }
 
-function updateButtonStates(hours) {
-    document.querySelectorAll('.controls button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const btnId = hours === 9999 ? 'btn-all' : `btn-${hours}`;
-    const btn = document.getElementById(btnId);
-    if (btn) btn.classList.add('active');
-}
-
-function drawCharts() {
-    const s = sliceData(currentRange);
-    
-    const config = {
-        responsive: true,
-        displayModeBar: false,
-        scrollZoom: false,
-        doubleClick: false,
-        dragMode: false,
-        staticPlot: false,
-        modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d', 'resetScale2d']
-    };
-    
-    // Temperature Chart
-    const currentTemp = s.data.temp[0];
-    const currentFeelsLike = s.data.feels_like[0];
-    
-    Plotly.newPlot('tempChart', [
-        {
-            x: s.times,
-            y: s.data.temp_p10,
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 0 },
-            showlegend: false,
-            fill: 'none',
-            hoverinfo: 'skip'
-        },
-        {
-            x: s.times,
-            y: s.data.temp_p90,
-            type: 'scatter',
-            mode: 'lines',
-            fill: 'tonexty',
-            fillcolor: 'rgba(59, 130, 246, 0.15)',
-            line: { width: 1, color: 'rgba(59, 130, 246, 0.3)' },
-            name: 'P10-P90',
-            hovertemplate: 'P90: %{y:.1f}°C<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.temp_p10,
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 1, color: 'rgba(59, 130, 246, 0.3)' },
-            name: 'P10',
-            hovertemplate: 'P10: %{y:.1f}°C<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.temp,
-            type: 'scatter',
-            mode: 'lines',
-            line: { color: '#3b82f6', width: 3 },
-            name: 'Temp',
-            hovertemplate: 'Temp: %{y:.1f}°C<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.feels_like,
-            type: 'scatter',
-            mode: 'lines',
-            line: { color: '#8b5cf6', width: 2, dash: 'dot' },
-            name: 'Känns som',
-            hovertemplate: 'Känns som: %{y:.1f}°C<extra></extra>'
-        }
-    ], {
-        margin: { t: 50, r: 20, b: 40, l: 45 },
-        height: 280,
-        autosize: true,
-        hovermode: 'x unified',
-        plot_bgcolor: '#f8fafc',
-        paper_bgcolor: 'white',
-        font: { family: 'system-ui', size: 11 },
-        title: { 
-            text: `🌡️ ${currentTemp?.toFixed(1) || 'N/A'}°C (känns som ${currentFeelsLike?.toFixed(1) || 'N/A'}°C)`, 
-            font: { size: 14, color: '#1e293b' },
-            x: 0.05,
-            xanchor: 'left'
-        },
-        xaxis: {
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        yaxis: {
-            title: { text: '°C', font: { size: 11 } },
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        legend: {
-            orientation: 'h',
-            y: -0.15,
-            x: 0.5,
-            xanchor: 'center',
-            font: { size: 10 }
-        },
-        dragmode: false
-    }, config);
-    
-    // Wind Chart
-    const currentWind = s.data.wind[0];
-    const currentGust = s.data.gust[0];
-    const currentWindDir = s.data.wind_direction[0];
-    
-    // Create annotations for wind direction arrows (show every 3rd point to avoid clutter)
-    const windAnnotations = [];
-    const showEveryN = Math.max(1, Math.floor(s.times.length / 12)); // Show max 12 arrows
-    for (let i = 0; i < s.times.length; i += showEveryN) {
-        if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
-            // Convert wind direction to arrow rotation (wind blows FROM direction, arrow points TO)
-            const arrowRotation = (s.data.wind_direction[i]) % 360;
-            windAnnotations.push({
-                x: s.times[i],
-                y: s.data.wind[i],
-                text: '↓',
-                showarrow: false,
-                font: { size: 28, color: '#222423' },
-                textangle: arrowRotation,
-                xanchor: 'center',
-                yanchor: 'middle'
-            });
-        }
-    }
-    
-    Plotly.newPlot('windChart', [
-        {
-            x: s.times,
-            y: s.data.wind_p10,
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 0 },
-            showlegend: false,
-            fill: 'none',
-            hoverinfo: 'skip'
-        },
-        {
-            x: s.times,
-            y: s.data.wind_p90,
-            type: 'scatter',
-            mode: 'lines',
-            fill: 'tonexty',
-            fillcolor: 'rgba(16, 185, 129, 0.15)',
-            line: { width: 1, color: 'rgba(16, 185, 129, 0.3)' },
-            name: 'P10-P90',
-            hovertemplate: 'P90: %{y:.1f} m/s<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.wind_p10,
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 1, color: 'rgba(16, 185, 129, 0.3)' },
-            name: 'P10',
-            hovertemplate: 'P10: %{y:.1f} m/s<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.wind,
-            type: 'scatter',
-            mode: 'lines',
-            line: { color: '#10b981', width: 3 },
-            name: 'Medelvind',
-            hovertemplate: 'Medelvind: %{y:.1f} m/s<extra></extra>'
-        },
-        {
-            x: s.times,
-            y: s.data.gust,
-            type: 'scatter',
-            mode: 'lines',
-            line: { color: '#f59e0b', width: 2, dash: 'dash' },
-            name: 'Vindbyar',
-            hovertemplate: 'Vindbyar: %{y:.1f} m/s<extra></extra>'
-        }
-    ], {
-        margin: { t: 50, r: 20, b: 40, l: 45 },
-        height: 280,
-        autosize: true,
-        hovermode: 'x unified',
-        plot_bgcolor: '#f8fafc',
-        paper_bgcolor: 'white',
-        font: { family: 'system-ui', size: 11 },
-        title: { 
-            text: `💨 ${currentWind?.toFixed(1) || 'N/A'} m/s (byar ${currentGust?.toFixed(1) || 'N/A'} m/s) ${getWindDirection(currentWindDir)}`, 
-            font: { size: 14, color: '#1e293b' },
-            x: 0.05,
-            xanchor: 'left'
-        },
-        xaxis: {
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        yaxis: {
-            title: { text: 'm/s', font: { size: 11 } },
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        legend: {
-            orientation: 'h',
-            y: -0.15,
-            x: 0.5,
-            xanchor: 'center',
-            font: { size: 10 }
-        },
-        annotations: windAnnotations,
-        dragmode: false
-    }, config);
-    
-    // Precipitation Chart
-    const currentPrecip = s.data.precip[0];
-    const validPrecipData = s.times.map((time, i) => ({
-        time: time,
-        precip: s.data.precip[i] !== null ? s.data.precip[i] : 0,
-        precip_p10: s.data.precip_p10[i] !== null ? s.data.precip_p10[i] : 0,
-        precip_p90: s.data.precip_p90[i] !== null ? s.data.precip_p90[i] : 0,
-        precip_prob: s.data.precip_prob[i] !== null ? s.data.precip_prob[i] : null
-    }));
-    
-    Plotly.newPlot('precipChart', [
-        {
-            x: validPrecipData.map(d => d.time),
-            y: validPrecipData.map(d => d.precip_p10),
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 0 },
-            showlegend: false,
-            fill: 'none',
-            hoverinfo: 'skip'
-        },
-        {
-            x: validPrecipData.map(d => d.time),
-            y: validPrecipData.map(d => d.precip_prob),
-            type: 'scatter',
-            mode: 'lines',
-            yaxis: 'y2',
-            line: { color: '#f97316', width: 2, dash: 'dot' },
-            name: 'Sannolikhet',
-            hovertemplate: 'Sannolikhet: %{y:.0f}%<extra></extra>'
-         },
-        {
-            x: validPrecipData.map(d => d.time),
-            y: validPrecipData.map(d => d.precip_p90),
-            type: 'scatter',
-            mode: 'lines',
-            fill: 'tonexty',
-            fillcolor: 'rgba(6, 182, 212, 0.15)',
-            line: { width: 1, color: 'rgba(6, 182, 212, 0.3)' },
-            name: 'Min-Max',
-            hovertemplate: 'Max: %{y:.1f} mm<extra></extra>'
-        },
-        {
-            x: validPrecipData.map(d => d.time),
-            y: validPrecipData.map(d => d.precip_p10),
-            type: 'scatter',
-            mode: 'lines',
-            line: { width: 1, color: 'rgba(6, 182, 212, 0.3)' },
-            name: 'Min',
-            hovertemplate: 'Min: %{y:.1f} mm<extra></extra>'
-        },
-        {
-            x: validPrecipData.map(d => d.time),
-            y: validPrecipData.map(d => d.precip),
-            type: 'scatter',
-            mode: 'lines',
-            line: { color: '#06b6d4', width: 3 },
-            name: 'Nederbörd',
-            hovertemplate: 'Nederb: %{y:.1f} mm<extra></extra>'
-        }
-    ], {
-        margin: { t: 50, r: 20, b: 40, l: 45 },
-        height: 280,
-        autosize: true,
-        hovermode: 'x unified',
-        plot_bgcolor: '#f8fafc',
-        paper_bgcolor: 'white',
-        font: { family: 'system-ui', size: 11 },
-        title: { 
-            text: `🌧️ ${currentPrecip?.toFixed(1) || '0.0'} mm`, 
-            font: { size: 14, color: '#1e293b' },
-            x: 0.05,
-            xanchor: 'left'
-        },
-        xaxis: {
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        yaxis: {
-            title: { text: 'mm', font: { size: 11 } },
-            gridcolor: '#e2e8f0',
-            linecolor: '#cbd5e1',
-            fixedrange: true
-        },
-        yaxis2: {
-            title: { text: '%', font: { size: 11 }, standoff: 5 },
-            overlaying: 'y',
-            side: 'right',
-            range: [0, 100],
-            gridcolor: 'rgba(0,0,0,0)',
-            linecolor: '#cbd5e1',
-            tickfont: { color: '#f97316', size: 10 },
-            titlefont: { color: '#f97316' },
-            fixedrange: true
-        },
-        legend: {
-            orientation: 'h',
-            y: -0.15,
-            x: 0.5,
-            xanchor: 'center',
-            font: { size: 10 }
-        },
-        dragmode: false
-    }, config);
-    
-    // Sparklines
-    const sparkConfig = { 
-        displayModeBar: false,
-        staticPlot: false,
-        responsive: true
-    };
-    const sparkHours = Math.min(24, currentRange === 9999 ? 48 : currentRange);
-    const sparkLayout = {
-        margin: { t: 5, r: 5, b: 5, l: 5 },
-        xaxis: { visible: false, fixedrange: true },
-        yaxis: { visible: false, fixedrange: true },
-        showlegend: false,
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        height: 60,
-        width: null,
-        autosize: true,
-        hovermode: 'closest',
-        dragmode: false
-    };
-    
-    Plotly.newPlot('cloudSpark', [{
-        x: s.times,
-        y: s.data.cloud,
-        type: 'scatter',
-        mode: 'lines',
-        fill: 'tozeroy',
-        line: { color: '#94a3b8', width: 2 },
-        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}%<extra></extra>'
-    }], {...sparkLayout}, sparkConfig);
-    
-    Plotly.newPlot('humiditySpark', [{
-        x: s.times,
-        y: s.data.humidity,
-        type: 'scatter',
-        mode: 'lines',
-        fill: 'tozeroy',
-        line: { color: '#94a3b8', width: 2 },
-        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}%<extra></extra>'
-    }], {...sparkLayout}, sparkConfig);
-    
-    Plotly.newPlot('pressureSpark', [{
-        x: s.times,
-        y: s.data.pressure,
-        type: 'scatter',
-        mode: 'lines',
-        fill: 'tozeroy',
-        line: { color: '#94a3b8', width: 2 },
-        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f} hPa<extra></extra>'
-    }], {...sparkLayout}, sparkConfig);
-    
-    Plotly.newPlot('uvSpark', [{
-        x: s.times,
-        y: s.data.uv,
-        type: 'scatter',
-        mode: 'lines',
-        fill: 'tozeroy',
-        line: { color: '#94a3b8', width: 2 },
-        hovertemplate: '%{x|%b %d %H:%M}<br>%{y:.1f}<extra></extra>'
-    }], {...sparkLayout}, sparkConfig);
-}
+// ── RANGE ─────────────────────────────────────────────────────────────────────
 
 function setRange(hours) {
-    currentRange = hours;
-    updateButtonStates(hours);
-    updateRiskPanel(hours);
-    drawCharts();
-    updateDataTable();
+  currentRange = hours;
+  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
+  const btn = document.getElementById(id);
+  if (btn) btn.classList.add('active');
+  updateCurrentCards();
+  updateRiskBadges();
+  drawCharts();
+  updateTable();
 }
 
-// Load default location on page load
-window.addEventListener('load', () => {
-    selectCity('Skellefteå', 64.762519, 20.923440);
-});
+// ── CURRENT CARDS ─────────────────────────────────────────────────────────────
 
+function updateCurrentCards() {
+  const d = weatherData.data;
+  const s = sliceData(currentRange);
+
+  // Temperature card
+  const t0 = d.temp[0], fl0 = d.feels_like[0];
+  document.getElementById('cTemp').textContent = t0 != null ? `${t0.toFixed(1)}°` : '—';
+  document.getElementById('cFeels').textContent = fl0 != null ? `Känns ${fl0.toFixed(1)}°` : '';
+
+  // Wind card
+  const w0 = d.wind[0], g0 = d.gust[0], wd0 = d.wind_direction[0];
+  document.getElementById('cWind').textContent = w0 != null ? `${w0.toFixed(1)} m/s` : '—';
+  document.getElementById('cGust').textContent = `Byar ${g0?.toFixed(1) || '—'} m/s · ${getWindDirection(wd0)}`;
+
+  // Precip card
+  const p0 = d.precip[0], pp0 = d.precip_prob[0];
+  document.getElementById('cPrecip').textContent = p0 != null ? `${p0.toFixed(1)} mm` : '0 mm';
+  const totalP = s.data.precip.reduce((a,b) => a+(b||0), 0);
+  document.getElementById('cPrecipSub').textContent = `Total ${totalP.toFixed(1)} mm · ${pp0 != null ? pp0.toFixed(0)+'%' : '—'}`;
+
+  // Cloud
+  document.getElementById('cCloud').textContent = d.cloud[0] != null ? `${d.cloud[0].toFixed(0)}%` : '—';
+  document.getElementById('cCloudRange').textContent = `${Math.min(...d.cloud).toFixed(0)}–${Math.max(...d.cloud).toFixed(0)}%`;
+
+  // Humidity
+  document.getElementById('cHumidity').textContent = d.humidity[0] != null ? `${d.humidity[0].toFixed(0)}%` : '—';
+  document.getElementById('cHumidityRange').textContent = `${Math.min(...d.humidity).toFixed(0)}–${Math.max(...d.humidity).toFixed(0)}%`;
+
+  // Pressure
+  document.getElementById('cPressure').textContent = d.pressure[0] != null ? `${d.pressure[0].toFixed(0)}` : '—';
+  document.getElementById('cPressureRange').textContent = `${Math.min(...d.pressure).toFixed(0)}–${Math.max(...d.pressure).toFixed(0)} hPa`;
+
+  // UV
+  document.getElementById('cUV').textContent = d.uv[0] != null ? d.uv[0].toFixed(1) : '—';
+  document.getElementById('cUVRange').textContent = `Max ${Math.max(...d.uv).toFixed(1)}`;
+
+  // Sparklines inside cards — hoverable, no staticPlot
+  const sc = { displayModeBar: false, responsive: true };
+  const sl = {
+    margin: {t:2,r:2,b:2,l:2},
+    xaxis: { visible:false, fixedrange:true },
+    yaxis: { visible:false, fixedrange:true },
+    showlegend: false,
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    height: 40,
+    autosize: true,
+    dragmode: false,
+    hovermode: 'x'
+  };
+
+  const mk = (color, y, unit) => [{
+    x: s.times, y,
+    type: 'scatter', mode: 'lines',
+    fill: 'tozeroy',
+    line: { color, width: 1.5 },
+    fillcolor: color.replace(')', ',0.15)').replace('rgb','rgba'),
+    hovertemplate: `%{y:.1f}${unit}<extra></extra>`
+  }];
+
+  Plotly.newPlot('sparkTemp',     mk('--accent)',  s.data.temp,     ' °C'), sl, sc);
+  Plotly.newPlot('sparkWind',     mk('rgb(52,211,153)',  s.data.wind,     ' m/s'), sl, sc);
+  Plotly.newPlot('sparkPrecip',     mk('(--cyan)',  s.data.precip,     ' mm'), sl, sc);
+  Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%'),    sl, sc);
+  Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%'),    sl, sc);
+  Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa'),sl, sc);
+  Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       ''),    sl, sc);
+}
+
+// ── RISK BADGES ───────────────────────────────────────────────────────────────
+
+function updateRiskBadges() {
+  const s = sliceData(currentRange);
+  const maxTemp = Math.max(...s.data.temp), minTemp = Math.min(...s.data.temp);
+  const maxWind = Math.max(...s.data.wind), maxGust = Math.max(...s.data.gust);
+  const maxUV   = Math.max(...s.data.uv);
+  const totalP  = s.data.precip.reduce((a,b)=>a+(b||0),0);
+  const label   = currentRange === 9999 ? 'Samtliga' : `${currentRange}h`;
+
+  const badge = (icon, text, cls) =>
+    `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
+
+  document.getElementById('riskRow').innerHTML =
+    badge('🌡️', `${minTemp.toFixed(1)}° → ${maxTemp.toFixed(1)}°`,
+      maxTemp > 30 || minTemp < -10 ? 'high' : maxTemp > 25 || minTemp < 0 ? 'medium' : 'low') +
+    badge('💨', `Max ${maxWind.toFixed(1)} m/s`,
+      maxWind > 15 ? 'high' : maxWind > 10 ? 'medium' : 'low') +
+    badge('🌪️', `Byar ${maxGust.toFixed(1)} m/s`,
+      maxGust > 20 ? 'high' : maxGust > 15 ? 'medium' : 'low') +
+    badge('☀️', `UV ${maxUV.toFixed(1)}`,
+      maxUV > 7 ? 'high' : maxUV > 3 ? 'medium' : 'low') +
+    badge('🌧️', `${totalP.toFixed(1)} mm tot.`,
+      totalP > 10 ? 'high' : totalP > 2 ? 'medium' : 'low');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+
+function drawCharts() {
+  const s = sliceData(currentRange);
+  const cfg = { responsive: true, displayModeBar: false, scrollZoom: false };
+
+  const base = {
+    margin: {t:10, r:40, b:45, l:50},
+    height: 240,
+    autosize: true,
+    hovermode: 'x unified',
+    plot_bgcolor: '#111827',
+    paper_bgcolor: '#111827',
+    font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
+    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:true, tickangle: -30 },
+    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:true },
+    legend: { orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
+    dragmode: false,
+    hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
+  };
+
+  // ── TEMP ──
+  document.getElementById('chartTempLive').textContent =
+    `${s.data.temp[0]?.toFixed(1)||'—'}°C · Känns ${s.data.feels_like[0]?.toFixed(1)||'—'}°C`;
+
+  Plotly.newPlot('tempChart', [
+    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(56,189,248,0.1)', line:{width:1,color:'rgba(56,189,248,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color:'#38bdf8',width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
+  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}} }, cfg);
+
+  // ── WIND ──
+  const windDir0 = s.data.wind_direction[0];
+  document.getElementById('chartWindLive').textContent =
+    `${s.data.wind[0]?.toFixed(1)||'—'} m/s · Byar ${s.data.gust[0]?.toFixed(1)||'—'} m/s · ${getWindDirection(windDir0)}`;
+
+  const showEveryN = Math.max(1, Math.floor(s.times.length / 12));
+  const windAnnotations = [];
+  for (let i = 0; i < s.times.length; i += showEveryN) {
+    if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
+      windAnnotations.push({ x:s.times[i], y:s.data.wind[i], text:'↓', showarrow:false, font:{size:22,color:'rgb(255, 255, 255)'}, textangle:s.data.wind_direction[i] % 360, xanchor:'center', yanchor:'middle' });
+    }
+  }
+
+  Plotly.newPlot('windChart', [
+    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} m/s<extra></extra>'},
+    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(52,211,153,0.1)', line:{width:1,color:'rgba(52,211,153,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color:'#34d399',width:2.5}, name:'Medelvind', hovertemplate:'%{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
+  ], { ...base, annotations:windAnnotations, yaxis:{...base.yaxis, title:{text:'m/s', font:{size:11, color:'#4a6080'}}} }, cfg);
+
+  // ── PRECIP ──
+  document.getElementById('chartPrecipLive').textContent =
+    `${s.data.precip[0]?.toFixed(1)||'0.0'} mm`;
+
+  const pd = s.times.map((_,i) => ({
+    t:s.times[i], p:s.data.precip[i]||0, p10:s.data.precip_p10[i]||0,
+    p90:s.data.precip_p90[i]||0, prob:s.data.precip_prob[i]
+  }));
+
+  Plotly.newPlot('precipChart', [
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'Max: %{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Sannolikhet', hovertemplate:'Prob %{y:.0f}%<extra></extra>' }
+  ], {
+    ...base,
+    yaxis:{...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}},
+    yaxis2:{ overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, titlefont:{color:'#f97316'}, title:{text:'%', font:{size:11}}, fixedrange:true }
+  }, cfg);
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────────
+
+function updateTable() {
+  const s = sliceData(currentRange);
+  const tbody = document.getElementById('weatherDataBody');
+  tbody.innerHTML = '';
+
+  for (let i = 0; i < s.times.length; i++) {
+    const row = tbody.insertRow();
+
+    // Time
+    const tc = row.insertCell();
+    tc.className = 'time-cell';
+    tc.textContent = s.times[i].toLocaleString('sv-SE', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    // Condition
+    const cc = row.insertCell();
+    const emoji = getWeatherEmoji(s.data.symbols[i]);
+    const desc  = getWeatherDescription(s.data.symbols[i]);
+    cc.innerHTML = `<div class="cond-cell"><span>${emoji}</span><span>${desc}</span></div>`;
+
+    // Temp with percentiles
+    const tv = s.data.temp[i], tp10 = s.data.temp_p10[i], tp90 = s.data.temp_p90[i];
+    const tempCell = row.insertCell();
+    tempCell.className = 'highlight';
+    if (tv != null) {
+      const cls = tv > 25 ? 'temp-hot' : tv < 0 ? 'temp-cold' : 'temp-norm';
+      tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">(${tp10.toFixed(1)}–${tp90.toFixed(1)})</span>`;
+    } else { tempCell.textContent = '—'; }
+
+    // Feels like
+    const fl = s.data.feels_like[i];
+    const flCell = row.insertCell();
+    if (fl != null) flCell.textContent = fl.toFixed(1);
+    else flCell.textContent = '—';
+
+    // Wind
+    const wv = s.data.wind[i];
+    const wCell = row.insertCell();
+    if (wv != null) {
+      wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
+      wCell.textContent = wv.toFixed(1);
+    } else { wCell.textContent = '—'; }
+
+    // Wind direction
+    row.insertCell().textContent = getWindDirection(s.data.wind_direction[i]);
+
+    // Gust
+    const gv = s.data.gust[i];
+    const gCell = row.insertCell();
+    if (gv != null) {
+      gCell.className = gv > 20 ? 'wind-high' : gv > 15 ? 'wind-med' : '';
+      gCell.textContent = gv.toFixed(1);
+    } else { gCell.textContent = '—'; }
+
+    // Precip
+    const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i], pprob = s.data.precip_prob[i];
+    const pCell = row.insertCell();
+    if (pv != null) {
+      pCell.className = pv > 0.1 ? 'precip-wet' : '';
+      const probStr = pprob != null ? ` ${pprob.toFixed(0)}%` : '';
+      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">(${pp10.toFixed(1)}–${pp90.toFixed(1)})${probStr}</span>`;
+    } else { pCell.textContent = '—'; }
+
+    // Cloud
+    row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) ?? '—';
+    // Humidity
+    row.insertCell().textContent = s.data.humidity[i]?.toFixed(0) ?? '—';
+    // Pressure
+    row.insertCell().textContent = s.data.pressure[i]?.toFixed(1) ?? '—';
+    // UV
+    row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
+  }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  selectCity('Skellefteå', 64.762519, 20.923440);
+});
 </script>
 </body>
 </html>
