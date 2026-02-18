@@ -1048,7 +1048,13 @@ function updateRiskBadges() {
 
 function drawCharts() {
   const s = sliceData(currentRange);
-  const cfg = { responsive: true, displayModeBar: false, scrollZoom: false };
+  const cfg = { 
+  responsive: true, 
+  displayModeBar: false, 
+  scrollZoom: true,
+  modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'autoScale2d'],
+  doubleClick: 'reset'
+};
 
   const base = {
     margin: {t:10, r:40, b:45, l:50},
@@ -1058,8 +1064,8 @@ function drawCharts() {
     plot_bgcolor: '#111827',
     paper_bgcolor: '#111827',
     font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
-    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:true, tickangle: -30 },
-    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:true },
+    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -30 },
+    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false },
     legend: { orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
     dragmode: false,
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
