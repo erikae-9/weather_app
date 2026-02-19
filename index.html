@@ -1109,7 +1109,7 @@ function updateRiskBadges() {
   // const totalP  = s.data.precip.reduce((a,b)=>a+(b||0),0);
   // const label   = currentRange === 9999 ? 'Samtliga' : `${currentRange}h`;
   const t0 = s.data.temp[0]
-  const f0 = s.data.temp[0]
+  const f0 = s.data.feels_like[0]
   const w0 = s.data.wind[0]
   const g0 = s.data.gust[0]
   const uv0 = s.data.uv[0]
@@ -1135,10 +1135,10 @@ function updateRiskBadges() {
       t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low') +
     badge('☝🏼', `${f0.toFixed(1)}°C`,
       f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low') +
-    badge('💨', `Vind ${w0.toFixed(1)} m/s`,
-      w0 > 15 ? 'high' : w0 > 10 ? 'medium' : 'low') +
-    badge('🌪️', `Byar ${g0.toFixed(1)} m/s`,
-      g0 > 20 ? 'high' : g0 > 15 ? 'medium' : 'low') +
+    badge('💨', `${w0.toFixed(1)} (${g0.toFixed(1)}) m/s`,
+      w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low') +
+    // badge('🌪️', `Byar ${g0.toFixed(1)} m/s`,
+    //   g0 > 20 ? 'high' : g0 > 15 ? 'medium' : 'low') +
     badge('☀️', `UV ${uv0.toFixed(1)}`,
       uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
     badge('🌧️', `${p0.toFixed(1)} mm.`,
