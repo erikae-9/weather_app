@@ -1097,9 +1097,9 @@ function drawCharts() {
     plot_bgcolor: '#111827',
     paper_bgcolor: '#111827',
     font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
-    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -30 },
+    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -25 },
     yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false },
-    legend: { orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
+    legend: { orientation:'h', y:-0.45, x:0.5, xanchor:'center', font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
     dragmode: false,
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
   };
@@ -1144,11 +1144,20 @@ function drawCharts() {
     p90:s.data.precip_p90[i]||0, prob:s.data.precip_prob[i]
   }));
 
+  const cumulativeProb = [];
+  let runningProb = 1.0; // Start with 100% chance of NO precip
+  for (let i = 0; i < pd.length; i++) {
+    const hourProb = Math.min(Math.max((pd[i].prob || 0) / 100, 0), 1);
+    runningProb *= (1 - hourProb); // Multiply by chance of NO precip
+    cumulativeProb.push((1 - runningProb) * 100); // Convert back to percent chance of ANY precip
+  }
+
   Plotly.newPlot('precipChart', [
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'Max: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Sannolikhet', hovertemplate:'Prob %{y:.0f}%<extra></extra>' }
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Sannolikhet', hovertemplate:'Prob %{y:.0f}%<extra></extra>' },
+    { x:pd.map(d=>d.t), y:cumulativeProb, type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:2,dash:'dash'}, name:'Kumulativ risk', hovertemplate:'Kumulativ: %{y:.0f}%<extra></extra>' }
   ], {
     ...base,
     yaxis:{...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}},
