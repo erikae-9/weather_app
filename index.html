@@ -622,10 +622,10 @@ body {
         <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
         <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
         <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        <input type="number" id="customHours" class="range-tab" style="width:90px; text-align:center; padding:7px 4px;" 
-         placeholder="enter h..." min="1" step="1" 
-         onkeypress="if(event.key==='Enter') setRange(parseInt(this.value))" 
-         onblur="if(this.value) setRange(parseInt(this.value))">
+        <input type="text" id="customHours" class="range-tab" style="width:80px; text-align:center; padding:7px 4px;" 
+        placeholder="24-48h" 
+        onkeypress="if(event.key==='Enter') parseCustomRange(this.value)" 
+        onblur="if(this.value) parseCustomRange(this.value)">
       </div>
       <div id="locationLabel" class="header-sub"></div>
     </div>
@@ -940,6 +940,16 @@ function processWeatherData(data) {
 // ── SLICE ─────────────────────────────────────────────────────────────────────
 
 function sliceData(hours) {
+  // Check if we have a custom range window
+  if (window.customRangeWindow) {
+    const { start, end } = window.customRangeWindow;
+    return {
+      times: weatherData.times.slice(start, end),
+      data: Object.fromEntries(Object.entries(weatherData.data).map(([k,v]) => [k, v.slice(start, end)]))
+    };
+  }
+  
+  // Otherwise use normal hours from start
   const n = hours === 9999 ? weatherData.times.length : Math.min(weatherData.times.length, hours);
   return {
     times: weatherData.times.slice(0, n),
@@ -948,8 +958,47 @@ function sliceData(hours) {
 }
 
 // ── RANGE ─────────────────────────────────────────────────────────────────────
+function parseCustomRange(input) {
+  const trimmed = input.trim().toLowerCase().replace(/h/g, '');
+  
+  // Check if it's a range (e.g., "24-48")
+  if (trimmed.includes('-')) {
+    const [start, end] = trimmed.split('-').map(v => parseInt(v));
+    if (!isNaN(start) && !isNaN(end) && start < end) {
+      setRangeWindow(start, end);
+      return;
+    }
+  }
+  
+  // Otherwise treat as single number
+  const hours = parseInt(trimmed);
+  if (!isNaN(hours) && hours > 0) {
+    setRange(hours);
+  }
+}
+
+function setRangeWindow(startHour, endHour) {
+  if (!weatherData) return;
+  
+  // Deactivate all buttons
+  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  
+  // Slice data from startHour to endHour
+  const start = Math.min(startHour, weatherData.times.length);
+  const end = Math.min(endHour, weatherData.times.length);
+  
+  // Store window in a global variable so sliceData can use it
+  window.customRangeWindow = { start, end };
+  
+  updateCurrentCards();
+  updateRiskBadges();
+  drawCharts();
+  updateTable();
+}
+
 
 function setRange(hours) {
+  window.customRangeWindow = null; // Clear custom window
   currentRange = hours;
   document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
   const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
