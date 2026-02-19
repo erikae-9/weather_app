@@ -463,6 +463,24 @@ body {
   font-size: 0.68rem !important;
 }
 
+/* ── DATETIME PICKER ── */
+input[type="datetime-local"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+input[type="datetime-local"]:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 /* ── STICKY TIME COLUMN ── */
 .timeline-table th:first-child,
 .timeline-table td:first-child {
@@ -622,10 +640,12 @@ body {
         <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
         <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
         <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        <input type="text" id="customHours" class="range-tab" style="width:80px; text-align:center; padding:7px 4px;" 
-        placeholder="24-48h" 
-        onkeypress="if(event.key==='Enter') parseCustomRange(this.value)" 
-        onblur="if(this.value) parseCustomRange(this.value)">
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="datetime-local" id="startDateTime" class="range-tab" style="width:155px; padding:5px 8px; font-size:0.72rem;">
+          <span style="color:var(--muted); font-size:0.7rem;">→</span>
+          <input type="datetime-local" id="endDateTime" class="range-tab" style="width:155px; padding:5px 8px; font-size:0.72rem;">
+          <button class="range-tab" onclick="applyDateTimeRange()" style="padding:7px 12px; cursor:pointer; background:var(--surface2);">✓</button>
+        </div>
       </div>
       <div id="locationLabel" class="header-sub"></div>
     </div>
@@ -881,6 +901,21 @@ async function fetchWeather() {
     document.getElementById('content').style.display = 'flex';
     document.getElementById('locationLabel').textContent = currentCity;
     setRange(currentRange);
+    // Initialize datetime pickers with first and last available times
+    if (weatherData && weatherData.times.length > 0) {
+      const firstTime = weatherData.times[0];
+      const lastTime = weatherData.times[weatherData.times.length - 1];
+      
+      // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+      document.getElementById('startDateTime').value = firstTime.toISOString().slice(0, 16);
+      document.getElementById('endDateTime').value = lastTime.toISOString().slice(0, 16);
+      
+      // Set min/max bounds
+      document.getElementById('startDateTime').min = firstTime.toISOString().slice(0, 16);
+      document.getElementById('startDateTime').max = lastTime.toISOString().slice(0, 16);
+      document.getElementById('endDateTime').min = firstTime.toISOString().slice(0, 16);
+      document.getElementById('endDateTime').max = lastTime.toISOString().slice(0, 16);
+    }
   } catch(e) {
     showError('Kunde inte hämta väderdata: ' + e.message);
     document.getElementById('loading').style.display = 'none';
@@ -958,37 +993,48 @@ function sliceData(hours) {
 }
 
 // ── RANGE ─────────────────────────────────────────────────────────────────────
-function parseCustomRange(input) {
-  const trimmed = input.trim().toLowerCase().replace(/h/g, '');
+function applyDateTimeRange() {
+  if (!weatherData) return;
   
-  // Check if it's a range (e.g., "24-48")
-  if (trimmed.includes('-')) {
-    const [start, end] = trimmed.split('-').map(v => parseInt(v));
-    if (!isNaN(start) && !isNaN(end) && start < end) {
-      setRangeWindow(start, end);
-      return;
-    }
+  const startInput = document.getElementById('startDateTime').value;
+  const endInput = document.getElementById('endDateTime').value;
+  
+  if (!startInput || !endInput) {
+    showError('Välj både start- och sluttid');
+    return;
   }
   
-  // Otherwise treat as single number
-  const hours = parseInt(trimmed);
-  if (!isNaN(hours) && hours > 0) {
-    setRange(hours);
+  const startDate = new Date(startInput);
+  const endDate = new Date(endInput);
+  
+  if (startDate >= endDate) {
+    showError('Starttiden måste vara före sluttiden');
+    return;
   }
+  
+  // Find closest indices in weatherData.times
+  let startIdx = weatherData.times.findIndex(t => t >= startDate);
+  let endIdx = weatherData.times.findIndex(t => t >= endDate);
+  
+  if (startIdx === -1) startIdx = 0;
+  if (endIdx === -1) endIdx = weatherData.times.length;
+  
+  if (startIdx >= endIdx) {
+    showError('Ingen data i det valda tidsintervallet');
+    return;
+  }
+  
+  setRangeWindow(startIdx, endIdx);
 }
 
-function setRangeWindow(startHour, endHour) {
+function setRangeWindow(startIdx, endIdx) {
   if (!weatherData) return;
   
   // Deactivate all buttons
   document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
   
-  // Slice data from startHour to endHour
-  const start = Math.min(startHour, weatherData.times.length);
-  const end = Math.min(endHour, weatherData.times.length);
-  
   // Store window in a global variable so sliceData can use it
-  window.customRangeWindow = { start, end };
+  window.customRangeWindow = { start: startIdx, end: endIdx };
   
   updateCurrentCards();
   updateRiskBadges();
