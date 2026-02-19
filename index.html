@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#090e1a">
@@ -371,7 +371,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  touch-action: pan-x pan-y;
 }
 
 .chart-panel-header {
@@ -634,46 +633,46 @@ body {
 
     <!-- CURRENT CONDITION CARDS (with sparklines) -->
     <div>
-      <div class="section-title" style="margin-bottom:6px;">Just nu</div>
+      <div class="section-title" style="margin-bottom:6px;">Under perioden</div>
       <div class="current-row">
         <div class="current-card" style="--card-color:var(--accent)">
-          <div class="current-card-label">Temperatur</div>
+          <div class="current-card-label">MedelTemperatur</div>
           <div class="current-card-value" id="cTemp">—</div>
-          <div class="current-card-sub" id="cFeels">—</div>
+          <div class="current-card-sub" id="cTempRange">—</div>
           <div class="current-card-spark" id="sparkTemp"></div>
         </div>
         <div class="current-card" style="--card-color:var(--green)">
           <div class="current-card-label">Medelvind</div>
           <div class="current-card-value" id="cWind">—</div>
-          <div class="current-card-sub" id="cGust">—</div>
+          <div class="current-card-sub" id="cWindsub">—</div>
           <div class="current-card-spark" id="sparkWind"></div>
         </div>
         <div class="current-card" style="--card-color:var(--cyan)">
-          <div class="current-card-label">Nederbörd</div>
+          <div class="current-card-label">MedelNederbörd</div>
           <div class="current-card-value" id="cPrecip">—</div>
           <div class="current-card-sub" id="cPrecipSub">—</div>
           <div class="current-card-spark" id="sparkPrecip"></div>
         </div>
         <div class="current-card" style="--card-color:var(--muted)">
-          <div class="current-card-label">Molntäcke</div>
+          <div class="current-card-label">MedelMolntäcke</div>
           <div class="current-card-value" id="cCloud">—</div>
           <div class="current-card-sub" id="cCloudRange">—</div>
           <div class="current-card-spark" id="sparkCloud"></div>
         </div>
         <div class="current-card" style="--card-color:var(--purple)">
-          <div class="current-card-label">Luftfuktighet</div>
+          <div class="current-card-label">MedelLuftfuktighet</div>
           <div class="current-card-value" id="cHumidity">—</div>
           <div class="current-card-sub" id="cHumidityRange">—</div>
           <div class="current-card-spark" id="sparkHumidity"></div>
         </div>
         <div class="current-card" style="--card-color:var(--amber)">
-          <div class="current-card-label">Lufttryck</div>
+          <div class="current-card-label">MedelLufttryck</div>
           <div class="current-card-value" id="cPressure">—</div>
           <div class="current-card-sub" id="cPressureRange">—</div>
           <div class="current-card-spark" id="sparkPressure"></div>
         </div>
         <div class="current-card" style="--card-color:#f97316">
-          <div class="current-card-label">UV Index</div>
+          <div class="current-card-label">Medel UV Index</div>
           <div class="current-card-value" id="cUV">—</div>
           <div class="current-card-sub" id="cUVRange">—</div>
           <div class="current-card-spark" id="sparkUV"></div>
@@ -955,36 +954,54 @@ function updateCurrentCards() {
   const s = sliceData(currentRange);
 
   // Temperature card
-  const t0 = d.temp[0], fl0 = d.feels_like[0];
-  document.getElementById('cTemp').textContent = t0 != null ? `${t0.toFixed(1)}°` : '—';
-  document.getElementById('cFeels').textContent = fl0 != null ? `Känns ${fl0.toFixed(1)}°` : '';
+  const tm = s.data.temp, fl0 = s.data.feels_like;
+  const meanT = tm.reduce((a,b) => a + (b || 0), 0) / tm.length;
+  const meanF = fl0.reduce((a,b) => a + (b || 0), 0) / fl0.length;
+  document.getElementById('cTemp').textContent = meanT != null ? `${meanT.toFixed(1)}°C` : '—';
+  document.getElementById('cTempRange').textContent = `Min${Math.min(...tm).toFixed(0)}°C, Max ${Math.max(...tm).toFixed(0)}°C`
 
   // Wind card
-  const w0 = d.wind[0], g0 = d.gust[0], wd0 = d.wind_direction[0];
-  document.getElementById('cWind').textContent = w0 != null ? `${w0.toFixed(1)} m/s` : '—';
-  document.getElementById('cGust').textContent = `Byar ${g0?.toFixed(1) || '—'} m/s · ${getWindDirection(wd0)}`;
+  const wm = s.data.wind, gm = s.data.gust, wd = s.data.wind_direction;
+  const meanW = wm.reduce((a,b) => a + (b || 0), 0) / wm.length;
+  const meanD = wd.reduce((a,b) => a + (b || 0), 0) / wd.length;
+  document.getElementById('cWind').textContent = meanW != null ? `${meanW.toFixed(1)} m/s` : '—';
+  document.getElementById('cWindsub').textContent = `Max ${Math.max(...wm)?.toFixed(0) || '—'}(${Math.max(...gm)?.toFixed(0) || '—'}) m/s · ${getWindDirection(meanD) || '—'}`;
 
   // Precip card
-  const p0 = d.precip[0], pp0 = d.precip_prob[0];
-  document.getElementById('cPrecip').textContent = p0 != null ? `${p0.toFixed(1)} mm` : '0 mm';
+  const pm = s.data.precip, probs = s.data.precip_prob;
+  const meanP = pm.reduce((a,b) => a + (b || 0), 0) / pm.length;
+  document.getElementById('cPrecip').textContent = meanP != null ? `${meanP.toFixed(1)} mm/h` : '0 mm';
   const totalP = s.data.precip.reduce((a,b) => a+(b||0), 0);
-  document.getElementById('cPrecipSub').textContent = `Total ${totalP.toFixed(1)} mm · ${pp0 != null ? pp0.toFixed(0)+'%' : '—'}`;
+  const windowProb = 1 - probs.reduce((acc, p) => {
+  const prob = Math.min(Math.max((p || 0) / 100, 0), 1);
+  return acc * (1 - prob);
+}, 1);
+  windowProbPercent = Math.round(windowProb * 100);
+  document.getElementById('cPrecipSub').innerHTML = `Förväntat ${totalP.toFixed(1)} mm <br> ${windowProbPercent != null ? windowProbPercent.toFixed(0)+'%' : '—'} risk för nederb.`;
 
   // Cloud
-  document.getElementById('cCloud').textContent = d.cloud[0] != null ? `${d.cloud[0].toFixed(0)}%` : '—';
-  document.getElementById('cCloudRange').textContent = `${Math.min(...d.cloud).toFixed(0)}–${Math.max(...d.cloud).toFixed(0)}%`;
+  const cloud = s.data.cloud
+  const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
+  document.getElementById('cCloud').textContent = meanC != null ? `${meanC.toFixed(0)}%` : '—';
+  document.getElementById('cCloudRange').textContent = `${Math.min(...cloud).toFixed(0)}–${Math.max(...cloud).toFixed(0)}%`;
 
   // Humidity
-  document.getElementById('cHumidity').textContent = d.humidity[0] != null ? `${d.humidity[0].toFixed(0)}%` : '—';
-  document.getElementById('cHumidityRange').textContent = `${Math.min(...d.humidity).toFixed(0)}–${Math.max(...d.humidity).toFixed(0)}%`;
+  const hum = s.data.humidity
+  const meanH = hum.reduce((a,b) => a + (b || 0), 0) / hum.length;
+  document.getElementById('cHumidity').textContent = meanH != null ? `${meanH.toFixed(0)}%` : '—';
+  document.getElementById('cHumidityRange').textContent = `${Math.min(...hum).toFixed(0)}–${Math.max(...hum).toFixed(0)}%`;
 
   // Pressure
-  document.getElementById('cPressure').textContent = d.pressure[0] != null ? `${d.pressure[0].toFixed(0)}` : '—';
-  document.getElementById('cPressureRange').textContent = `${Math.min(...d.pressure).toFixed(0)}–${Math.max(...d.pressure).toFixed(0)} hPa`;
+  const pres = s.data.pressure
+  const meanPr = pres.reduce((a,b) => a + (b || 0), 0) / pres.length;
+  document.getElementById('cPressure').textContent = meanPr != null ? `${meanPr.toFixed(0)}` : '—';
+  document.getElementById('cPressureRange').textContent = `${Math.min(...pres).toFixed(0)}–${Math.max(...pres).toFixed(0)} hPa`;
 
   // UV
-  document.getElementById('cUV').textContent = d.uv[0] != null ? d.uv[0].toFixed(1) : '—';
-  document.getElementById('cUVRange').textContent = `Max ${Math.max(...d.uv).toFixed(1)}`;
+  const uv = s.data.uv
+  const meanUV = uv.reduce((a,b) => a + (b || 0), 0) / uv.length;
+  document.getElementById('cUV').textContent = meanUV != null ? meanUV.toFixed(1) : '—';
+  document.getElementById('cUVRange').textContent = `Max ${Math.max(...uv).toFixed(1)}`;
 
   // Sparklines inside cards — hoverable, no staticPlot
   const sc = { displayModeBar: false, responsive: true };
