@@ -632,7 +632,7 @@ body {
 
     <!-- RISK BADGES -->
     <div>
-      <div class="section-title" style="margin-bottom:6px;">Sammanfattning</div>
+      <div class="section-title" style="margin-bottom:6px;">Just nu</div>
       <div id="riskRow" class="risk-row"></div>
     </div>
 
@@ -1103,26 +1103,46 @@ function updateCurrentCards() {
 
 function updateRiskBadges() {
   const s = sliceData(currentRange);
-  const maxTemp = Math.max(...s.data.temp), minTemp = Math.min(...s.data.temp);
-  const maxWind = Math.max(...s.data.wind), maxGust = Math.max(...s.data.gust);
-  const maxUV   = Math.max(...s.data.uv);
-  const totalP  = s.data.precip.reduce((a,b)=>a+(b||0),0);
-  const label   = currentRange === 9999 ? 'Samtliga' : `${currentRange}h`;
+  // const maxTemp = Math.max(...s.data.temp), minTemp = Math.min(...s.data.temp);
+  // const maxWind = Math.max(...s.data.wind), maxGust = Math.max(...s.data.gust);
+  // const maxUV   = Math.max(...s.data.uv);
+  // const totalP  = s.data.precip.reduce((a,b)=>a+(b||0),0);
+  // const label   = currentRange === 9999 ? 'Samtliga' : `${currentRange}h`;
+  const t0 = s.data.temp[0]
+  const f0 = s.data.temp[0]
+  const w0 = s.data.wind[0]
+  const g0 = s.data.gust[0]
+  const uv0 = s.data.uv[0]
+  const p0 = s.data.precip[0]
+  const label2   = 'Just nu'
 
   const badge = (icon, text, cls) =>
     `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
 
+  // document.getElementById('riskRow').innerHTML =
+  //   badge('🌡️', `${minTemp.toFixed(1)}° → ${maxTemp.toFixed(1)}°`,
+  //     maxTemp > 30 || minTemp < -10 ? 'high' : maxTemp > 25 || minTemp < 0 ? 'medium' : 'low') +
+  //   badge('💨', `Max ${maxWind.toFixed(1)} m/s`,
+  //     maxWind > 15 ? 'high' : maxWind > 10 ? 'medium' : 'low') +
+  //   badge('🌪️', `Byar ${maxGust.toFixed(1)} m/s`,
+  //     maxGust > 20 ? 'high' : maxGust > 15 ? 'medium' : 'low') +
+  //   badge('☀️', `UV ${maxUV.toFixed(1)}`,
+  //     maxUV > 7 ? 'high' : maxUV > 3 ? 'medium' : 'low') +
+  //   badge('🌧️', `${totalP.toFixed(1)} mm tot.`,
+  //     totalP > 10 ? 'high' : totalP > 2 ? 'medium' : 'low');
   document.getElementById('riskRow').innerHTML =
-    badge('🌡️', `${minTemp.toFixed(1)}° → ${maxTemp.toFixed(1)}°`,
-      maxTemp > 30 || minTemp < -10 ? 'high' : maxTemp > 25 || minTemp < 0 ? 'medium' : 'low') +
-    badge('💨', `Max ${maxWind.toFixed(1)} m/s`,
-      maxWind > 15 ? 'high' : maxWind > 10 ? 'medium' : 'low') +
-    badge('🌪️', `Byar ${maxGust.toFixed(1)} m/s`,
-      maxGust > 20 ? 'high' : maxGust > 15 ? 'medium' : 'low') +
-    badge('☀️', `UV ${maxUV.toFixed(1)}`,
-      maxUV > 7 ? 'high' : maxUV > 3 ? 'medium' : 'low') +
-    badge('🌧️', `${totalP.toFixed(1)} mm tot.`,
-      totalP > 10 ? 'high' : totalP > 2 ? 'medium' : 'low');
+    badge('🌡️', `${t0.toFixed(1)}°C`,
+      t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low') +
+    badge('☝🏼', `${f0.toFixed(1)}°C`,
+      f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low') +
+    badge('💨', `Vind ${w0.toFixed(1)} m/s`,
+      w0 > 15 ? 'high' : w0 > 10 ? 'medium' : 'low') +
+    badge('🌪️', `Byar ${g0.toFixed(1)} m/s`,
+      g0 > 20 ? 'high' : g0 > 15 ? 'medium' : 'low') +
+    badge('☀️', `UV ${uv0.toFixed(1)}`,
+      uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
+    badge('🌧️', `${p0.toFixed(1)} mm.`,
+      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low');
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
@@ -1293,6 +1313,23 @@ function updateTable() {
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   selectCity('Skellefteå', 64.762519, 20.923440);
+});
+
+// Prevent page zoom on chart areas - force Plotly to handle gestures
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.chart-panel').forEach(panel => {
+    panel.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    panel.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  });
 });
 </script>
 </body>
