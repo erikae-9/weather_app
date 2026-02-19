@@ -481,6 +481,66 @@ input[type="datetime-local"]:focus {
   outline: none;
 }
 
+/* ── DATE RANGE (desktop default) ── */
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-range input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.date-range button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* ── MOBILE LAYOUT ── */
+@media (max-width: 640px) {
+
+  .range-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .date-range {
+    width: 100%;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .date-range input {
+    flex: 1 1 100%;
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .date-separator {
+    display: none;
+  }
+
+  .date-range button {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+}
+
+
 /* ── STICKY TIME COLUMN ── */
 .timeline-table th:first-child,
 .timeline-table td:first-child {
@@ -640,11 +700,11 @@ input[type="datetime-local"]:focus {
         <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
         <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
         <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        <div style="display:flex; gap:4px; align-items:center;">
-          <input type="datetime-local" id="startDateTime" class="range-tab" style="width:155px; padding:5px 8px; font-size:0.72rem;">
-          <span style="color:var(--muted); font-size:0.7rem;">→</span>
-          <input type="datetime-local" id="endDateTime" class="range-tab" style="width:155px; padding:5px 8px; font-size:0.72rem;">
-          <button class="range-tab" onclick="applyDateTimeRange()" style="padding:7px 12px; cursor:pointer; background:var(--surface2);">✓</button>
+        <div class="date-range">
+          <input type="datetime-local" id="startDateTime">
+          <span class="date-separator">→</span>
+          <input type="datetime-local" id="endDateTime">
+          <button onclick="applyDateTimeRange()">Använd</button>
         </div>
       </div>
       <div id="locationLabel" class="header-sub"></div>
