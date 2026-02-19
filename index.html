@@ -897,6 +897,7 @@ function processWeatherData(data) {
     const t = new Date(entry.time);
     const inst = entry.data.instant.details;
     const next1h = entry.data.next_1_hours;
+    const next6h = entry.data.next_6_hours;
 
     times.push(t);
     temp.push(inst.air_temperature);
@@ -915,6 +916,14 @@ function processWeatherData(data) {
       precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
       precip_prob.push(next1h.details.probability_of_precipitation ?? null);
       symbols.push(next1h.summary?.symbol_code || 'unknown');
+    } else if (next6h) {
+      // Fall back to 6-hour data (divide by 6 to get hourly rate approximation)
+      const precip6h = next6h.details.precipitation_amount || 0;
+      precip.push(precip6h / 6);
+      precip_p10.push((next6h.details.precipitation_amount_min || precip6h) / 6);
+      precip_p90.push((next6h.details.precipitation_amount_max || precip6h) / 6);
+      precip_prob.push(next6h.details.probability_of_precipitation ?? null);
+      symbols.push(next6h.summary?.symbol_code || 'unknown');
     } else {
       precip.push(null); precip_p10.push(null); precip_p90.push(null); precip_prob.push(null);
       symbols.push('unknown');
@@ -1077,7 +1086,7 @@ function drawCharts() {
   scrollZoom: true,
   modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'autoScale2d'],
   doubleClick: 'reset',
-  dragmode: 'pan'
+  dragmode: 'zoom'
 };
 
   const base = {
