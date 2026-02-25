@@ -468,6 +468,23 @@ body {
   font-size: 0.68rem !important;
 }
 
+.day-separator td {
+  background: var(--surface2) !important;
+  color: var(--accent) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 10px !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-top: 2px solid var(--border) !important;
+}
+
+.day-separator td:first-child {
+  background: var(--surface2) !important;
+}
+
+
 /* ── DATETIME PICKER ── */
 input[type="datetime-local"] {
   background: var(--surface);
@@ -786,6 +803,12 @@ input[type="datetime-local"]:focus {
           <div class="current-card-sub" id="cPrecipSub">—</div>
           <div class="current-card-spark" id="sparkPrecip"></div>
         </div>
+        <div class="current-card" style="--card-color:#f97316">
+          <div class="current-card-label">Medel UV Index</div>
+          <div class="current-card-value" id="cUV">—</div>
+          <div class="current-card-sub" id="cUVRange">—</div>
+          <div class="current-card-spark" id="sparkUV"></div>
+        </div>
         <div class="current-card" style="--card-color:var(--muted)">
           <div class="current-card-label">MedelMolntäcke</div>
           <div class="current-card-value" id="cCloud">—</div>
@@ -798,18 +821,13 @@ input[type="datetime-local"]:focus {
           <div class="current-card-sub" id="cHumidityRange">—</div>
           <div class="current-card-spark" id="sparkHumidity"></div>
         </div>
-        <div class="current-card" style="--card-color:var(--amber)">
+        <!-- <div class="current-card" style="--card-color:var(--amber)">
           <div class="current-card-label">MedelLufttryck</div>
           <div class="current-card-value" id="cPressure">—</div>
           <div class="current-card-sub" id="cPressureRange">—</div>
           <div class="current-card-spark" id="sparkPressure"></div>
-        </div>
-        <div class="current-card" style="--card-color:#f97316">
-          <div class="current-card-label">Medel UV Index</div>
-          <div class="current-card-value" id="cUV">—</div>
-          <div class="current-card-sub" id="cUVRange">—</div>
-          <div class="current-card-spark" id="sparkUV"></div>
-        </div>
+        </div> -->
+        
       </div>
     </div>
 
@@ -853,8 +871,8 @@ input[type="datetime-local"]:focus {
                 <th>Väder</th>
                 <th>Temp (°C)</th>
                 <th>Känns (°C)</th>
-                <th>Vind (m/s)</th>
                 <th>Nederb (mm)</th>
+                <th>Vind (m/s)</th>
                 <th>Moln (%)</th>
                 <th>Luftfukt. (%)</th>
                 <th>Tryck (hPa)</th>
@@ -1277,10 +1295,10 @@ function updateCurrentCards() {
   document.getElementById('cHumidityRange').textContent = `${Math.min(...hum).toFixed(0)}–${Math.max(...hum).toFixed(0)}%`;
 
   // Pressure
-  const pres = s.data.pressure
-  const meanPr = pres.reduce((a,b) => a + (b || 0), 0) / pres.length;
-  document.getElementById('cPressure').textContent = meanPr != null ? `${meanPr.toFixed(0)}` : '—';
-  document.getElementById('cPressureRange').textContent = `${Math.min(...pres).toFixed(0)}–${Math.max(...pres).toFixed(0)} hPa`;
+  // const pres = s.data.pressure
+  // const meanPr = pres.reduce((a,b) => a + (b || 0), 0) / pres.length;
+  // document.getElementById('cPressure').textContent = meanPr != null ? `${meanPr.toFixed(0)}` : '—';
+  // document.getElementById('cPressureRange').textContent = `${Math.min(...pres).toFixed(0)}–${Math.max(...pres).toFixed(0)} hPa`;
 
   // UV
   const uv = s.data.uv
@@ -1317,7 +1335,7 @@ function updateCurrentCards() {
   Plotly.newPlot('sparkPrecip',     mk('(--cyan)',  s.data.precip,     ' mm',), sl, sc,);
   Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%',),    sl, sc,);
   Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%',),    sl, sc,);
-  Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa',),sl, sc,);
+  // Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa',),sl, sc,);
   Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       '',),    sl, sc,);
 }
 
@@ -1463,13 +1481,29 @@ function updateTable() {
   const tbody = document.getElementById('weatherDataBody');
   tbody.innerHTML = '';
 
+  let lastDateStr = null;
+  const colCount = 10; // must match number of <th> columns
+
   for (let i = 0; i < s.times.length; i++) {
+    const t = s.times[i];
+    const dateStr = t.toLocaleDateString('sv-SE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    // Insert a separator row whenever the date changes
+    if (dateStr !== lastDateStr) {
+      lastDateStr = dateStr;
+      const sepRow = tbody.insertRow();
+      sepRow.className = 'day-separator';
+      const sepCell = sepRow.insertCell();
+      sepCell.colSpan = colCount;
+      sepCell.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    }
+
     const row = tbody.insertRow();
 
     // Time
     const tc = row.insertCell();
     tc.className = 'time-cell';
-    tc.textContent = s.times[i].toLocaleString('sv-SE', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    tc.textContent = t.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' });
 
     // Condition
     const cc = row.insertCell();
@@ -1492,14 +1526,7 @@ function updateTable() {
     if (fl != null) flCell.textContent = fl.toFixed(1);
     else flCell.textContent = '—';
 
-    // Wind
-    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]) ;
-    const wCell = row.insertCell();
-    if (wv != null) {
-      wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.innerHTML = `<span class="${wCell}">${wv.toFixed(1)}</span> <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
-      // wCell.textContent = wv.toFixed(1);
-    } else { wCell.textContent = '—'; }
+    
 
     // Wind direction
     // row.insertCell().textContent = getWindDirection(s.data.wind_direction[i]);
@@ -1520,6 +1547,15 @@ function updateTable() {
       const probStr = pprob != null ? ` ${pprob.toFixed(0)}%` : '';
       pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]${probStr}</span>`;
     } else { pCell.textContent = '—'; }
+
+    // Wind
+    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]) ;
+    const wCell = row.insertCell();
+    if (wv != null) {
+      wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
+      wCell.innerHTML = `<span class="${wCell}">${wv.toFixed(1)}</span> <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
+      // wCell.textContent = wv.toFixed(1);
+    } else { wCell.textContent = '—'; }
 
     // Cloud
     row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) ?? '—';
