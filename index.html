@@ -224,6 +224,11 @@ body {
   border-radius: 8px;
   padding: 4px;
   width: fit-content;
+  flex-wrap: wrap;
+}
+
+.date-range {
+  display: contents; /* Makes children behave as direct children of range-tabs */
 }
 
 .range-tab {
@@ -545,9 +550,15 @@ input[type="datetime-local"]:focus {
     width: 100%;
   }
 
+  .date-range {
+    width: 100%;
+    order: 10; /* Push it to the end after all buttons */
+  }
+
   .custom-date-inputs {
     flex-wrap: wrap;
     width: 100%;
+    margin-top: 0;
   }
 
   .custom-date-inputs input {
@@ -558,7 +569,7 @@ input[type="datetime-local"]:focus {
   }
 
   .custom-date-inputs span {
-    display: none; /* Hide the arrow on mobile */
+    display: none;
   }
 
   .custom-date-inputs button {
