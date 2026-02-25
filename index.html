@@ -482,64 +482,80 @@ input[type="datetime-local"]:focus {
 }
 
 /* ── DATE RANGE (desktop default) ── */
-.date-range {
+/* ── DATE PRESET DROPDOWN ── */
+.date-preset-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.date-preset-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.custom-date-inputs {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface2);
+  border-radius: 6px;
+  border: 1px solid var(--border);
 }
 
-.date-range input {
+.custom-date-inputs input {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-dim);
   padding: 6px 8px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-family: 'Inter', sans-serif;
+  flex: 1;
 }
 
-.date-range button {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
+.custom-date-inputs button {
+  background: var(--accent);
+  border: none;
+  color: #000;
   border-radius: 6px;
-  padding: 7px 12px;
+  padding: 7px 14px;
   font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-/* ── MOBILE LAYOUT ── */
 @media (max-width: 640px) {
-
-  .range-tabs {
+  .date-preset-select {
     width: 100%;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .custom-date-inputs {
     flex-wrap: wrap;
   }
 
-  .date-range {
-    width: 100%;
-    margin-top: 6px;
-    flex-wrap: wrap;
-  }
-
-  .date-range input {
+  .custom-date-inputs input {
     flex: 1 1 100%;
-    width: 100%;
     font-size: 0.85rem;
     padding: 10px;
   }
 
-  .date-separator {
-    display: none;
-  }
-
-  .date-range button {
+  .custom-date-inputs button {
     width: 100%;
     padding: 10px;
-    font-size: 0.85rem;
   }
 }
-
 
 /* ── STICKY TIME COLUMN ── */
 .timeline-table th:first-child,
@@ -691,22 +707,34 @@ input[type="datetime-local"]:focus {
   <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
 
     <!-- RANGE TABS -->
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-      <div class="range-tabs">
-        <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
-        <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
-        <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
-        <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
-        <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        <div class="date-range">
-          <input type="datetime-local" id="startDateTime">
-          <span class="date-separator">→</span>
-          <input type="datetime-local" id="endDateTime">
-          <button onclick="applyDateTimeRange()">Använd</button>
-        </div>
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <div class="range-tabs">
+      <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
+      <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
+      <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
+      <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
+      <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
+      <div class="date-range">
+        <select id="datePreset" class="date-preset-select" onchange="applyDatePreset()">
+          <option value="">Välj tidsperiod...</option>
+          <option value="today">Idag</option>
+          <option value="tomorrow">Imorgon</option>
+          <option value="weekend">Helgen</option>
+          <option value="week">Denna vecka</option>
+          <option value="custom">Anpassad...</option>
+        </select>
       </div>
-      <div id="locationLabel" class="header-sub"></div>
     </div>
+    <div id="locationLabel" class="header-sub"></div>
+  </div>
+
+  <!-- Hidden custom date inputs (separate, below the range tabs section) -->
+  <div id="customDateInputs" class="custom-date-inputs" style="display:none;">
+    <input type="datetime-local" id="startDateTime">
+    <span style="color:var(--muted); font-size:0.7rem;">→</span>
+    <input type="datetime-local" id="endDateTime">
+    <button onclick="applyDateTimeRange()">✓</button>
+  </div>
 
     <!-- RISK BADGES -->
     <div>
@@ -1051,6 +1079,63 @@ function sliceData(hours) {
 }
 
 // ── RANGE ─────────────────────────────────────────────────────────────────────
+function applyDatePreset() {
+  const preset = document.getElementById('datePreset').value;
+  const customInputs = document.getElementById('customDateInputs');
+  
+  if (preset === 'custom') {
+    customInputs.style.display = 'flex';
+    return;
+  }
+  
+  customInputs.style.display = 'none';
+  
+  if (!preset || !weatherData) return;
+  
+  const now = weatherData.times[0];
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  
+  let startDate, endDate;
+  
+  switch(preset) {
+    case 'today':
+      startDate = todayStart;
+      endDate = new Date(todayStart);
+      endDate.setHours(23, 59, 59);
+      break;
+    case 'tomorrow':
+      startDate = new Date(todayStart);
+      startDate.setDate(startDate.getDate() + 1);
+      endDate = new Date(startDate);
+      endDate.setHours(23, 59, 59);
+      break;
+    case 'weekend':
+      // Find next Saturday
+      const dayOfWeek = todayStart.getDay();
+      const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
+      startDate = new Date(todayStart);
+      startDate.setDate(startDate.getDate() + daysUntilSat);
+      endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 1);
+      endDate.setHours(23, 59, 59);
+      break;
+    case 'week':
+      startDate = todayStart;
+      endDate = new Date(todayStart);
+      endDate.setDate(endDate.getDate() + 7);
+      break;
+  }
+  
+  // Find indices
+  let startIdx = weatherData.times.findIndex(t => t >= startDate);
+  let endIdx = weatherData.times.findIndex(t => t >= endDate);
+  
+  if (startIdx === -1) startIdx = 0;
+  if (endIdx === -1) endIdx = weatherData.times.length;
+  
+  setRangeWindow(startIdx, endIdx);
+}
 function applyDateTimeRange() {
   if (!weatherData) return;
   
@@ -1144,7 +1229,18 @@ function updateCurrentCards() {
   return acc * (1 - prob);
 }, 1);
   windowProbPercent = Math.round(windowProb * 100);
-  document.getElementById('cPrecipSub').innerHTML = `Förväntat ${totalP.toFixed(1)} mm <br> ${windowProbPercent != null ? windowProbPercent.toFixed(0)+'%' : '—'} risk för nederb.`;
+
+  // Calculate the actual time span being displayed
+  let timeSpanHours;
+  if (window.customRangeWindow) {
+    const startTime = weatherData.times[window.customRangeWindow.start];
+    const endTime = weatherData.times[window.customRangeWindow.end - 1];
+    timeSpanHours = Math.round((endTime - startTime) / (1000 * 60 * 60));
+  } else {
+    timeSpanHours = currentRange === 9999 ? 'samtliga' : currentRange;
+  }
+
+  document.getElementById('cPrecipSub').innerHTML = `Förväntat ${totalP.toFixed(1)} mm <br> ${windowProbPercent != null ? windowProbPercent.toFixed(0)+'%' : '—'} risk inom ${timeSpanHours}${typeof timeSpanHours === 'number' ? 'h' : ''}.`;
 
   // Cloud
   const cloud = s.data.cloud
@@ -1282,7 +1378,7 @@ function drawCharts() {
    `<span class="blink">●</span> ${s.data.temp[0]?.toFixed(1)||'—'}°C · Känns ${s.data.feels_like[0]?.toFixed(1)||'—'}°C`;
 
   Plotly.newPlot('tempChart', [
-    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(56,189,248,0.1)', line:{width:1,color:'rgba(56,189,248,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color:'#38bdf8',width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
@@ -1326,10 +1422,10 @@ function drawCharts() {
   }
 
   Plotly.newPlot('precipChart', [
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'Max: %{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'P90: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Sannolikhet', hovertemplate:'Prob %{y:.0f}%<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Risk', hovertemplate:'Prob %{y:.0f}%<extra></extra>' },
     { x:pd.map(d=>d.t), y:cumulativeProb, type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:2,dash:'dash'}, name:'Kumulativ risk', hovertemplate:'Kumulativ: %{y:.0f}%<extra></extra>' }
   ], {
     ...base,
