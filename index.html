@@ -541,19 +541,30 @@ input[type="datetime-local"]:focus {
     font-size: 0.85rem;
   }
 
+  .range-tabs {
+    width: 100%;
+  }
+
   .custom-date-inputs {
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .custom-date-inputs input {
     flex: 1 1 100%;
     font-size: 0.85rem;
     padding: 10px;
+    min-width: 0;
+  }
+
+  .custom-date-inputs span {
+    display: none; /* Hide the arrow on mobile */
   }
 
   .custom-date-inputs button {
     width: 100%;
     padding: 10px;
+    margin-top: 4px;
   }
 }
 
