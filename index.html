@@ -38,7 +38,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ── HEADER ── */
 .header {
   padding: 20px 20px 0;
   display: flex;
@@ -65,16 +64,7 @@ body {
   text-transform: uppercase;
 }
 
-/* ── MAIN GRID ── */
 .app { padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 1200px; margin: 0 auto; }
-
-/* ── CONTROL BAR ── */
-.control-bar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
 
 .location-pill {
   display: flex;
@@ -137,7 +127,6 @@ body {
 .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
 .preset-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 
-/* Coord toggle */
 .coord-row {
   display: none;
   gap: 8px;
@@ -158,13 +147,6 @@ body {
   outline: none;
 }
 .coord-input:focus { border-color: var(--accent); }
-
-.action-strip {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
 
 .fetch-btn {
   background: var(--accent);
@@ -215,7 +197,6 @@ body {
 }
 .coord-toggle-btn:hover { border-color: var(--muted); color: var(--text-dim); }
 
-/* ── RANGE TABS ── */
 .range-tabs {
   display: flex;
   gap: 4px;
@@ -228,7 +209,7 @@ body {
 }
 
 .date-range {
-  display: contents; /* Makes children behave as direct children of range-tabs */
+  display: contents;
 }
 
 .range-tab {
@@ -248,7 +229,6 @@ body {
 .range-tab:hover { color: var(--text); }
 .range-tab.active { background: var(--surface2); color: var(--accent); border: 1px solid var(--border); }
 
-/* ── CURRENT CONDITIONS ROW ── */
 .current-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -302,7 +282,6 @@ body {
   height: 40px;
 }
 
-/* ── SUMMARY STATS ROW ── */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -338,7 +317,6 @@ body {
   color: var(--text-dim);
 }
 
-/* ── RISK BADGES ROW ── */
 .risk-row {
   display: flex;
   gap: 8px;
@@ -370,7 +348,6 @@ body {
   white-space: nowrap;
 }
 
-/* ── CHART PANEL ── */
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -401,7 +378,32 @@ body {
   color: var(--text);
 }
 
-/* ── TIMELINE TABLE ── */
+/* Beaufort legend */
+.beaufort-legend {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.bf-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.bf-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 .timeline-section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -484,8 +486,6 @@ body {
   background: var(--surface2) !important;
 }
 
-
-/* ── DATETIME PICKER ── */
 input[type="datetime-local"] {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -503,8 +503,6 @@ input[type="datetime-local"]:focus {
   outline: none;
 }
 
-/* ── DATE RANGE (desktop default) ── */
-/* ── DATE PRESET DROPDOWN ── */
 .date-preset-select {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -557,46 +555,15 @@ input[type="datetime-local"]:focus {
 }
 
 @media (max-width: 640px) {
-  .date-preset-select {
-    width: 100%;
-    padding: 10px;
-    font-size: 0.85rem;
-  }
-
-  .range-tabs {
-    width: 100%;
-  }
-
-  .date-range {
-    width: 100%;
-    order: 10; /* Push it to the end after all buttons */
-  }
-
-  .custom-date-inputs {
-    flex-wrap: wrap;
-    width: 100%;
-    margin-top: 0;
-  }
-
-  .custom-date-inputs input {
-    flex: 1 1 100%;
-    font-size: 0.85rem;
-    padding: 10px;
-    min-width: 0;
-  }
-
-  .custom-date-inputs span {
-    display: none;
-  }
-
-  .custom-date-inputs button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 4px;
-  }
+  .date-preset-select { width: 100%; padding: 10px; font-size: 0.85rem; }
+  .range-tabs { width: 100%; }
+  .date-range { width: 100%; order: 10; }
+  .custom-date-inputs { flex-wrap: wrap; width: 100%; margin-top: 0; }
+  .custom-date-inputs input { flex: 1 1 100%; font-size: 0.85rem; padding: 10px; min-width: 0; }
+  .custom-date-inputs span { display: none; }
+  .custom-date-inputs button { width: 100%; padding: 10px; margin-top: 4px; }
 }
 
-/* ── STICKY TIME COLUMN ── */
 .timeline-table th:first-child,
 .timeline-table td:first-child {
   position: sticky;
@@ -627,7 +594,6 @@ input[type="datetime-local"]:focus {
 
 .precip-wet { color: var(--accent) !important; }
 
-/* ── ERRORS & LOADING ── */
 .error-box {
   background: rgba(248,113,113,0.1);
   border: 1px solid var(--red);
@@ -636,7 +602,6 @@ input[type="datetime-local"]:focus {
   color: var(--red);
   font-size: 0.8rem;
 }
-
 
 .loading-box {
   text-align: center;
@@ -674,7 +639,6 @@ input[type="datetime-local"]:focus {
   display: inline-block;
 }
 
-/* ── SECTION DIVIDER ── */
 .section-title {
   font-size: 0.62rem;
   letter-spacing: 0.15em;
@@ -710,7 +674,6 @@ input[type="datetime-local"]:focus {
 
 <div class="app">
 
-  <!-- LOCATION SEARCH -->
   <div style="display:flex; flex-direction:column; gap:8px;">
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <div class="location-pill">
@@ -736,52 +699,44 @@ input[type="datetime-local"]:focus {
     </div>
   </div>
 
-  <!-- ERROR -->
   <div id="error" style="display:none;" class="error-box"></div>
-
-  <!-- LOADING -->
   <div id="loading" class="loading-box" style="display:none;">Laddar väderdata</div>
 
-  <!-- CONTENT -->
   <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
 
-    <!-- RANGE TABS -->
-  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-    <div class="range-tabs">
-      <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
-      <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
-      <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
-      <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
-      <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-      <div class="date-range">
-        <select id="datePreset" class="date-preset-select" onchange="applyDatePreset()">
-          <option value="">Välj tidsperiod...</option>
-          <option value="today">Idag</option>
-          <option value="tomorrow">Imorgon</option>
-          <option value="weekend">Helgen</option>
-          <option value="week">Denna vecka</option>
-          <option value="custom">Anpassad...</option>
-        </select>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div class="range-tabs">
+        <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
+        <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
+        <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
+        <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
+        <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
+        <div class="date-range">
+          <select id="datePreset" class="date-preset-select" onchange="applyDatePreset()">
+            <option value="">Välj tidsperiod...</option>
+            <option value="today">Idag</option>
+            <option value="tomorrow">Imorgon</option>
+            <option value="weekend">Helgen</option>
+            <option value="week">Denna vecka</option>
+            <option value="custom">Anpassad...</option>
+          </select>
+        </div>
       </div>
+      <div id="locationLabel" class="header-sub"></div>
     </div>
-    <div id="locationLabel" class="header-sub"></div>
-  </div>
 
-  <!-- Hidden custom date inputs (separate, below the range tabs section) -->
-  <div id="customDateInputs" class="custom-date-inputs" style="display:none;">
-    <input type="datetime-local" id="startDateTime">
-    <span style="color:var(--muted); font-size:0.7rem;">→</span>
-    <input type="datetime-local" id="endDateTime">
-    <button onclick="applyDateTimeRange()">✓</button>
-  </div>
+    <div id="customDateInputs" class="custom-date-inputs" style="display:none;">
+      <input type="datetime-local" id="startDateTime">
+      <span style="color:var(--muted); font-size:0.7rem;">→</span>
+      <input type="datetime-local" id="endDateTime">
+      <button onclick="applyDateTimeRange()">✓</button>
+    </div>
 
-    <!-- RISK BADGES -->
     <div>
       <div class="section-title" style="margin-bottom:6px;">Just nu</div>
       <div id="riskRow" class="risk-row"></div>
     </div>
 
-    <!-- CURRENT CONDITION CARDS (with sparklines) -->
     <div>
       <div class="section-title" style="margin-bottom:6px;">Under perioden</div>
       <div class="current-row">
@@ -821,17 +776,9 @@ input[type="datetime-local"]:focus {
           <div class="current-card-sub" id="cHumidityRange">—</div>
           <div class="current-card-spark" id="sparkHumidity"></div>
         </div>
-        <!-- <div class="current-card" style="--card-color:var(--amber)">
-          <div class="current-card-label">MedelLufttryck</div>
-          <div class="current-card-value" id="cPressure">—</div>
-          <div class="current-card-sub" id="cPressureRange">—</div>
-          <div class="current-card-spark" id="sparkPressure"></div>
-        </div> -->
-        
       </div>
     </div>
 
-    <!-- CHARTS STACKED -->
     <div>
       <div class="section-title" style="margin-bottom:6px;">Grafer</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
@@ -842,13 +789,25 @@ input[type="datetime-local"]:focus {
           </div>
           <div id="tempChart"></div>
         </div>
+
+        <!-- Wind chart with Beaufort legend -->
         <div class="chart-panel">
           <div class="chart-panel-header">
             <span class="chart-panel-title">Vind</span>
             <span class="chart-panel-live" id="chartWindLive"></span>
           </div>
           <div id="windChart"></div>
+          <div class="beaufort-legend" id="beaufortLegend">
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(100,180,100,0.25);border:1px solid rgba(100,180,100,0.5)"></div>Lugnt (0–0.2)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(120,200,120,0.25);border:1px solid rgba(120,200,120,0.5)"></div>Svag (0.3–3.3)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(160,220,100,0.25);border:1px solid rgba(160,220,100,0.5)"></div>Måttlig (3.4–7.9)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(220,200,60,0.25);border:1px solid rgba(220,200,60,0.5)"></div>Frisk (8.0–13.8)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(240,140,40,0.25);border:1px solid rgba(240,140,40,0.5)"></div>Hård (13.9–24.4)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(220,60,60,0.25);border:1px solid rgba(220,60,60,0.5)"></div>Storm (24.5–32.6)</div>
+            <div class="bf-item"><div class="bf-swatch" style="background:rgba(160,40,160,0.30);border:1px solid rgba(160,40,160,0.6)"></div>Orkan (32.7+)</div>
+          </div>
         </div>
+
         <div class="chart-panel">
           <div class="chart-panel-header">
             <span class="chart-panel-title">Nederbörd</span>
@@ -859,7 +818,6 @@ input[type="datetime-local"]:focus {
       </div>
     </div>
 
-    <!-- TIMELINE TABLE -->
     <div>
       <div class="section-title" style="margin-bottom:6px;">Detaljer</div>
       <div class="timeline-section">
@@ -885,13 +843,69 @@ input[type="datetime-local"]:focus {
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /app -->
+  </div>
+</div>
 
 <script>
 let weatherData = null;
 let currentRange = 24;
 let currentCity = 'Skellefteå';
+
+// ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
+// Each zone: { name, min, max, color (rgba fill), lineColor }
+const BEAUFORT_ZONES = [
+  { name: 'Lugnt (Bf 0)',      min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)' },
+  { name: 'Svag vind (Bf 1–2)',min: 0.2,  max: 3.3,  color: 'rgba(120,200,120,0.10)', lineColor: 'rgba(120,200,120,0.35)' },
+  { name: 'Måttlig (Bf 3–4)', min: 3.3,  max: 7.9,  color: 'rgba(160,220,100,0.10)', lineColor: 'rgba(160,220,100,0.35)' },
+  { name: 'Frisk (Bf 5–6)',    min: 7.9,  max: 13.8, color: 'rgba(220,200,60,0.12)',  lineColor: 'rgba(220,200,60,0.4)' },
+  { name: 'Hård vind (Bf 7–9)',min: 13.8, max: 24.4, color: 'rgba(240,140,40,0.14)',  lineColor: 'rgba(240,140,40,0.5)' },
+  { name: 'Storm (Bf 10–11)', min: 24.4, max: 32.6, color: 'rgba(220,60,60,0.15)',   lineColor: 'rgba(220,60,60,0.5)' },
+  { name: 'Orkan (Bf 12)',     min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
+];
+
+// Build Beaufort shape traces for Plotly (horizontal bands)
+function buildBeaufortShapes(yMax) {
+  const shapes = [];
+  const annotations = [];
+
+  for (const zone of BEAUFORT_ZONES) {
+    const y0 = zone.min;
+    const y1 = Math.min(zone.max, yMax);
+    if (y0 >= yMax) continue;
+
+    shapes.push({
+      type: 'rect',
+      xref: 'paper',
+      yref: 'y',
+      x0: 0, x1: 1,
+      y0: y0, y1: y1,
+      fillcolor: zone.color,
+      line: { color: zone.lineColor, width: 0.5 },
+      layer: 'below'
+    });
+
+    // Label on right side, vertically centred in the band
+    const midY = (y0 + Math.min(zone.max, yMax)) / 2;
+    // Only show label if band is tall enough to fit text
+    if ((Math.min(zone.max, yMax) - y0) > 1.5) {
+      annotations.push({
+        xref: 'paper',
+        yref: 'y',
+        x: 1,
+        xanchor: 'right',
+        y: midY,
+        yanchor: 'middle',
+        text: zone.name,
+        showarrow: false,
+        font: { size: 9, color: zone.lineColor },
+        bgcolor: 'rgba(17,24,39,0.6)',
+        borderpad: 2,
+      });
+    }
+  }
+
+  return { shapes, annotations };
+}
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -1027,16 +1041,11 @@ async function fetchWeather() {
     document.getElementById('content').style.display = 'flex';
     document.getElementById('locationLabel').textContent = currentCity;
     setRange(currentRange);
-    // Initialize datetime pickers with first and last available times
     if (weatherData && weatherData.times.length > 0) {
       const firstTime = weatherData.times[0];
       const lastTime = weatherData.times[weatherData.times.length - 1];
-      
-      // Format for datetime-local input (YYYY-MM-DDTHH:mm)
       document.getElementById('startDateTime').value = firstTime.toISOString().slice(0, 16);
       document.getElementById('endDateTime').value = lastTime.toISOString().slice(0, 16);
-      
-      // Set min/max bounds
       document.getElementById('startDateTime').min = firstTime.toISOString().slice(0, 16);
       document.getElementById('startDateTime').max = lastTime.toISOString().slice(0, 16);
       document.getElementById('endDateTime').min = firstTime.toISOString().slice(0, 16);
@@ -1078,7 +1087,6 @@ function processWeatherData(data) {
       precip_prob.push(next1h.details.probability_of_precipitation ?? null);
       symbols.push(next1h.summary?.symbol_code || 'unknown');
     } else if (next6h) {
-      // Fall back to 6-hour data (divide by 6 to get hourly rate approximation)
       const precip6h = next6h.details.precipitation_amount || 0;
       precip.push(precip6h / 6);
       precip_p10.push((next6h.details.precipitation_amount_min || precip6h) / 6);
@@ -1101,7 +1109,6 @@ function processWeatherData(data) {
 // ── SLICE ─────────────────────────────────────────────────────────────────────
 
 function sliceData(hours) {
-  // Check if we have a custom range window
   if (window.customRangeWindow) {
     const { start, end } = window.customRangeWindow;
     return {
@@ -1109,8 +1116,6 @@ function sliceData(hours) {
       data: Object.fromEntries(Object.entries(weatherData.data).map(([k,v]) => [k, v.slice(start, end)]))
     };
   }
-  
-  // Otherwise use normal hours from start
   const n = hours === 9999 ? weatherData.times.length : Math.min(weatherData.times.length, hours);
   return {
     times: weatherData.times.slice(0, n),
@@ -1119,115 +1124,75 @@ function sliceData(hours) {
 }
 
 // ── RANGE ─────────────────────────────────────────────────────────────────────
+
 function applyDatePreset() {
   const preset = document.getElementById('datePreset').value;
   const customInputs = document.getElementById('customDateInputs');
-  
-  if (preset === 'custom') {
-    customInputs.style.display = 'flex';
-    return;
-  }
-  
+  if (preset === 'custom') { customInputs.style.display = 'flex'; return; }
   customInputs.style.display = 'none';
-  
   if (!preset || !weatherData) return;
-  
+
   const now = weatherData.times[0];
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
-  
   let startDate, endDate;
-  
+
   switch(preset) {
     case 'today':
       startDate = todayStart;
-      endDate = new Date(todayStart);
-      endDate.setHours(23, 59, 59);
+      endDate = new Date(todayStart); endDate.setHours(23, 59, 59);
       break;
     case 'tomorrow':
-      startDate = new Date(todayStart);
-      startDate.setDate(startDate.getDate() + 1);
-      endDate = new Date(startDate);
-      endDate.setHours(23, 59, 59);
+      startDate = new Date(todayStart); startDate.setDate(startDate.getDate() + 1);
+      endDate = new Date(startDate); endDate.setHours(23, 59, 59);
       break;
     case 'weekend':
-      // Find next Saturday
       const dayOfWeek = todayStart.getDay();
       const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
-      startDate = new Date(todayStart);
-      startDate.setDate(startDate.getDate() + daysUntilSat);
-      endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 1);
-      endDate.setHours(23, 59, 59);
+      startDate = new Date(todayStart); startDate.setDate(startDate.getDate() + daysUntilSat);
+      endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 1); endDate.setHours(23, 59, 59);
       break;
     case 'week':
       startDate = todayStart;
-      endDate = new Date(todayStart);
-      endDate.setDate(endDate.getDate() + 7);
+      endDate = new Date(todayStart); endDate.setDate(endDate.getDate() + 7);
       break;
   }
-  
-  // Find indices
+
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
   let endIdx = weatherData.times.findIndex(t => t >= endDate);
-  
   if (startIdx === -1) startIdx = 0;
   if (endIdx === -1) endIdx = weatherData.times.length;
-  
   setRangeWindow(startIdx, endIdx);
 }
+
 function applyDateTimeRange() {
   if (!weatherData) return;
-  
   const startInput = document.getElementById('startDateTime').value;
   const endInput = document.getElementById('endDateTime').value;
-  
-  if (!startInput || !endInput) {
-    showError('Välj både start- och sluttid');
-    return;
-  }
-  
+  if (!startInput || !endInput) { showError('Välj både start- och sluttid'); return; }
   const startDate = new Date(startInput);
   const endDate = new Date(endInput);
-  
-  if (startDate >= endDate) {
-    showError('Starttiden måste vara före sluttiden');
-    return;
-  }
-  
-  // Find closest indices in weatherData.times
+  if (startDate >= endDate) { showError('Starttiden måste vara före sluttiden'); return; }
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
   let endIdx = weatherData.times.findIndex(t => t >= endDate);
-  
   if (startIdx === -1) startIdx = 0;
   if (endIdx === -1) endIdx = weatherData.times.length;
-  
-  if (startIdx >= endIdx) {
-    showError('Ingen data i det valda tidsintervallet');
-    return;
-  }
-  
+  if (startIdx >= endIdx) { showError('Ingen data i det valda tidsintervallet'); return; }
   setRangeWindow(startIdx, endIdx);
 }
 
 function setRangeWindow(startIdx, endIdx) {
   if (!weatherData) return;
-  
-  // Deactivate all buttons
   document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
-  
-  // Store window in a global variable so sliceData can use it
   window.customRangeWindow = { start: startIdx, end: endIdx };
-  
   updateCurrentCards();
   updateRiskBadges();
   drawCharts();
   updateTable();
 }
 
-
 function setRange(hours) {
-  window.customRangeWindow = null; // Clear custom window
+  window.customRangeWindow = null;
   currentRange = hours;
   document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
   const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
@@ -1242,35 +1207,29 @@ function setRange(hours) {
 // ── CURRENT CARDS ─────────────────────────────────────────────────────────────
 
 function updateCurrentCards() {
-  const d = weatherData.data;
   const s = sliceData(currentRange);
 
-  // Temperature card
   const tm = s.data.temp, fl0 = s.data.feels_like;
   const meanT = tm.reduce((a,b) => a + (b || 0), 0) / tm.length;
-  const meanF = fl0.reduce((a,b) => a + (b || 0), 0) / fl0.length;
   document.getElementById('cTemp').textContent = meanT != null ? `${meanT.toFixed(1)}°C` : '—';
-  document.getElementById('cTempRange').textContent = `Min${Math.min(...tm).toFixed(0)}°C, Max ${Math.max(...tm).toFixed(0)}°C`
+  document.getElementById('cTempRange').textContent = `Min ${Math.min(...tm).toFixed(0)}°C, Max ${Math.max(...tm).toFixed(0)}°C`;
 
-  // Wind card
   const wm = s.data.wind, gm = s.data.gust, wd = s.data.wind_direction;
   const meanW = wm.reduce((a,b) => a + (b || 0), 0) / wm.length;
   const meanD = wd.reduce((a,b) => a + (b || 0), 0) / wd.length;
   document.getElementById('cWind').textContent = meanW != null ? `${meanW.toFixed(1)} m/s` : '—';
   document.getElementById('cWindsub').textContent = `Max ${Math.max(...wm)?.toFixed(0) || '—'}(${Math.max(...gm)?.toFixed(0) || '—'}) m/s · ${getWindDirection(meanD) || '—'}`;
 
-  // Precip card
   const pm = s.data.precip, probs = s.data.precip_prob;
   const meanP = pm.reduce((a,b) => a + (b || 0), 0) / pm.length;
   document.getElementById('cPrecip').textContent = meanP != null ? `${meanP.toFixed(1)} mm/h` : '0 mm';
   const totalP = s.data.precip.reduce((a,b) => a+(b||0), 0);
   const windowProb = 1 - probs.reduce((acc, p) => {
-  const prob = Math.min(Math.max((p || 0) / 100, 0), 1);
-  return acc * (1 - prob);
-}, 1);
-  windowProbPercent = Math.round(windowProb * 100);
+    const prob = Math.min(Math.max((p || 0) / 100, 0), 1);
+    return acc * (1 - prob);
+  }, 1);
+  const windowProbPercent = Math.round(windowProb * 100);
 
-  // Calculate the actual time span being displayed
   let timeSpanHours;
   if (window.customRangeWindow) {
     const startTime = weatherData.times[window.customRangeWindow.start];
@@ -1279,34 +1238,23 @@ function updateCurrentCards() {
   } else {
     timeSpanHours = currentRange === 9999 ? 'samtliga' : currentRange;
   }
-
   document.getElementById('cPrecipSub').innerHTML = `Förväntat ${totalP.toFixed(1)} mm <br> ${windowProbPercent != null ? windowProbPercent.toFixed(0)+'%' : '—'} risk inom ${timeSpanHours}${typeof timeSpanHours === 'number' ? 'h' : ''}.`;
 
-  // Cloud
-  const cloud = s.data.cloud
+  const cloud = s.data.cloud;
   const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
   document.getElementById('cCloud').textContent = meanC != null ? `${meanC.toFixed(0)}%` : '—';
   document.getElementById('cCloudRange').textContent = `${Math.min(...cloud).toFixed(0)}–${Math.max(...cloud).toFixed(0)}%`;
 
-  // Humidity
-  const hum = s.data.humidity
+  const hum = s.data.humidity;
   const meanH = hum.reduce((a,b) => a + (b || 0), 0) / hum.length;
   document.getElementById('cHumidity').textContent = meanH != null ? `${meanH.toFixed(0)}%` : '—';
   document.getElementById('cHumidityRange').textContent = `${Math.min(...hum).toFixed(0)}–${Math.max(...hum).toFixed(0)}%`;
 
-  // Pressure
-  // const pres = s.data.pressure
-  // const meanPr = pres.reduce((a,b) => a + (b || 0), 0) / pres.length;
-  // document.getElementById('cPressure').textContent = meanPr != null ? `${meanPr.toFixed(0)}` : '—';
-  // document.getElementById('cPressureRange').textContent = `${Math.min(...pres).toFixed(0)}–${Math.max(...pres).toFixed(0)} hPa`;
-
-  // UV
-  const uv = s.data.uv
+  const uv = s.data.uv;
   const meanUV = uv.reduce((a,b) => a + (b || 0), 0) / uv.length;
   document.getElementById('cUV').textContent = meanUV != null ? meanUV.toFixed(1) : '—';
   document.getElementById('cUVRange').textContent = `Max ${Math.max(...uv).toFixed(1)}`;
 
-  // Sparklines inside cards — hoverable, no staticPlot
   const sc = { displayModeBar: false, responsive: true };
   const sl = {
     margin: {t:2,r:2,b:2,l:2},
@@ -1330,46 +1278,28 @@ function updateCurrentCards() {
     hovertemplate: `%{x|%b %d %H:%M}<br>%{y:.1f}${unit}<extra></extra>`
   }];
 
-  Plotly.newPlot('sparkTemp',     mk('--accent)',  s.data.temp,     ' °C',), sl, sc,);
-  Plotly.newPlot('sparkWind',     mk('rgb(52,211,153)',  s.data.wind,     ' m/s',), sl, sc,);
-  Plotly.newPlot('sparkPrecip',     mk('(--cyan)',  s.data.precip,     ' mm',), sl, sc,);
-  Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%',),    sl, sc,);
-  Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%',),    sl, sc,);
-  // Plotly.newPlot('sparkPressure', mk('rgb(251,191,36)',  s.data.pressure, ' hPa',),sl, sc,);
-  Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       '',),    sl, sc,);
+  Plotly.newPlot('sparkTemp',     mk('rgb(56,189,248)',  s.data.temp,     ' °C'),    sl, sc);
+  Plotly.newPlot('sparkWind',     mk('rgb(52,211,153)',  s.data.wind,     ' m/s'),   sl, sc);
+  Plotly.newPlot('sparkPrecip',   mk('rgb(103,232,249)', s.data.precip,  ' mm'),    sl, sc);
+  Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%'),      sl, sc);
+  Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%'),      sl, sc);
+  Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       ''),       sl, sc);
 }
 
 // ── RISK BADGES ───────────────────────────────────────────────────────────────
 
 function updateRiskBadges() {
   const s = sliceData(currentRange);
-  // const maxTemp = Math.max(...s.data.temp), minTemp = Math.min(...s.data.temp);
-  // const maxWind = Math.max(...s.data.wind), maxGust = Math.max(...s.data.gust);
-  // const maxUV   = Math.max(...s.data.uv);
-  // const totalP  = s.data.precip.reduce((a,b)=>a+(b||0),0);
-  // const label   = currentRange === 9999 ? 'Samtliga' : `${currentRange}h`;
-  const t0 = s.data.temp[0]
-  const f0 = s.data.feels_like[0]
-  const w0 = s.data.wind[0]
-  const g0 = s.data.gust[0]
-  const uv0 = s.data.uv[0]
-  const p0 = s.data.precip[0]
-  const label2   = 'Just nu'
+  const t0  = s.data.temp[0];
+  const f0  = s.data.feels_like[0];
+  const w0  = s.data.wind[0];
+  const g0  = s.data.gust[0];
+  const uv0 = s.data.uv[0];
+  const p0  = s.data.precip[0];
 
   const badge = (icon, text, cls) =>
     `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
 
-  // document.getElementById('riskRow').innerHTML =
-  //   badge('🌡️', `${minTemp.toFixed(1)}° → ${maxTemp.toFixed(1)}°`,
-  //     maxTemp > 30 || minTemp < -10 ? 'high' : maxTemp > 25 || minTemp < 0 ? 'medium' : 'low') +
-  //   badge('💨', `Max ${maxWind.toFixed(1)} m/s`,
-  //     maxWind > 15 ? 'high' : maxWind > 10 ? 'medium' : 'low') +
-  //   badge('🌪️', `Byar ${maxGust.toFixed(1)} m/s`,
-  //     maxGust > 20 ? 'high' : maxGust > 15 ? 'medium' : 'low') +
-  //   badge('☀️', `UV ${maxUV.toFixed(1)}`,
-  //     maxUV > 7 ? 'high' : maxUV > 3 ? 'medium' : 'low') +
-  //   badge('🌧️', `${totalP.toFixed(1)} mm tot.`,
-  //     totalP > 10 ? 'high' : totalP > 2 ? 'medium' : 'low');
   document.getElementById('riskRow').innerHTML =
     badge('🌡️', `${t0.toFixed(1)}°C`,
       t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low') +
@@ -1377,8 +1307,6 @@ function updateRiskBadges() {
       f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low') +
     badge('💨', `${w0.toFixed(1)} (${g0.toFixed(1)}) m/s`,
       w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low') +
-    // badge('🌪️', `Byar ${g0.toFixed(1)} m/s`,
-    //   g0 > 20 ? 'high' : g0 > 15 ? 'medium' : 'low') +
     badge('☀️', `UV ${uv0.toFixed(1)}`,
       uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
     badge('🌧️', `${p0.toFixed(1)} mm.`,
@@ -1389,14 +1317,13 @@ function updateRiskBadges() {
 
 function drawCharts() {
   const s = sliceData(currentRange);
-  const cfg = { 
-  responsive: true, 
-  displayModeBar: false, 
-  scrollZoom: true,
-  modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'autoScale2d'],
-  doubleClick: 'reset',
-  dragmode: 'zoom'
-};
+  const cfg = {
+    responsive: true,
+    displayModeBar: false,
+    scrollZoom: true,
+    doubleClick: 'reset',
+    dragmode: 'zoom'
+  };
 
   const base = {
     margin: {t:10, r:40, b:45, l:50},
@@ -1424,25 +1351,53 @@ function drawCharts() {
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
   ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}} }, cfg);
 
-  // ── WIND ──
+  // ── WIND with Beaufort shading ──
   const windDir0 = s.data.wind_direction[0];
   document.getElementById('chartWindLive').innerHTML =
    `<span class="blink">●</span>${s.data.wind[0]?.toFixed(1)||'—'} m/s · Byar ${s.data.gust[0]?.toFixed(1)||'—'} m/s · ${getWindDirection(windDir0)}`;
+
+  // Compute y-axis max with a comfortable ceiling above max gust
+  const maxGustAll = Math.max(...s.data.gust.filter(v => v != null));
+  const yMax = Math.max(
+    Math.ceil(maxGustAll * 1.15 / 5) * 5,  // 15% headroom, rounded to nearest 5
+    15  // minimum axis height so bands are visible even in calm weather
+  );
+
+  const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax);
 
   const showEveryN = Math.max(1, Math.floor(s.times.length / 12));
   const windAnnotations = [];
   for (let i = 0; i < s.times.length; i += showEveryN) {
     if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
-      windAnnotations.push({ x:s.times[i], y:s.data.wind[i], text:'↓', showarrow:false, font:{size:22,color:'rgb(255, 255, 255)'}, textangle:s.data.wind_direction[i] % 360, xanchor:'center', yanchor:'middle' });
+      windAnnotations.push({
+        x: s.times[i],
+        y: s.data.wind[i],
+        text: '↓',
+        showarrow: false,
+        font: { size: 22, color: 'rgb(255,255,255)' },
+        textangle: s.data.wind_direction[i] % 360,
+        xanchor: 'center',
+        yanchor: 'middle'
+      });
     }
   }
 
   Plotly.newPlot('windChart', [
-    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} m/s<extra></extra>'},
+    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(52,211,153,0.1)', line:{width:1,color:'rgba(52,211,153,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color:'#34d399',width:2.5}, name:'Medelvind', hovertemplate:'%{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
-  ], { ...base, annotations:windAnnotations, yaxis:{...base.yaxis, title:{text:'m/s', font:{size:11, color:'#4a6080'}}} }, cfg);
+  ], {
+    ...base,
+    yaxis: {
+      ...base.yaxis,
+      title: { text: 'm/s', font: { size: 11, color: '#4a6080' } },
+      range: [0, yMax],
+      fixedrange: false
+    },
+    shapes: bfShapes,
+    annotations: [...windAnnotations, ...bfAnnotations]
+  }, cfg);
 
   // ── PRECIP ──
   document.getElementById('chartPrecipLive').innerHTML =
@@ -1454,11 +1409,11 @@ function drawCharts() {
   }));
 
   const cumulativeProb = [];
-  let runningProb = 1.0; // Start with 100% chance of NO precip
+  let runningProb = 1.0;
   for (let i = 0; i < pd.length; i++) {
     const hourProb = Math.min(Math.max((pd[i].prob || 0) / 100, 0), 1);
-    runningProb *= (1 - hourProb); // Multiply by chance of NO precip
-    cumulativeProb.push((1 - runningProb) * 100); // Convert back to percent chance of ANY precip
+    runningProb *= (1 - hourProb);
+    cumulativeProb.push((1 - runningProb) * 100);
   }
 
   Plotly.newPlot('precipChart', [
@@ -1480,15 +1435,13 @@ function updateTable() {
   const s = sliceData(currentRange);
   const tbody = document.getElementById('weatherDataBody');
   tbody.innerHTML = '';
-
   let lastDateStr = null;
-  const colCount = 10; // must match number of <th> columns
+  const colCount = 10;
 
   for (let i = 0; i < s.times.length; i++) {
     const t = s.times[i];
     const dateStr = t.toLocaleDateString('sv-SE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-    // Insert a separator row whenever the date changes
     if (dateStr !== lastDateStr) {
       lastDateStr = dateStr;
       const sepRow = tbody.insertRow();
@@ -1499,19 +1452,13 @@ function updateTable() {
     }
 
     const row = tbody.insertRow();
-
-    // Time
     const tc = row.insertCell();
     tc.className = 'time-cell';
     tc.textContent = t.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' });
 
-    // Condition
     const cc = row.insertCell();
-    const emoji = getWeatherEmoji(s.data.symbols[i]);
-    const desc  = getWeatherDescription(s.data.symbols[i]);
-    cc.innerHTML = `<div class="cond-cell"><span>${emoji}</span><span>${desc}</span></div>`;
+    cc.innerHTML = `<div class="cond-cell"><span>${getWeatherEmoji(s.data.symbols[i])}</span><span>${getWeatherDescription(s.data.symbols[i])}</span></div>`;
 
-    // Temp with percentiles
     const tv = s.data.temp[i], tp10 = s.data.temp_p10[i], tp90 = s.data.temp_p90[i];
     const tempCell = row.insertCell();
     tempCell.className = 'highlight';
@@ -1520,26 +1467,10 @@ function updateTable() {
       tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">[${tp10.toFixed(1)}, ${tp90.toFixed(1)}]</span>`;
     } else { tempCell.textContent = '—'; }
 
-    // Feels like
     const fl = s.data.feels_like[i];
     const flCell = row.insertCell();
-    if (fl != null) flCell.textContent = fl.toFixed(1);
-    else flCell.textContent = '—';
+    flCell.textContent = fl != null ? fl.toFixed(1) : '—';
 
-    
-
-    // Wind direction
-    // row.insertCell().textContent = getWindDirection(s.data.wind_direction[i]);
-
-    // Gust
-    // const gv = s.data.gust[i];
-    // const gCell = row.insertCell();
-    // if (gv != null) {
-    //   gCell.className = gv > 20 ? 'wind-high' : gv > 15 ? 'wind-med' : '';
-    //   gCell.textContent = gv.toFixed(1);
-    // } else { gCell.textContent = '—'; }
-
-    // Precip
     const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i], pprob = s.data.precip_prob[i];
     const pCell = row.insertCell();
     if (pv != null) {
@@ -1548,22 +1479,16 @@ function updateTable() {
       pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]${probStr}</span>`;
     } else { pCell.textContent = '—'; }
 
-    // Wind
-    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]) ;
+    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]);
     const wCell = row.insertCell();
     if (wv != null) {
       wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.innerHTML = `<span class="${wCell}">${wv.toFixed(1)}</span> <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
-      // wCell.textContent = wv.toFixed(1);
+      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
     } else { wCell.textContent = '—'; }
 
-    // Cloud
     row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) ?? '—';
-    // Humidity
     row.insertCell().textContent = s.data.humidity[i]?.toFixed(0) ?? '—';
-    // Pressure
     row.insertCell().textContent = s.data.pressure[i]?.toFixed(1) ?? '—';
-    // UV
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
   }
 }
@@ -1573,20 +1498,10 @@ window.addEventListener('load', () => {
   selectCity('Skellefteå', 64.762519, 20.923440);
 });
 
-// Prevent page zoom on chart areas - force Plotly to handle gestures
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.chart-panel').forEach(panel => {
-    panel.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 1) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-    
-    panel.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 1) {
-        e.preventDefault();
-      }
-    }, { passive: false });
+    panel.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    panel.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   });
 });
 </script>
