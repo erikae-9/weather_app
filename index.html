@@ -378,30 +378,41 @@ body {
   color: var(--text);
 }
 
-/* Beaufort legend */
+/* Beaufort legend — single compact row */
 .beaufort-legend {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 8px 14px;
+  gap: 0;
+  padding: 0;
   border-top: 1px solid var(--border);
-  background: var(--surface2);
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
 }
 
 .bf-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.65rem;
+  justify-content: center;
+  flex: 1;
+  font-size: 0.58rem;
   color: var(--text-dim);
   white-space: nowrap;
+  padding: 4px 2px;
+  gap: 3px;
+  overflow: hidden;
 }
 
 .bf-swatch {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
+}
+
+/* Hide label text on very small screens, keep swatches */
+@media (max-width: 480px) {
+  .bf-item { font-size: 0; gap: 0; padding: 4px 0; }
+  .bf-swatch { width: 100%; height: 6px; border-radius: 0; border: none !important; }
+  .beaufort-legend { gap: 1px; }
 }
 
 .timeline-section {
@@ -1325,9 +1336,12 @@ function drawCharts() {
     dragmode: 'zoom'
   };
 
+  const isMobile = window.innerWidth < 640;
+  const chartH = isMobile ? 220 : 260;
+
   const base = {
-    margin: {t:10, r:40, b:45, l:50},
-    height: 240,
+    margin: {t:10, r:40, b:54, l:50},
+    height: chartH,
     autosize: true,
     hovermode: 'x unified',
     plot_bgcolor: '#111827',
@@ -1335,7 +1349,15 @@ function drawCharts() {
     font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
     xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -25 },
     yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false },
-    legend: { orientation:'h', y:-0.45, x:0.5, xanchor:'center', font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
+    legend: {
+      orientation:'h',
+      x: 0.5, xanchor: 'center',
+      y: 1.0, yanchor: 'bottom',
+      font:{size:9},
+      bgcolor:'rgba(17,24,39,0.75)',
+      bordercolor:'rgba(31,46,71,0.6)',
+      borderwidth: 1
+    },
     dragmode: false,
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
   };
@@ -1365,7 +1387,10 @@ function drawCharts() {
 
   const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax);
 
-  const showEveryN = Math.max(1, Math.floor(s.times.length / 12));
+  const MAX_ARROWS = 10;
+  const showEveryN = Math.max(1, Math.floor(s.times.length / MAX_ARROWS));
+  // Arrow size: smaller when many data points (long range), bigger for short range
+  const arrowSize = s.times.length <= 24 ? 18 : s.times.length <= 72 ? 14 : 11;
   const windAnnotations = [];
   for (let i = 0; i < s.times.length; i += showEveryN) {
     if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
@@ -1374,7 +1399,7 @@ function drawCharts() {
         y: s.data.wind[i],
         text: '↓',
         showarrow: false,
-        font: { size: 22, color: 'rgb(255,255,255)' },
+        font: { size: arrowSize, color: 'rgba(255,255,255,0.75)' },
         textangle: s.data.wind_direction[i] % 360,
         xanchor: 'center',
         yanchor: 'middle'
