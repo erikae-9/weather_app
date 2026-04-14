@@ -865,13 +865,13 @@ let currentCity = 'Skellefteå';
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
 // Each zone: { name, min, max, color (rgba fill), lineColor }
 const BEAUFORT_ZONES = [
-  { name: 'Lugnt (Bf 0)',      min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)' },
-  { name: 'Svag vind (Bf 1–2)',min: 0.2,  max: 3.3,  color: 'rgba(120,200,120,0.10)', lineColor: 'rgba(120,200,120,0.35)' },
-  { name: 'Måttlig (Bf 3–4)', min: 3.3,  max: 7.9,  color: 'rgba(160,220,100,0.10)', lineColor: 'rgba(160,220,100,0.35)' },
-  { name: 'Frisk (Bf 5–6)',    min: 7.9,  max: 13.8, color: 'rgba(220,200,60,0.12)',  lineColor: 'rgba(220,200,60,0.4)' },
-  { name: 'Hård vind (Bf 7–9)',min: 13.8, max: 24.4, color: 'rgba(240,140,40,0.14)',  lineColor: 'rgba(240,140,40,0.5)' },
-  { name: 'Storm (Bf 10–11)', min: 24.4, max: 32.6, color: 'rgba(220,60,60,0.15)',   lineColor: 'rgba(220,60,60,0.5)' },
-  { name: 'Orkan (Bf 12)',     min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
+  { name: 'Lugnt',       min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)' },
+  { name: 'Svag vind',   min: 0.2,  max: 3.3,  color: 'rgba(120,200,120,0.10)', lineColor: 'rgba(120,200,120,0.35)' },
+  { name: 'Måttlig',     min: 3.3,  max: 7.9,  color: 'rgba(160,220,100,0.10)', lineColor: 'rgba(160,220,100,0.35)' },
+  { name: 'Frisk',       min: 7.9,  max: 13.8, color: 'rgba(220,200,60,0.12)',  lineColor: 'rgba(220,200,60,0.4)' },
+  { name: 'Hård vind',   min: 13.8, max: 24.4, color: 'rgba(240,140,40,0.14)',  lineColor: 'rgba(240,140,40,0.5)' },
+  { name: 'Storm',       min: 24.4, max: 32.6, color: 'rgba(220,60,60,0.15)',   lineColor: 'rgba(220,60,60,0.5)' },
+  { name: 'Orkan',       min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
 ];
 
 // Build Beaufort shape traces for Plotly (horizontal bands)
@@ -1338,9 +1338,10 @@ function drawCharts() {
 
   const isMobile = window.innerWidth < 640;
   const chartH = isMobile ? 220 : 260;
+  const leftMargin = isMobile ? 36 : 50;
 
   const base = {
-    margin: {t:10, r:40, b:54, l:50},
+    margin: {t:10, r:40, b:54, l:leftMargin},
     height: chartH,
     autosize: true,
     hovermode: 'x unified',
@@ -1389,8 +1390,6 @@ function drawCharts() {
 
   const MAX_ARROWS = 10;
   const showEveryN = Math.max(1, Math.floor(s.times.length / MAX_ARROWS));
-  // Arrow size: smaller when many data points (long range), bigger for short range
-  const arrowSize = s.times.length <= 24 ? 18 : s.times.length <= 72 ? 14 : 11;
   const windAnnotations = [];
   for (let i = 0; i < s.times.length; i += showEveryN) {
     if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
@@ -1399,7 +1398,7 @@ function drawCharts() {
         y: s.data.wind[i],
         text: '↓',
         showarrow: false,
-        font: { size: arrowSize, color: 'rgba(255,255,255,0.75)' },
+        font: { size: 18, color: 'rgba(255,255,255,0.75)' },
         textangle: s.data.wind_direction[i] % 360,
         xanchor: 'center',
         yanchor: 'middle'
@@ -1449,7 +1448,7 @@ function drawCharts() {
     { x:pd.map(d=>d.t), y:cumulativeProb, type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:2,dash:'dash'}, name:'Kumulativ risk', hovertemplate:'Kumulativ: %{y:.0f}%<extra></extra>' }
   ], {
     ...base,
-    yaxis:{...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}},
+    yaxis:{...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null]},
     yaxis2:{ overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, titlefont:{color:'#f97316'}, title:{text:'%', font:{size:11}}, fixedrange:true }
   }, cfg);
 }
