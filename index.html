@@ -102,6 +102,7 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
+  min-height: 44px;
 }
 .pill-btn:hover { background: var(--surface2); }
 .pill-btn:active { background: var(--border); }
@@ -123,6 +124,7 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  min-height: 44px;
 }
 .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
 .preset-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
@@ -160,7 +162,7 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   touch-action: manipulation;
-  min-height: 38px;
+  min-height: 44px;
 }
 .fetch-btn:hover { background: #7dd3fc; }
 .fetch-btn:disabled { background: var(--muted); cursor: not-allowed; }
@@ -177,7 +179,7 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   touch-action: manipulation;
-  min-height: 38px;
+  min-height: 44px;
   white-space: nowrap;
 }
 .geo-btn:hover { background: rgba(52,211,153,0.08); }
@@ -194,40 +196,116 @@ body {
   cursor: pointer;
   transition: border-color 0.15s;
   touch-action: manipulation;
+  min-height: 44px;
 }
 .coord-toggle-btn:hover { border-color: var(--muted); color: var(--text-dim); }
 
-.range-tabs {
+/* ── UNIFIED RANGE CONTROL ─────────────────────────────────────────── */
+.range-control {
   display: flex;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px;
-  width: fit-content;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
-.date-range {
-  display: contents;
+.range-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.range-group-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 2px;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.range-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .range-tab {
   background: transparent;
-  border: none;
-  border-radius: 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--text-dim);
   font-family: 'Inter', sans-serif;
   font-size: 0.78rem;
   font-weight: 500;
-  padding: 7px 14px;
+  padding: 6px 11px;
   cursor: pointer;
   transition: all 0.15s;
   touch-action: manipulation;
   min-height: 34px;
+  white-space: nowrap;
 }
-.range-tab:hover { color: var(--text); }
-.range-tab.active { background: var(--surface2); color: var(--accent); border: 1px solid var(--border); }
+.range-tab:hover { color: var(--text); background: var(--surface2); }
+.range-tab.active { background: var(--surface2); color: var(--accent); border-color: var(--border); }
+
+.date-pickers-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.date-picker-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.date-picker-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  flex: 1;
+  min-width: 148px;
+  max-width: 180px;
+  outline: none;
+}
+.date-picker-input:focus { border-color: var(--accent); color: var(--text); }
+.date-picker-input::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
+
+.date-apply-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 34px;
+  transition: background 0.15s;
+}
+.date-apply-btn:hover { background: var(--border); }
+
+@media (max-width: 640px) {
+  .date-picker-input { min-width: 130px; font-size: 0.8rem; padding: 8px; }
+  .range-tab { min-height: 38px; }
+  .date-apply-btn { min-height: 38px; }
+  .range-group-label { display: none; }
+  .range-sep { display: none; }
+}
+/* ────────────────────────────────────────────────────────────────────── */
 
 .current-row {
   display: grid;
@@ -348,12 +426,12 @@ body {
   white-space: nowrap;
 }
 
+/* chart-panel: allow touch-action so Plotly gets gestures */
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  touch-action: pan-x pan-y;
 }
 
 .chart-panel-header {
@@ -378,7 +456,6 @@ body {
   color: var(--text);
 }
 
-/* Beaufort legend — single compact row */
 .beaufort-legend {
   display: flex;
   gap: 0;
@@ -408,7 +485,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Hide label text on very small screens, keep swatches */
 @media (max-width: 480px) {
   .bf-item { font-size: 0; gap: 0; padding: 4px 0; }
   .bf-swatch { width: 100%; height: 6px; border-radius: 0; border: none !important; }
@@ -481,6 +557,16 @@ body {
   font-size: 0.68rem !important;
 }
 
+/* Highlight current-time row in table */
+.timeline-table tr.now-row td {
+  background: rgba(56,189,248,0.07) !important;
+  color: var(--text) !important;
+}
+.timeline-table tr.now-row .time-cell {
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
 .day-separator td {
   background: var(--surface2) !important;
   color: var(--accent) !important;
@@ -495,84 +581,6 @@ body {
 
 .day-separator td:first-child {
   background: var(--surface2) !important;
-}
-
-input[type="datetime-local"] {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-}
-
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
-  cursor: pointer;
-}
-
-input[type="datetime-local"]:focus {
-  border-color: var(--accent);
-  outline: none;
-}
-
-.date-preset-select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  padding: 7px 12px;
-  font-size: 0.75rem;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  min-width: 150px;
-}
-
-.date-preset-select:focus {
-  border-color: var(--accent);
-  outline: none;
-}
-
-.custom-date-inputs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px;
-  background: var(--surface2);
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
-
-.custom-date-inputs input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  padding: 6px 8px;
-  font-size: 0.72rem;
-  font-family: 'Inter', sans-serif;
-  flex: 1;
-}
-
-.custom-date-inputs button {
-  background: var(--accent);
-  border: none;
-  color: #000;
-  border-radius: 6px;
-  padding: 7px 14px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .date-preset-select { width: 100%; padding: 10px; font-size: 0.85rem; }
-  .range-tabs { width: 100%; }
-  .date-range { width: 100%; order: 10; }
-  .custom-date-inputs { flex-wrap: wrap; width: 100%; margin-top: 0; }
-  .custom-date-inputs input { flex: 1 1 100%; font-size: 0.85rem; padding: 10px; min-width: 0; }
-  .custom-date-inputs span { display: none; }
-  .custom-date-inputs button { width: 100%; padding: 10px; margin-top: 4px; }
 }
 
 .timeline-table th:first-child,
@@ -661,7 +669,6 @@ input[type="datetime-local"]:focus {
 @media (max-width: 480px) {
   .header-title { font-size: 1.4rem; }
   .current-card-value { font-size: 1.25rem; }
-  .range-tab { padding: 6px 10px; font-size: 0.75rem; }
   .current-row { grid-template-columns: repeat(2, 1fr); }
   .location-pill { min-width: 0; }
   .preset-strip { gap: 5px; }
@@ -671,7 +678,6 @@ input[type="datetime-local"]:focus {
 }
 
 @media (max-width: 360px) {
-  .range-tab { padding: 6px 7px; font-size: 0.7rem; }
   .current-card-value { font-size: 1.1rem; }
 }
 </style>
@@ -715,36 +721,36 @@ input[type="datetime-local"]:focus {
 
   <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
 
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-      <div class="range-tabs">
-        <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
-        <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
-        <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
-        <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
-        <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-        <div class="date-range">
-          <select id="datePreset" class="date-preset-select" onchange="applyDatePreset()">
-            <option value="">Välj tidsperiod...</option>
-            <option value="today">Idag</option>
-            <option value="tomorrow">Imorgon</option>
-            <option value="weekend">Helgen</option>
-            <option value="week">Denna vecka</option>
-            <option value="custom">Anpassad...</option>
-          </select>
+    <!-- UNIFIED RANGE CONTROL -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div class="range-control">
+        <div class="range-row">
+          <span class="range-group-label">Timmar</span>
+          <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
+          <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
+          <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
+          <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
+          <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
+          <div class="range-sep"></div>
+          <span class="range-group-label">Dag</span>
+          <button class="range-tab" id="btn-today"    onclick="setDayPreset('today')">Idag</button>
+          <button class="range-tab" id="btn-tomorrow" onclick="setDayPreset('tomorrow')">Imorg</button>
+          <button class="range-tab" id="btn-weekend"  onclick="setDayPreset('weekend')">Helg</button>
+          <button class="range-tab" id="btn-week"     onclick="setDayPreset('week')">Vecka</button>
+        </div>
+        <div class="date-pickers-row">
+          <span class="date-picker-label">Från</span>
+          <input type="datetime-local" id="startDateTime" class="date-picker-input">
+          <span class="date-picker-label">Till</span>
+          <input type="datetime-local" id="endDateTime" class="date-picker-input">
+          <button class="date-apply-btn" onclick="applyDateTimeRange()">Visa ↵</button>
         </div>
       </div>
-      <div id="locationLabel" class="header-sub"></div>
-    </div>
-
-    <div id="customDateInputs" class="custom-date-inputs" style="display:none;">
-      <input type="datetime-local" id="startDateTime">
-      <span style="color:var(--muted); font-size:0.7rem;">→</span>
-      <input type="datetime-local" id="endDateTime">
-      <button onclick="applyDateTimeRange()">✓</button>
+      <div id="locationLabel" class="header-sub" style="padding-top:6px;"></div>
     </div>
 
     <div>
-      <div class="section-title" style="margin-bottom:6px;">Just nu</div>
+      <div id="nowSectionTitle" class="section-title" style="margin-bottom:6px;">Just nu</div>
       <div id="riskRow" class="risk-row"></div>
     </div>
 
@@ -801,7 +807,6 @@ input[type="datetime-local"]:focus {
           <div id="tempChart"></div>
         </div>
 
-        <!-- Wind chart with Beaufort legend -->
         <div class="chart-panel">
           <div class="chart-panel-header">
             <span class="chart-panel-title">Vind</span>
@@ -841,6 +846,7 @@ input[type="datetime-local"]:focus {
                 <th>Temp (°C)</th>
                 <th>Känns (°C)</th>
                 <th>Nederb (mm)</th>
+                <th>3h risk (%)</th>
                 <th>Vind (m/s)</th>
                 <th>Moln (%)</th>
                 <th>Luftfukt. (%)</th>
@@ -863,7 +869,6 @@ let currentRange = 24;
 let currentCity = 'Skellefteå';
 
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
-// Each zone: { name, min, max, color (rgba fill), lineColor }
 const BEAUFORT_ZONES = [
   { name: 'Lugnt',       min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)' },
   { name: 'Svag vind',   min: 0.2,  max: 3.3,  color: 'rgba(120,200,120,0.10)', lineColor: 'rgba(120,200,120,0.35)' },
@@ -874,48 +879,52 @@ const BEAUFORT_ZONES = [
   { name: 'Orkan',       min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
 ];
 
-// Build Beaufort shape traces for Plotly (horizontal bands)
 function buildBeaufortShapes(yMax) {
-  const shapes = [];
-  const annotations = [];
-
+  const shapes = [], annotations = [];
   for (const zone of BEAUFORT_ZONES) {
-    const y0 = zone.min;
-    const y1 = Math.min(zone.max, yMax);
+    const y0 = zone.min, y1 = Math.min(zone.max, yMax);
     if (y0 >= yMax) continue;
-
-    shapes.push({
-      type: 'rect',
-      xref: 'paper',
-      yref: 'y',
-      x0: 0, x1: 1,
-      y0: y0, y1: y1,
-      fillcolor: zone.color,
-      line: { color: zone.lineColor, width: 0.5 },
-      layer: 'below'
-    });
-
-    // Label on right side, vertically centred in the band
+    shapes.push({ type:'rect', xref:'paper', yref:'y', x0:0, x1:1, y0, y1,
+      fillcolor: zone.color, line:{ color:zone.lineColor, width:0.5 }, layer:'below' });
     const midY = (y0 + Math.min(zone.max, yMax)) / 2;
-    // Only show label if band is tall enough to fit text
     if ((Math.min(zone.max, yMax) - y0) > 1.5) {
-      annotations.push({
-        xref: 'paper',
-        yref: 'y',
-        x: 1,
-        xanchor: 'right',
-        y: midY,
-        yanchor: 'middle',
-        text: zone.name,
-        showarrow: false,
-        font: { size: 9, color: zone.lineColor },
-        bgcolor: 'rgba(17,24,39,0.6)',
-        borderpad: 2,
-      });
+      annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'right', y:midY, yanchor:'middle',
+        text: zone.name, showarrow:false, font:{ size:9, color:zone.lineColor },
+        bgcolor:'rgba(17,24,39,0.6)', borderpad:2 });
     }
   }
-
   return { shapes, annotations };
+}
+
+// ── FIND CURRENT-TIME INDEX ───────────────────────────────────────────────────
+// Returns the index in weatherData.times closest to now.
+// Returns null if weatherData is empty.
+function findNowIndex() {
+  if (!weatherData || !weatherData.times.length) return null;
+  const now = Date.now();
+  let bestIdx = 0, bestDiff = Infinity;
+  for (let i = 0; i < weatherData.times.length; i++) {
+    const diff = Math.abs(weatherData.times[i].getTime() - now);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+// ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
+// For each index i, compute the probability that it rains in the 3-hour window
+// centered on i (i-1, i, i+1): P(rain) = 1 - ∏(1 - p_k).
+// Clamps to available data at boundaries.
+function compute3hRollingProb(precip_prob) {
+  return precip_prob.map((_, i) => {
+    const window = [];
+    for (let k = Math.max(0, i - 1); k <= Math.min(precip_prob.length - 1, i + 1); k++) {
+      window.push(precip_prob[k]);
+    }
+    const validProbs = window.filter(p => p !== null && p !== undefined);
+    if (!validProbs.length) return null;
+    const noRain = validProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1);
+    return Math.round((1 - noRain) * 100);
+  });
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1044,7 +1053,8 @@ async function fetchWeather() {
   document.getElementById('error').style.display = 'none';
 
   try {
-    const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,{ headers:{'User-Agent':'WeatherDashboard/1.0 (educational)'} });
+    const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
+      { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     processWeatherData(data);
@@ -1114,7 +1124,10 @@ function processWeatherData(data) {
     uv.push(inst.ultraviolet_index_clear_sky || 0);
   });
 
-  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, cloud, humidity, pressure, uv, symbols } };
+  // Compute 3-hour rolling probability for each data point
+  const rolling3h = compute3hRollingProb(precip_prob);
+
+  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols } };
 }
 
 // ── SLICE ─────────────────────────────────────────────────────────────────────
@@ -1136,44 +1149,63 @@ function sliceData(hours) {
 
 // ── RANGE ─────────────────────────────────────────────────────────────────────
 
-function applyDatePreset() {
-  const preset = document.getElementById('datePreset').value;
-  const customInputs = document.getElementById('customDateInputs');
-  if (preset === 'custom') { customInputs.style.display = 'flex'; return; }
-  customInputs.style.display = 'none';
-  if (!preset || !weatherData) return;
+function clearAllRangeTabs() {
+  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+}
 
-  const now = weatherData.times[0];
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+function setDayPreset(preset) {
+  if (!weatherData) return;
+  clearAllRangeTabs();
+  const tabId = { today:'btn-today', tomorrow:'btn-tomorrow', weekend:'btn-weekend', week:'btn-week' }[preset];
+  if (tabId) document.getElementById(tabId)?.classList.add('active');
+
+  // Build dates from explicit local year/month/day components to avoid
+  // timezone-offset bugs when using setHours() on a Date whose UTC value
+  // has already been shifted by the local offset.
+  function localMidnight(offsetDays) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);          // local midnight today
+    d.setDate(d.getDate() + (offsetDays || 0));
+    return d;
+  }
+  function localEndOfDay(midnightDate) {
+    const d = new Date(midnightDate);
+    d.setHours(23, 59, 59, 999);     // local end-of-day on the same calendar date
+    return d;
+  }
+
+  const now = new Date();
+  const dow = now.getDay();           // 0=Sun … 6=Sat
   let startDate, endDate;
 
   switch(preset) {
     case 'today':
-      startDate = todayStart;
-      endDate = new Date(todayStart); endDate.setHours(23, 59, 59);
+      startDate = localMidnight(0);
+      endDate   = localEndOfDay(startDate);
       break;
     case 'tomorrow':
-      startDate = new Date(todayStart); startDate.setDate(startDate.getDate() + 1);
-      endDate = new Date(startDate); endDate.setHours(23, 59, 59);
+      startDate = localMidnight(1);
+      endDate   = localEndOfDay(startDate);
       break;
-    case 'weekend':
-      const dayOfWeek = todayStart.getDay();
-      const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
-      startDate = new Date(todayStart); startDate.setDate(startDate.getDate() + daysUntilSat);
-      endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 1); endDate.setHours(23, 59, 59);
+    case 'weekend': {
+      const daysUntilSat = (6 - dow + 7) % 7 || 7;
+      startDate = localMidnight(daysUntilSat);
+      const sunStart = localMidnight(daysUntilSat + 1);
+      endDate   = localEndOfDay(sunStart);
       break;
+    }
     case 'week':
-      startDate = todayStart;
-      endDate = new Date(todayStart); endDate.setDate(endDate.getDate() + 7);
+      startDate = localMidnight(0);
+      endDate   = localEndOfDay(localMidnight(6));  // 7 days incl. today
       break;
   }
 
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx = weatherData.times.findIndex(t => t >= endDate);
+  let endIdx   = weatherData.times.findIndex(t => t > endDate);
   if (startIdx === -1) startIdx = 0;
-  if (endIdx === -1) endIdx = weatherData.times.length;
-  setRangeWindow(startIdx, endIdx);
+  if (endIdx   === -1) endIdx   = weatherData.times.length;
+  window.customRangeWindow = { start: startIdx, end: endIdx };
+  _refreshAll();
 }
 
 function applyDateTimeRange() {
@@ -1181,34 +1213,37 @@ function applyDateTimeRange() {
   const startInput = document.getElementById('startDateTime').value;
   const endInput = document.getElementById('endDateTime').value;
   if (!startInput || !endInput) { showError('Välj både start- och sluttid'); return; }
-  const startDate = new Date(startInput);
-  const endDate = new Date(endInput);
+  // datetime-local values ("2025-05-31T14:00") must be parsed as LOCAL time.
+  // Appending ":00" and passing to Date() is ambiguous across browsers; instead
+  // split the components and use the Date constructor with explicit local parts.
+  function parseLocalDT(s) {
+    const [date, time] = s.split('T');
+    const [y, mo, d] = date.split('-').map(Number);
+    const [h, mi] = (time || '00:00').split(':').map(Number);
+    return new Date(y, mo - 1, d, h, mi, 0, 0);
+  }
+  const startDate = parseLocalDT(startInput), endDate = parseLocalDT(endInput);
   if (startDate >= endDate) { showError('Starttiden måste vara före sluttiden'); return; }
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx = weatherData.times.findIndex(t => t >= endDate);
+  let endIdx = weatherData.times.findIndex(t => t > endDate);
   if (startIdx === -1) startIdx = 0;
   if (endIdx === -1) endIdx = weatherData.times.length;
   if (startIdx >= endIdx) { showError('Ingen data i det valda tidsintervallet'); return; }
-  setRangeWindow(startIdx, endIdx);
-}
-
-function setRangeWindow(startIdx, endIdx) {
-  if (!weatherData) return;
-  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  clearAllRangeTabs();
   window.customRangeWindow = { start: startIdx, end: endIdx };
-  updateCurrentCards();
-  updateRiskBadges();
-  drawCharts();
-  updateTable();
+  _refreshAll();
 }
 
 function setRange(hours) {
   window.customRangeWindow = null;
   currentRange = hours;
-  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  clearAllRangeTabs();
   const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
-  const btn = document.getElementById(id);
-  if (btn) btn.classList.add('active');
+  document.getElementById(id)?.classList.add('active');
+  _refreshAll();
+}
+
+function _refreshAll() {
   updateCurrentCards();
   updateRiskBadges();
   drawCharts();
@@ -1220,7 +1255,7 @@ function setRange(hours) {
 function updateCurrentCards() {
   const s = sliceData(currentRange);
 
-  const tm = s.data.temp, fl0 = s.data.feels_like;
+  const tm = s.data.temp;
   const meanT = tm.reduce((a,b) => a + (b || 0), 0) / tm.length;
   document.getElementById('cTemp').textContent = meanT != null ? `${meanT.toFixed(1)}°C` : '—';
   document.getElementById('cTempRange').textContent = `Min ${Math.min(...tm).toFixed(0)}°C, Max ${Math.max(...tm).toFixed(0)}°C`;
@@ -1231,15 +1266,14 @@ function updateCurrentCards() {
   document.getElementById('cWind').textContent = meanW != null ? `${meanW.toFixed(1)} m/s` : '—';
   document.getElementById('cWindsub').textContent = `Max ${Math.max(...wm)?.toFixed(0) || '—'}(${Math.max(...gm)?.toFixed(0) || '—'}) m/s · ${getWindDirection(meanD) || '—'}`;
 
-  const pm = s.data.precip, probs = s.data.precip_prob;
+  const pm = s.data.precip;
   const meanP = pm.reduce((a,b) => a + (b || 0), 0) / pm.length;
   document.getElementById('cPrecip').textContent = meanP != null ? `${meanP.toFixed(1)} mm/h` : '0 mm';
-  const totalP = s.data.precip.reduce((a,b) => a+(b||0), 0);
-  const windowProb = 1 - probs.reduce((acc, p) => {
-    const prob = Math.min(Math.max((p || 0) / 100, 0), 1);
-    return acc * (1 - prob);
-  }, 1);
-  const windowProbPercent = Math.round(windowProb * 100);
+  const totalP = pm.reduce((a,b) => a+(b||0), 0);
+
+  // Use max rolling 3h probability in the window as the "headline" risk figure
+  const rolling = s.data.rolling3h.filter(p => p !== null);
+  const maxRolling = rolling.length ? Math.max(...rolling) : null;
 
   let timeSpanHours;
   if (window.customRangeWindow) {
@@ -1249,7 +1283,9 @@ function updateCurrentCards() {
   } else {
     timeSpanHours = currentRange === 9999 ? 'samtliga' : currentRange;
   }
-  document.getElementById('cPrecipSub').innerHTML = `Förväntat ${totalP.toFixed(1)} mm <br> ${windowProbPercent != null ? windowProbPercent.toFixed(0)+'%' : '—'} risk inom ${timeSpanHours}${typeof timeSpanHours === 'number' ? 'h' : ''}.`;
+  document.getElementById('cPrecipSub').innerHTML =
+    `Förväntat ${totalP.toFixed(1)} mm<br>` +
+    (maxRolling !== null ? `Max 3h risk: ${maxRolling}%` : '—');
 
   const cloud = s.data.cloud;
   const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
@@ -1297,19 +1333,34 @@ function updateCurrentCards() {
   Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       ''),       sl, sc);
 }
 
-// ── RISK BADGES ───────────────────────────────────────────────────────────────
+// ── RISK BADGES ──────────────────────────────────────────────────────────────
+// Always reads from weatherData via findNowIndex() — the /complete endpoint
+// has all fields (including UV) and covers any selected time window.
 
 function updateRiskBadges() {
-  const s = sliceData(currentRange);
-  const t0  = s.data.temp[0];
-  const f0  = s.data.feels_like[0];
-  const w0  = s.data.wind[0];
-  const g0  = s.data.gust[0];
-  const uv0 = s.data.uv[0];
-  const p0  = s.data.precip[0];
+  if (!weatherData) return;
+  const nowIdx = findNowIndex();
+  if (nowIdx === null) return;
+
+  const d = weatherData.data;
+  const t0    = d.temp[nowIdx]         || 0;
+  const f0    = d.feels_like[nowIdx]   || 0;
+  const w0    = d.wind[nowIdx]         || 0;
+  const g0    = d.gust[nowIdx]         || 0;
+  const uv0   = d.uv[nowIdx]           || 0;
+  const p0    = d.precip[nowIdx]       || 0;
+  const prob0 = d.precip_prob[nowIdx];
+  const roll3h = d.rolling3h[nowIdx];
+
+  const timeStr = weatherData.times[nowIdx].toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' });
+  document.getElementById('nowSectionTitle').textContent = `Just nu · ${timeStr}`;
 
   const badge = (icon, text, cls) =>
     `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
+
+  let precipLabel = `${p0.toFixed(1)} mm`;
+  if (prob0 !== null && prob0 !== undefined) precipLabel += ` · ${Math.round(prob0)}%`;
+  if (roll3h !== null) precipLabel += ` · 3h ${roll3h}%`;
 
   document.getElementById('riskRow').innerHTML =
     badge('🌡️', `${t0.toFixed(1)}°C`,
@@ -1320,7 +1371,7 @@ function updateRiskBadges() {
       w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low') +
     badge('☀️', `UV ${uv0.toFixed(1)}`,
       uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
-    badge('🌧️', `${p0.toFixed(1)} mm.`,
+    badge('🌧️', precipLabel,
       p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low');
 }
 
@@ -1328,17 +1379,22 @@ function updateRiskBadges() {
 
 function drawCharts() {
   const s = sliceData(currentRange);
+  // Mobile pinch-zoom: scrollZoom + zoom dragmode, no fixedrange overrides
   const cfg = {
     responsive: true,
     displayModeBar: false,
     scrollZoom: true,
     doubleClick: 'reset',
-    dragmode: 'zoom'
   };
 
   const isMobile = window.innerWidth < 640;
   const chartH = isMobile ? 220 : 260;
   const leftMargin = isMobile ? 36 : 50;
+
+  // Explicit x-axis range so Plotly doesn't auto-expand to the full dataset
+  // when a subset (idag, imorgon, helg…) is selected.
+  const xStart = s.times[0];
+  const xEnd   = s.times[s.times.length - 1];
 
   const base = {
     margin: {t:10, r:40, b:54, l:leftMargin},
@@ -1348,44 +1404,47 @@ function drawCharts() {
     plot_bgcolor: '#111827',
     paper_bgcolor: '#111827',
     font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
-    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -25 },
+    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -25, range:[xStart, xEnd] },
     yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false },
     legend: {
-      orientation:'h',
-      x: 0.5, xanchor: 'center',
-      y: 1.0, yanchor: 'bottom',
-      font:{size:9},
-      bgcolor:'rgba(17,24,39,0.75)',
-      bordercolor:'rgba(31,46,71,0.6)',
-      borderwidth: 1
+      orientation:'h', x:0.5, xanchor:'center', y:1.0, yanchor:'bottom',
+      font:{size:9}, bgcolor:'rgba(17,24,39,0.75)', bordercolor:'rgba(31,46,71,0.6)', borderwidth:1
     },
-    dragmode: false,
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
   };
 
+  // Get the "now" index within the sliced data for vertical line marker
+  const nowIdx = findNowIndex();
+  const nowTime = weatherData && nowIdx !== null ? weatherData.times[nowIdx] : null;
+  const nowShape = nowTime ? [{
+    type: 'line', xref: 'x', yref: 'paper',
+    x0: nowTime, x1: nowTime, y0: 0, y1: 1,
+    line: { color: 'rgba(56,189,248,0.4)', width: 1.5, dash: 'dot' }
+  }] : [];
+
   // ── TEMP ──
+  const nowDataIdx = nowIdx !== null ? nowIdx : 0;
+  const nowTemp = weatherData.data.temp[nowDataIdx];
+  const nowFeels = weatherData.data.feels_like[nowDataIdx];
   document.getElementById('chartTempLive').innerHTML =
-   `<span class="blink">●</span> ${s.data.temp[0]?.toFixed(1)||'—'}°C · Känns ${s.data.feels_like[0]?.toFixed(1)||'—'}°C`;
+   `<span class="blink">●</span> ${nowTemp?.toFixed(1)||'—'}°C · Känns ${nowFeels?.toFixed(1)||'—'}°C`;
 
   Plotly.newPlot('tempChart', [
     { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(56,189,248,0.1)', line:{width:1,color:'rgba(56,189,248,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color:'#38bdf8',width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
-  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}} }, cfg);
+  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}}, shapes: nowShape }, cfg);
 
   // ── WIND with Beaufort shading ──
-  const windDir0 = s.data.wind_direction[0];
+  const nowWind = weatherData.data.wind[nowDataIdx];
+  const nowGust = weatherData.data.gust[nowDataIdx];
+  const nowWindDir = weatherData.data.wind_direction[nowDataIdx];
   document.getElementById('chartWindLive').innerHTML =
-   `<span class="blink">●</span>${s.data.wind[0]?.toFixed(1)||'—'} m/s · Byar ${s.data.gust[0]?.toFixed(1)||'—'} m/s · ${getWindDirection(windDir0)}`;
+   `<span class="blink">●</span>${nowWind?.toFixed(1)||'—'} m/s · Byar ${nowGust?.toFixed(1)||'—'} m/s · ${getWindDirection(nowWindDir)}`;
 
-  // Compute y-axis max with a comfortable ceiling above max gust
   const maxGustAll = Math.max(...s.data.gust.filter(v => v != null));
-  const yMax = Math.max(
-    Math.ceil(maxGustAll * 1.15 / 5) * 5,  // 15% headroom, rounded to nearest 5
-    15  // minimum axis height so bands are visible even in calm weather
-  );
-
+  const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
   const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax);
 
   const MAX_ARROWS = 10;
@@ -1394,14 +1453,11 @@ function drawCharts() {
   for (let i = 0; i < s.times.length; i += showEveryN) {
     if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
       windAnnotations.push({
-        x: s.times[i],
-        y: s.data.wind[i],
-        text: '↓',
-        showarrow: false,
+        x: s.times[i], y: s.data.wind[i],
+        text: '↓', showarrow: false,
         font: { size: 18, color: 'rgba(255,255,255,0.75)' },
         textangle: s.data.wind_direction[i] % 360,
-        xanchor: 'center',
-        yanchor: 'middle'
+        xanchor: 'center', yanchor: 'middle'
       });
     }
   }
@@ -1413,43 +1469,40 @@ function drawCharts() {
     { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
   ], {
     ...base,
-    yaxis: {
-      ...base.yaxis,
-      title: { text: 'm/s', font: { size: 11, color: '#4a6080' } },
-      range: [0, yMax],
-      fixedrange: false
-    },
-    shapes: bfShapes,
+    yaxis: { ...base.yaxis, title:{ text:'m/s', font:{size:11, color:'#4a6080'} }, range:[0, yMax], fixedrange:false },
+    shapes: [...bfShapes, ...nowShape],
     annotations: [...windAnnotations, ...bfAnnotations]
   }, cfg);
 
   // ── PRECIP ──
+  const nowPrecip = weatherData.data.precip[nowDataIdx] || 0;
+  const nowProb1h = weatherData.data.precip_prob[nowDataIdx];
+  const nowRoll   = weatherData.data.rolling3h[nowDataIdx];
   document.getElementById('chartPrecipLive').innerHTML =
-   `<span class="blink">●</span>${s.data.precip[0]?.toFixed(1)||'0.0'} mm`;
+   `<span class="blink">●</span>${(nowPrecip||0).toFixed(1)} mm` +
+   (nowProb1h !== null && nowProb1h !== undefined ? ` · 1h ${Math.round(nowProb1h)}%` : '') +
+   (nowRoll !== null ? ` · 3h ${nowRoll}%` : '');
 
   const pd = s.times.map((_,i) => ({
-    t:s.times[i], p:s.data.precip[i]||0, p10:s.data.precip_p10[i]||0,
-    p90:s.data.precip_p90[i]||0, prob:s.data.precip_prob[i]
+    t: s.times[i],
+    p: s.data.precip[i]||0,
+    p10: s.data.precip_p10[i]||0,
+    p90: s.data.precip_p90[i]||0,
+    prob: s.data.precip_prob[i],
+    roll: s.data.rolling3h[i]
   }));
-
-  const cumulativeProb = [];
-  let runningProb = 1.0;
-  for (let i = 0; i < pd.length; i++) {
-    const hourProb = Math.min(Math.max((pd[i].prob || 0) / 100, 0), 1);
-    runningProb *= (1 - hourProb);
-    cumulativeProb.push((1 - runningProb) * 100);
-  }
 
   Plotly.newPlot('precipChart', [
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'P90: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:1.5,dash:'dot'}, name:'Risk', hovertemplate:'Prob %{y:.0f}%<extra></extra>' },
-    { x:pd.map(d=>d.t), y:cumulativeProb, type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:2,dash:'dash'}, name:'Kumulativ risk', hovertemplate:'Kumulativ: %{y:.0f}%<extra></extra>' }
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'1h risk: %{y:.0f}%<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:2,dash:'dot'}, name:'3h risk', hovertemplate:'3h risk: %{y:.0f}%<extra></extra>' },
   ], {
     ...base,
-    yaxis:{...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null]},
-    yaxis2:{ overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, titlefont:{color:'#f97316'}, title:{text:'%', font:{size:11}}, fixedrange:true }
+    yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null] },
+    yaxis2: { overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
+    shapes: nowShape
   }, cfg);
 }
 
@@ -1457,10 +1510,12 @@ function drawCharts() {
 
 function updateTable() {
   const s = sliceData(currentRange);
+  const nowIdx = findNowIndex();
   const tbody = document.getElementById('weatherDataBody');
   tbody.innerHTML = '';
   let lastDateStr = null;
-  const colCount = 10;
+  const colCount = 11;
+  let nowRowEl = null;
 
   for (let i = 0; i < s.times.length; i++) {
     const t = s.times[i];
@@ -1476,38 +1531,55 @@ function updateTable() {
     }
 
     const row = tbody.insertRow();
+
+    // Find the global index for this sliced entry to compare with nowIdx
+    let globalIdx = i;
+    if (window.customRangeWindow) {
+      globalIdx = window.customRangeWindow.start + i;
+    }
+    if (globalIdx === nowIdx) {
+      row.className = 'now-row';
+      nowRowEl = row;
+    }
+
     const tc = row.insertCell();
     tc.className = 'time-cell';
-    tc.textContent = t.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' });
+    const timeStr = t.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' });
+    tc.textContent = globalIdx === nowIdx ? `▶ ${timeStr}` : timeStr;
 
     const cc = row.insertCell();
     cc.innerHTML = `<div class="cond-cell"><span>${getWeatherEmoji(s.data.symbols[i])}</span><span>${getWeatherDescription(s.data.symbols[i])}</span></div>`;
 
     const tv = s.data.temp[i], tp10 = s.data.temp_p10[i], tp90 = s.data.temp_p90[i];
-    const tempCell = row.insertCell();
-    tempCell.className = 'highlight';
+    const tempCell = row.insertCell(); tempCell.className = 'highlight';
     if (tv != null) {
       const cls = tv > 25 ? 'temp-hot' : tv < 0 ? 'temp-cold' : 'temp-norm';
       tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">[${tp10.toFixed(1)}, ${tp90.toFixed(1)}]</span>`;
     } else { tempCell.textContent = '—'; }
 
     const fl = s.data.feels_like[i];
-    const flCell = row.insertCell();
-    flCell.textContent = fl != null ? fl.toFixed(1) : '—';
+    row.insertCell().textContent = fl != null ? fl.toFixed(1) : '—';
 
-    const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i], pprob = s.data.precip_prob[i];
+    const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i];
     const pCell = row.insertCell();
     if (pv != null) {
       pCell.className = pv > 0.1 ? 'precip-wet' : '';
-      const probStr = pprob != null ? ` ${pprob.toFixed(0)}%` : '';
-      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]${probStr}</span>`;
+      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]</span>`;
     } else { pCell.textContent = '—'; }
 
-    const wv = s.data.wind[i], gv = s.data.gust[i], wd = getWindDirection(s.data.wind_direction[i]);
+    // 3h rolling probability column
+    const r3h = s.data.rolling3h[i];
+    const r3hCell = row.insertCell();
+    if (r3h !== null && r3h !== undefined) {
+      r3hCell.textContent = `${r3h}%`;
+      r3hCell.style.color = r3h >= 70 ? 'var(--red)' : r3h >= 40 ? 'var(--amber)' : 'var(--text-dim)';
+    } else { r3hCell.textContent = '—'; }
+
+    const wv = s.data.wind[i], gv = s.data.gust[i], wdir = getWindDirection(s.data.wind_direction[i]);
     const wCell = row.insertCell();
     if (wv != null) {
       wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wd}</span>`;
+      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wdir}</span>`;
     } else { wCell.textContent = '—'; }
 
     row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) ?? '—';
@@ -1515,18 +1587,16 @@ function updateTable() {
     row.insertCell().textContent = s.data.pressure[i]?.toFixed(1) ?? '—';
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
   }
+
+  // Scroll to now row if it exists in the table
+  if (nowRowEl) {
+    setTimeout(() => nowRowEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 100);
+  }
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   selectCity('Skellefteå', 64.762519, 20.923440);
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.chart-panel').forEach(panel => {
-    panel.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-    panel.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-  });
 });
 </script>
 </body>
