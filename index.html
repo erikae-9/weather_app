@@ -253,11 +253,12 @@ body {
 .range-tab.active { background: var(--surface2); color: var(--accent); border-color: var(--border); }
 
 .date-pickers-row {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
+.date-pickers-row.open { display: flex; }
 
 .date-picker-label {
   font-size: 0.65rem;
@@ -317,7 +318,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 14px 14px 10px;
+  padding: 10px 12px 8px;
   position: relative;
   overflow: hidden;
 }
@@ -331,11 +332,11 @@ body {
 }
 
 .current-card-label {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-weight: 500;
 }
 
@@ -356,8 +357,8 @@ body {
 }
 
 .current-card-spark {
-  margin-top: 8px;
-  height: 40px;
+  margin-top: 6px;
+  height: 28px;
 }
 
 .stats-row {
@@ -438,8 +439,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .chart-panel-title {
@@ -451,9 +454,42 @@ body {
 
 .chart-panel-live {
   font-family: 'Manrope', sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text);
+}
+/* Inline chart legend: colored dots + labels shown in header */
+.chart-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.chart-legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.chart-legend-dashed {
+  border-top: 2px dashed;
+  background: transparent !important;
+  height: 0;
+}
+.chart-legend-dotted {
+  border-top: 2px dotted;
+  background: transparent !important;
+  height: 0;
 }
 
 .beaufort-legend {
@@ -667,14 +703,18 @@ body {
 }
 
 @media (max-width: 480px) {
-  .header-title { font-size: 1.4rem; }
-  .current-card-value { font-size: 1.25rem; }
+  .header-title { font-size: 1.3rem; }
+  .header { padding: 12px 14px 0; }
+  .current-card-value { font-size: 1.15rem; }
   .current-row { grid-template-columns: repeat(2, 1fr); }
   .location-pill { min-width: 0; }
   .preset-strip { gap: 5px; }
   .preset-btn { font-size: 0.75rem; padding: 6px 9px; }
-  .risk-badge { font-size: 0.68rem; padding: 5px 10px; }
-  .app { padding: 12px 12px 32px; gap: 10px; }
+  .risk-badge { font-size: 0.67rem; padding: 5px 9px; gap: 5px; }
+  .app { padding: 10px 10px 32px; gap: 8px; }
+  .current-card-spark { display: none; }
+  .current-card { padding: 8px 10px 8px; }
+  .chart-legend { display: none; }
 }
 
 @media (max-width: 360px) {
@@ -686,7 +726,7 @@ body {
 
 <div class="header">
   <div class="header-title">🌤 Eriks <span>väderapp</span></div>
-  <div class="header-sub">Detaljerade väderprognoser</div>
+  <div class="header-sub" style="font-size:0.62rem;">Väderprognos</div>
 </div>
 
 <div class="app">
@@ -738,7 +778,10 @@ body {
           <button class="range-tab" id="btn-weekend"  onclick="setDayPreset('weekend')">Helg</button>
           <button class="range-tab" id="btn-week"     onclick="setDayPreset('week')">Vecka</button>
         </div>
-        <div class="date-pickers-row">
+        <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+          <button class="range-tab" id="btn-datepicker" onclick="toggleDatePickers()" title="Välj tidsperiod" style="font-size:1rem; padding:5px 10px; min-height:34px;">📅</button>
+        </div>
+        <div class="date-pickers-row" id="datePickers">
           <span class="date-picker-label">Från</span>
           <input type="datetime-local" id="startDateTime" class="date-picker-input">
           <span class="date-picker-label">Till</span>
@@ -803,6 +846,11 @@ body {
           <div class="chart-panel-header">
             <span class="chart-panel-title">Temperatur</span>
             <span class="chart-panel-live" id="chartTempLive"></span>
+            <div class="chart-legend">
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:#38bdf8"></span>Temp</span>
+              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#a78bfa"></span>Känns</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(56,189,248,0.35);height:8px;border-radius:2px"></span>P10–90</span>
+            </div>
           </div>
           <div id="tempChart"></div>
         </div>
@@ -811,6 +859,11 @@ body {
           <div class="chart-panel-header">
             <span class="chart-panel-title">Vind</span>
             <span class="chart-panel-live" id="chartWindLive"></span>
+            <div class="chart-legend">
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:#34d399"></span>Medel</span>
+              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>Byar</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(52,211,153,0.35);height:8px;border-radius:2px"></span>P10–90</span>
+            </div>
           </div>
           <div id="windChart"></div>
           <div class="beaufort-legend" id="beaufortLegend">
@@ -828,6 +881,11 @@ body {
           <div class="chart-panel-header">
             <span class="chart-panel-title">Nederbörd</span>
             <span class="chart-panel-live" id="chartPrecipLive"></span>
+            <div class="chart-legend">
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:#67e8f9"></span>mm</span>
+              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>1h%</span>
+              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#f97316"></span>3h%</span>
+            </div>
           </div>
           <div id="precipChart"></div>
         </div>
@@ -879,7 +937,7 @@ const BEAUFORT_ZONES = [
   { name: 'Orkan',       min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
 ];
 
-function buildBeaufortShapes(yMax) {
+function buildBeaufortShapes(yMax, isMobile) {
   const shapes = [], annotations = [];
   for (const zone of BEAUFORT_ZONES) {
     const y0 = zone.min, y1 = Math.min(zone.max, yMax);
@@ -887,7 +945,7 @@ function buildBeaufortShapes(yMax) {
     shapes.push({ type:'rect', xref:'paper', yref:'y', x0:0, x1:1, y0, y1,
       fillcolor: zone.color, line:{ color:zone.lineColor, width:0.5 }, layer:'below' });
     const midY = (y0 + Math.min(zone.max, yMax)) / 2;
-    if ((Math.min(zone.max, yMax) - y0) > 1.5) {
+    if ((Math.min(zone.max, yMax) - y0) > 1.5 && !isMobile) {
       annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'right', y:midY, yanchor:'middle',
         text: zone.name, showarrow:false, font:{ size:9, color:zone.lineColor },
         bgcolor:'rgba(17,24,39,0.6)', borderpad:2 });
@@ -1388,28 +1446,36 @@ function drawCharts() {
   };
 
   const isMobile = window.innerWidth < 640;
-  const chartH = isMobile ? 220 : 260;
-  const leftMargin = isMobile ? 36 : 50;
+  const chartH = isMobile ? 260 : 300;
+  const leftMargin = isMobile ? 34 : 48;
+  const bottomMargin = isMobile ? 36 : 44;
 
   // Explicit x-axis range so Plotly doesn't auto-expand to the full dataset
-  // when a subset (idag, imorgon, helg…) is selected.
   const xStart = s.times[0];
   const xEnd   = s.times[s.times.length - 1];
 
+  // Show time only; add a date label once per day via tickformat + dtick
+  const spanHours = (xEnd - xStart) / 3.6e6;
+  const tickFormat = spanHours <= 36 ? '%H:%M' : '%d/%m %H:%M';
+
   const base = {
-    margin: {t:10, r:40, b:54, l:leftMargin},
+    margin: {t:6, r:38, b:bottomMargin, l:leftMargin},
     height: chartH,
     autosize: true,
     hovermode: 'x unified',
+    showlegend: false,
     plot_bgcolor: '#111827',
     paper_bgcolor: '#111827',
-    font: { family: 'Inter, sans-serif', size: 11, color: '#7a94b8' },
-    xaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false, tickangle: -25, range:[xStart, xEnd] },
-    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:10}, fixedrange:false },
-    legend: {
-      orientation:'h', x:0.5, xanchor:'center', y:1.0, yanchor:'bottom',
-      font:{size:9}, bgcolor:'rgba(17,24,39,0.75)', bordercolor:'rgba(31,46,71,0.6)', borderwidth:1
+    font: { family: 'Inter, sans-serif', size: 10, color: '#7a94b8' },
+    xaxis: {
+      gridcolor:'#1f2e47', linecolor:'#1f2e47',
+      tickfont:{color:'#4a6080', size:9},
+      fixedrange:false,
+      tickangle: -30,
+      range:[xStart, xEnd],
+      tickformat: tickFormat,
     },
+    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:9}, fixedrange:false },
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
   };
 
@@ -1445,9 +1511,9 @@ function drawCharts() {
 
   const maxGustAll = Math.max(...s.data.gust.filter(v => v != null));
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
-  const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax);
+  const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax, isMobile);
 
-  const MAX_ARROWS = 10;
+  const MAX_ARROWS = isMobile ? 6 : 10;
   const showEveryN = Math.max(1, Math.floor(s.times.length / MAX_ARROWS));
   const windAnnotations = [];
   for (let i = 0; i < s.times.length; i += showEveryN) {
@@ -1455,7 +1521,7 @@ function drawCharts() {
       windAnnotations.push({
         x: s.times[i], y: s.data.wind[i],
         text: '↓', showarrow: false,
-        font: { size: 18, color: 'rgba(255,255,255,0.75)' },
+        font: { size: isMobile ? 13 : 16, color: 'rgba(255,255,255,0.6)' },
         textangle: s.data.wind_direction[i] % 360,
         xanchor: 'center', yanchor: 'middle'
       });
@@ -1592,6 +1658,14 @@ function updateTable() {
   if (nowRowEl) {
     setTimeout(() => nowRowEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 100);
   }
+}
+
+// ── DATE PICKER TOGGLE ───────────────────────────────────────────────────────
+function toggleDatePickers() {
+  const row = document.getElementById('datePickers');
+  const btn = document.getElementById('btn-datepicker');
+  const open = row.classList.toggle('open');
+  btn.classList.toggle('active', open);
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
