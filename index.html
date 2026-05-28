@@ -1513,18 +1513,25 @@ function drawCharts() {
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
   const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax, isMobile);
 
-  const MAX_ARROWS = isMobile ? 6 : 10;
-  const showEveryN = Math.max(1, Math.floor(s.times.length / MAX_ARROWS));
+  // Space arrows evenly by TIME, not by array index.
+  // Met.no data is hourly for the first ~48h then switches to 6-hourly,
+  // so index-based stepping clusters arrows at the start of the window.
+  const MAX_ARROWS = isMobile ? 7 : 12;
+  const spanMs = s.times[s.times.length - 1] - s.times[0];
+  const intervalMs = spanMs / MAX_ARROWS;
   const windAnnotations = [];
-  for (let i = 0; i < s.times.length; i += showEveryN) {
-    if (s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
+  let nextArrowTime = s.times[0].getTime();
+  for (let i = 0; i < s.times.length; i++) {
+    const tMs = s.times[i].getTime();
+    if (tMs >= nextArrowTime && s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
       windAnnotations.push({
         x: s.times[i], y: s.data.wind[i],
         text: '↓', showarrow: false,
-        font: { size: isMobile ? 13 : 16, color: 'rgba(255,255,255,0.6)' },
+        font: { size: isMobile ? 16 : 18, color: 'rgba(255,255,255,0.85)' },
         textangle: s.data.wind_direction[i] % 360,
         xanchor: 'center', yanchor: 'middle'
       });
+      nextArrowTime = tMs + intervalMs;
     }
   }
 
