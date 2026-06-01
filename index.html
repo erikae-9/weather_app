@@ -779,146 +779,7 @@ body {
 }
 .day-card-precip.wet { color: var(--accent); }
 
-/* ── ACTIVITY RISK CALCULATOR ───────────────────────────────────────── */
-.activity-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.activity-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.activity-header:hover { background: var(--surface2); }
-.activity-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.activity-title {
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.activity-chevron {
-  color: var(--muted);
-  font-size: 0.7rem;
-  transition: transform 0.2s;
-}
-.activity-chevron.open { transform: rotate(180deg); }
 
-.activity-body {
-  display: none;
-  padding: 0 14px 14px;
-  border-top: 1px solid var(--border);
-}
-.activity-body.open { display: block; }
-
-.activity-inputs {
-  display: flex;
-  gap: 6px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  padding-top: 12px;
-}
-.activity-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 140px;
-}
-.activity-input-label {
-  font-size: 0.62rem;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.activity-input {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
-  padding: 7px 9px;
-  outline: none;
-  width: 100%;
-}
-.activity-input:focus { border-color: var(--accent); }
-.activity-input::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-
-.activity-calc-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 6px;
-  color: #000;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 8px 16px;
-  cursor: pointer;
-  white-space: nowrap;
-  min-height: 36px;
-  transition: background 0.15s;
-  align-self: flex-end;
-}
-.activity-calc-btn:hover { background: #7dd3fc; }
-
-.activity-result {
-  margin-top: 12px;
-  display: none;
-}
-.activity-result.visible { display: block; }
-
-
-.activity-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 6px;
-}
-.activity-metric {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-.activity-metric-label {
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 3px;
-}
-.activity-metric-value {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-.activity-metric-sub {
-  font-size: 0.62rem;
-  color: var(--text-dim);
-  margin-top: 1px;
-}
-.activity-metric.warn .activity-metric-value { color: var(--amber); }
-.activity-metric.danger .activity-metric-value { color: var(--red); }
-.activity-metric.good .activity-metric-value { color: var(--green); }
-
-@media (max-width: 480px) {
-  .activity-inputs { gap: 8px; }
-  .activity-input-group { min-width: 100%; }
-  .activity-calc-btn { width: 100%; }
-  .day-card { min-width: 60px; padding: 7px 8px; }
-  .day-card-icon { font-size: 1.2rem; }
-}
 </style>
 </head>
 <body>
@@ -994,6 +855,12 @@ body {
       <div id="riskRow" class="risk-row"></div>
     </div>
 
+    <!-- DAY SUMMARY STRIP -->
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Dagar</div>
+      <div class="day-strip" id="dayStrip"></div>
+    </div>
+
     <div>
       <div class="section-title" style="margin-bottom:6px;">Under perioden</div>
       <div class="current-row">
@@ -1010,13 +877,13 @@ body {
           <div class="current-card-spark" id="sparkWind"></div>
         </div>
         <div class="current-card" style="--card-color:var(--cyan)">
-          <div class="current-card-label">MedelNederbörd</div>
+          <div class="current-card-label">Nederbörd</div>
           <div class="current-card-value" id="cPrecip">—</div>
           <div class="current-card-sub" id="cPrecipSub">—</div>
           <div class="current-card-spark" id="sparkPrecip"></div>
         </div>
         <div class="current-card" style="--card-color:#f97316">
-          <div class="current-card-label">Medel UV Index</div>
+          <div class="current-card-label">UV Index</div>
           <div class="current-card-value" id="cUV">—</div>
           <div class="current-card-sub" id="cUVRange">—</div>
           <div class="current-card-spark" id="sparkUV"></div>
@@ -1032,39 +899,6 @@ body {
           <div class="current-card-value" id="cHumidity">—</div>
           <div class="current-card-sub" id="cHumidityRange">—</div>
           <div class="current-card-spark" id="sparkHumidity"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- DAY SUMMARY STRIP -->
-    <div>
-      <div class="section-title" style="margin-bottom:6px;">Dagar</div>
-      <div class="day-strip" id="dayStrip"></div>
-    </div>
-
-    <!-- ACTIVITY RISK CALCULATOR -->
-    <div class="activity-panel">
-      <div class="activity-header" onclick="toggleActivityPanel()">
-        <div class="activity-header-left">
-          <span style="font-size:1rem;">🎯</span>
-          <span class="activity-title">Aktivitetsrisk</span>
-        </div>
-        <span class="activity-chevron" id="activityChevron">▼</span>
-      </div>
-      <div class="activity-body" id="activityBody">
-        <div class="activity-inputs">
-          <div class="activity-input-group">
-            <span class="activity-input-label">Från</span>
-            <input type="datetime-local" id="actStart" class="activity-input">
-          </div>
-          <div class="activity-input-group">
-            <span class="activity-input-label">Till</span>
-            <input type="datetime-local" id="actEnd" class="activity-input">
-          </div>
-          <button class="activity-calc-btn" onclick="calculateActivityRisk()">Beräkna ↵</button>
-        </div>
-        <div class="activity-result" id="activityResult">
-          <div class="activity-metrics" id="actMetrics"></div>
         </div>
       </div>
     </div>
@@ -1360,20 +1194,13 @@ async function fetchWeather() {
     if (weatherData && weatherData.times.length > 0) {
       const firstTime = weatherData.times[0];
       const lastTime = weatherData.times[weatherData.times.length - 1];
-      document.getElementById('startDateTime').value = firstTime.toISOString().slice(0, 16);
-      document.getElementById('endDateTime').value = lastTime.toISOString().slice(0, 16);
-      document.getElementById('startDateTime').min = firstTime.toISOString().slice(0, 16);
-      document.getElementById('startDateTime').max = lastTime.toISOString().slice(0, 16);
-      document.getElementById('endDateTime').min = firstTime.toISOString().slice(0, 16);
-      document.getElementById('endDateTime').max = lastTime.toISOString().slice(0, 16);
-      // Pre-fill activity calculator with next 24h window
-      const actEndTime = new Date(Math.min(firstTime.getTime() + 24*3600*1000, lastTime.getTime()));
-      document.getElementById('actStart').value = toLocalDTString(firstTime);
-      document.getElementById('actEnd').value   = toLocalDTString(actEndTime);
-      document.getElementById('actStart').min   = firstTime.toISOString().slice(0, 16);
-      document.getElementById('actStart').max   = lastTime.toISOString().slice(0, 16);
-      document.getElementById('actEnd').min     = firstTime.toISOString().slice(0, 16);
-      document.getElementById('actEnd').max     = lastTime.toISOString().slice(0, 16);
+      document.getElementById('startDateTime').value = toLocalDTString(firstTime);
+      document.getElementById('endDateTime').value = toLocalDTString(lastTime);
+      document.getElementById('startDateTime').min = toLocalDTString(firstTime);
+      document.getElementById('startDateTime').max = toLocalDTString(lastTime);
+      document.getElementById('endDateTime').min = toLocalDTString(firstTime);
+      document.getElementById('endDateTime').max = toLocalDTString(lastTime);
+
     }
   } catch(e) {
     showError('Kunde inte hämta väderdata: ' + e.message);
@@ -1519,12 +1346,6 @@ function applyDateTimeRange() {
   // datetime-local values ("2025-05-31T14:00") must be parsed as LOCAL time.
   // Appending ":00" and passing to Date() is ambiguous across browsers; instead
   // split the components and use the Date constructor with explicit local parts.
-  function parseLocalDT(s) {
-    const [date, time] = s.split('T');
-    const [y, mo, d] = date.split('-').map(Number);
-    const [h, mi] = (time || '00:00').split(':').map(Number);
-    return new Date(y, mo - 1, d, h, mi, 0, 0);
-  }
   const startDate = parseLocalDT(startInput), endDate = parseLocalDT(endInput);
   if (startDate >= endDate) { showError('Starttiden måste vara före sluttiden'); return; }
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
@@ -1552,7 +1373,16 @@ function _refreshAll() {
   updateRiskBadges();
   drawCharts();
   updateTable();
-  autoCalculateActivity();
+  syncDatePickers();
+}
+
+// Keep the date pickers showing the current view window in local time.
+function syncDatePickers() {
+  if (!weatherData) return;
+  const s = sliceData(currentRange);
+  if (!s.times.length) return;
+  document.getElementById('startDateTime').value = toLocalDTString(s.times[0]);
+  document.getElementById('endDateTime').value   = toLocalDTString(s.times[s.times.length - 1]);
 }
 
 // ── CURRENT CARDS ─────────────────────────────────────────────────────────────
@@ -1572,25 +1402,17 @@ function updateCurrentCards() {
   document.getElementById('cWindsub').textContent = `Max ${Math.max(...wm)?.toFixed(0) || '—'}(${Math.max(...gm)?.toFixed(0) || '—'}) m/s · ${getWindDirection(meanD) || '—'}`;
 
   const pm = s.data.precip;
-  const meanP = pm.reduce((a,b) => a + (b || 0), 0) / pm.length;
-  document.getElementById('cPrecip').textContent = meanP != null ? `${meanP.toFixed(1)} mm/h` : '0 mm';
   const totalP = pm.reduce((a,b) => a+(b||0), 0);
-
-  // Use max rolling 3h probability in the window as the "headline" risk figure
+  document.getElementById('cPrecip').textContent = `${totalP.toFixed(1)} mm`;
   const rolling = s.data.rolling3h.filter(p => p !== null);
   const maxRolling = rolling.length ? Math.max(...rolling) : null;
-
-  let timeSpanHours;
-  if (window.customRangeWindow) {
-    const startTime = weatherData.times[window.customRangeWindow.start];
-    const endTime = weatherData.times[window.customRangeWindow.end - 1];
-    timeSpanHours = Math.round((endTime - startTime) / (1000 * 60 * 60));
-  } else {
-    timeSpanHours = currentRange === 9999 ? 'samtliga' : currentRange;
-  }
+  const allProbs = s.data.precip_prob.filter(p => p !== null);
+  const compoundRisk = allProbs.length
+    ? Math.round((1 - allProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100,0),1)), 1)) * 100)
+    : null;
   document.getElementById('cPrecipSub').innerHTML =
-    `Förväntat ${totalP.toFixed(1)} mm<br>` +
-    (maxRolling !== null ? `Max 3h risk: ${maxRolling}%` : '—');
+    (maxRolling !== null ? `Max 3h risk: ${maxRolling}%` : '—') +
+    (compoundRisk !== null ? `<br>Sammansatt risk: ${compoundRisk}%` : '');
 
   const cloud = s.data.cloud;
   const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
@@ -1603,9 +1425,10 @@ function updateCurrentCards() {
   document.getElementById('cHumidityRange').textContent = `${Math.min(...hum).toFixed(0)}–${Math.max(...hum).toFixed(0)}%`;
 
   const uv = s.data.uv;
-  const meanUV = uv.reduce((a,b) => a + (b || 0), 0) / uv.length;
-  document.getElementById('cUV').textContent = meanUV != null ? meanUV.toFixed(1) : '—';
-  document.getElementById('cUVRange').textContent = `Max ${Math.max(...uv).toFixed(1)}`;
+  const maxUV = Math.max(...uv);
+  const minUV = Math.min(...uv);
+  document.getElementById('cUV').textContent = maxUV != null ? maxUV.toFixed(1) : '—';
+  document.getElementById('cUVRange').textContent = `${minUV.toFixed(1)}–${maxUV.toFixed(1)}`;
 
   const sc = { displayModeBar: false, responsive: true };
   const sl = {
@@ -1996,22 +1819,6 @@ function zoomToDay(dateKey) {
 
 // ── ACTIVITY RISK CALCULATOR ──────────────────────────────────────────────────
 
-function toggleActivityPanel() {
-  const body    = document.getElementById('activityBody');
-  const chevron = document.getElementById('activityChevron');
-  const open    = body.classList.toggle('open');
-  chevron.classList.toggle('open', open);
-
-  // Pre-fill with current view window when opening
-  if (open && weatherData) {
-    const s = sliceData(currentRange);
-    if (s.times.length) {
-      document.getElementById('actStart').value = toLocalDTString(s.times[0]);
-      document.getElementById('actEnd').value   = toLocalDTString(s.times[s.times.length - 1]);
-    }
-  }
-}
-
 function parseLocalDT(s) {
   const [date, time] = s.split('T');
   const [y, mo, d]  = date.split('-').map(Number);
@@ -2020,108 +1827,10 @@ function parseLocalDT(s) {
 }
 
 // Core computation — accepts Date objects, returns a stats object or null.
-function computeActivityStats(startDate, endDate) {
-  if (!weatherData || startDate >= endDate) return null;
-  let si = weatherData.times.findIndex(t => t >= startDate);
-  let ei = weatherData.times.findIndex(t => t > endDate);
-  if (si === -1) si = 0;
-  if (ei === -1) ei = weatherData.times.length;
-  if (si >= ei) return null;
-
-  const d     = weatherData.data;
-  const idxs  = Array.from({ length: ei - si }, (_, k) => si + k);
-  const hours = Math.round((endDate - startDate) / 3.6e6);
-
-  const temps  = idxs.map(i => d.temp[i]).filter(v => v !== null);
-  const winds  = idxs.map(i => d.wind[i]).filter(v => v !== null);
-  const gusts  = idxs.map(i => d.gust[i]).filter(v => v !== null);
-  const probs  = idxs.map(i => d.precip_prob[i]).filter(v => v !== null);
-  const precip = idxs.map(i => d.precip[i]).filter(v => v !== null);
-  const uvs    = idxs.map(i => d.uv[i]).filter(v => v !== null);
-  if (!temps.length) return null;
-
-  return {
-    startDate, endDate, hours,
-    hiTemp:   Math.max(...temps),
-    loTemp:   Math.min(...temps),
-    meanTemp: temps.reduce((a,b) => a+b, 0) / temps.length,
-    avgWind:  winds.reduce((a,b) => a+b, 0) / winds.length,
-    maxGust:  Math.max(...gusts),
-    totalMm:  precip.reduce((a,b) => a+b, 0),
-    maxUV:    Math.max(...uvs),
-    rainProb: probs.length
-      ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100,0),1)), 1)) * 100)
-      : null
-  };
-}
 
 // Render pre-computed stats into the activity result panel.
-function renderActivityStats(stats) {
-  if (!stats) return;
-  function metricCls(val, warn, danger) {
-    return val >= danger ? 'danger' : val >= warn ? 'warn' : 'good';
-  }
-  const timeLabel = `${stats.startDate.toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' })} – ${stats.endDate.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' })} (${stats.hours}h)`;
-
-  document.getElementById('actMetrics').innerHTML = `
-    <div class="activity-metric ${metricCls(stats.rainProb ?? 0, 35, 70)}">
-      <div class="activity-metric-label">Regnrisk</div>
-      <div class="activity-metric-value">${stats.rainProb !== null ? stats.rainProb + '%' : '—'}</div>
-      <div class="activity-metric-sub">Sammansatt · ${stats.totalMm.toFixed(1)} mm totalt</div>
-    </div>
-    <div class="activity-metric ${stats.loTemp < 0 || stats.hiTemp > 28 ? (stats.loTemp < -10 || stats.hiTemp > 35 ? 'danger' : 'warn') : 'good'}">
-      <div class="activity-metric-label">Temperatur</div>
-      <div class="activity-metric-value">${stats.meanTemp.toFixed(1)}°C</div>
-      <div class="activity-metric-sub">Medel · ${stats.loTemp.toFixed(0)}–${stats.hiTemp.toFixed(0)}°C (min–max)</div>
-    </div>
-    <div class="activity-metric ${metricCls(stats.maxGust, 10, 15)}">
-      <div class="activity-metric-label">Vind</div>
-      <div class="activity-metric-value">${stats.avgWind.toFixed(1)} m/s</div>
-      <div class="activity-metric-sub">Medelvind · byar max ${stats.maxGust.toFixed(1)} m/s</div>
-    </div>
-    <div class="activity-metric ${metricCls(stats.maxUV, 4, 8)}">
-      <div class="activity-metric-label">UV Index</div>
-      <div class="activity-metric-value">${stats.maxUV.toFixed(1)}</div>
-      <div class="activity-metric-sub">Max under perioden</div>
-    </div>
-    <div class="activity-metric">
-      <div class="activity-metric-label">Period</div>
-      <div class="activity-metric-value" style="font-size:0.72rem;">${stats.hours}h</div>
-      <div class="activity-metric-sub">${timeLabel}</div>
-    </div>`;
-
-  document.getElementById('activityResult').classList.add('visible');
-}
 
 // Auto-calculate from the current view window (called by _refreshAll).
-function autoCalculateActivity() {
-  if (!weatherData) return;
-  const s = sliceData(currentRange);
-  if (!s.times.length) return;
-  const stats = computeActivityStats(s.times[0], s.times[s.times.length - 1]);
-  renderActivityStats(stats);
-  // Keep activity inputs in sync with the current window
-  document.getElementById('actStart').value = toLocalDTString(s.times[0]);
-  document.getElementById('actEnd').value   = toLocalDTString(s.times[s.times.length - 1]);
-}
-
-function calculateActivityRisk() {
-  if (!weatherData) return;
-
-  const startVal = document.getElementById('actStart').value;
-  const endVal   = document.getElementById('actEnd').value;
-  if (!startVal || !endVal) { showError('Välj start- och sluttid'); return; }
-
-  const startDate = parseLocalDT(startVal);
-  const endDate   = parseLocalDT(endVal);
-  if (startDate >= endDate) { showError('Starttid måste vara före sluttid'); return; }
-
-  const stats = computeActivityStats(startDate, endDate);
-  if (!stats) { showError('Ingen data i valt intervall'); return; }
-
-
-  renderActivityStats(stats);
-}
 
 // ── DATE PICKER TOGGLE ───────────────────────────────────────────────────────
 function toggleDatePickers() {
