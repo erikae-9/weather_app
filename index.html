@@ -1901,10 +1901,7 @@ function updateTable() {
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
   }
 
-  // Scroll to now row if it exists in the table
-  if (nowRowEl) {
-    setTimeout(() => nowRowEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 100);
-  }
+
 }
 
 
