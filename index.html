@@ -878,33 +878,6 @@ body {
 }
 .activity-result.visible { display: block; }
 
-.activity-score-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid;
-}
-.activity-score-row.score-good   { border-color: var(--green); background: rgba(52,211,153,0.07); }
-.activity-score-row.score-ok     { border-color: var(--amber); background: rgba(251,191,36,0.07); }
-.activity-score-row.score-bad    { border-color: var(--red);   background: rgba(248,113,113,0.07); }
-
-.activity-score-emoji { font-size: 1.8rem; line-height: 1; }
-.activity-score-label {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 800;
-  flex: 1;
-}
-.activity-score-row.score-good .activity-score-label  { color: var(--green); }
-.activity-score-row.score-ok   .activity-score-label  { color: var(--amber); }
-.activity-score-row.score-bad  .activity-score-label  { color: var(--red); }
-.activity-score-sub {
-  font-size: 0.68rem;
-  color: var(--text-dim);
-}
 
 .activity-metrics {
   display: grid;
@@ -999,8 +972,6 @@ body {
           <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
           <div class="range-sep"></div>
           <span class="range-group-label">Dag</span>
-          <button class="range-tab" id="btn-today"    onclick="setDayPreset('today')">Idag</button>
-          <button class="range-tab" id="btn-tomorrow" onclick="setDayPreset('tomorrow')">Imorg</button>
           <button class="range-tab" id="btn-weekend"  onclick="setDayPreset('weekend')">Helg</button>
           <button class="range-tab" id="btn-week"     onclick="setDayPreset('week')">Vecka</button>
         </div>
@@ -1093,13 +1064,6 @@ body {
           <button class="activity-calc-btn" onclick="calculateActivityRisk()">Beräkna ↵</button>
         </div>
         <div class="activity-result" id="activityResult">
-          <div class="activity-score-row" id="actScoreRow">
-            <span class="activity-score-emoji" id="actScoreEmoji"></span>
-            <div>
-              <div class="activity-score-label" id="actScoreLabel"></div>
-              <div class="activity-score-sub" id="actScoreSub"></div>
-            </div>
-          </div>
           <div class="activity-metrics" id="actMetrics"></div>
         </div>
       </div>
@@ -1581,6 +1545,7 @@ function _refreshAll() {
   updateRiskBadges();
   drawCharts();
   updateTable();
+  autoCalculateActivity();
 }
 
 // ── CURRENT CARDS ─────────────────────────────────────────────────────────────
@@ -2043,15 +2008,101 @@ function toggleActivityPanel() {
   }
 }
 
+function parseLocalDT(s) {
+  const [date, time] = s.split('T');
+  const [y, mo, d]  = date.split('-').map(Number);
+  const [h, mi]     = (time || '00:00').split(':').map(Number);
+  return new Date(y, mo - 1, d, h, mi, 0, 0);
+}
+
+// Core computation — accepts Date objects, returns a stats object or null.
+function computeActivityStats(startDate, endDate) {
+  if (!weatherData || startDate >= endDate) return null;
+  let si = weatherData.times.findIndex(t => t >= startDate);
+  let ei = weatherData.times.findIndex(t => t > endDate);
+  if (si === -1) si = 0;
+  if (ei === -1) ei = weatherData.times.length;
+  if (si >= ei) return null;
+
+  const d     = weatherData.data;
+  const idxs  = Array.from({ length: ei - si }, (_, k) => si + k);
+  const hours = Math.round((endDate - startDate) / 3.6e6);
+
+  const temps  = idxs.map(i => d.temp[i]).filter(v => v !== null);
+  const winds  = idxs.map(i => d.wind[i]).filter(v => v !== null);
+  const gusts  = idxs.map(i => d.gust[i]).filter(v => v !== null);
+  const probs  = idxs.map(i => d.precip_prob[i]).filter(v => v !== null);
+  const precip = idxs.map(i => d.precip[i]).filter(v => v !== null);
+  const uvs    = idxs.map(i => d.uv[i]).filter(v => v !== null);
+  if (!temps.length) return null;
+
+  return {
+    startDate, endDate, hours,
+    hiTemp:   Math.max(...temps),
+    loTemp:   Math.min(...temps),
+    meanTemp: temps.reduce((a,b) => a+b, 0) / temps.length,
+    avgWind:  winds.reduce((a,b) => a+b, 0) / winds.length,
+    maxGust:  Math.max(...gusts),
+    totalMm:  precip.reduce((a,b) => a+b, 0),
+    maxUV:    Math.max(...uvs),
+    rainProb: probs.length
+      ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100,0),1)), 1)) * 100)
+      : null
+  };
+}
+
+// Render pre-computed stats into the activity result panel.
+function renderActivityStats(stats) {
+  if (!stats) return;
+  function metricCls(val, warn, danger) {
+    return val >= danger ? 'danger' : val >= warn ? 'warn' : 'good';
+  }
+  const timeLabel = `${stats.startDate.toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' })} – ${stats.endDate.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' })} (${stats.hours}h)`;
+
+  document.getElementById('actMetrics').innerHTML = `
+    <div class="activity-metric ${metricCls(stats.rainProb ?? 0, 35, 70)}">
+      <div class="activity-metric-label">Regnrisk</div>
+      <div class="activity-metric-value">${stats.rainProb !== null ? stats.rainProb + '%' : '—'}</div>
+      <div class="activity-metric-sub">Sammansatt · ${stats.totalMm.toFixed(1)} mm totalt</div>
+    </div>
+    <div class="activity-metric ${stats.loTemp < 0 || stats.hiTemp > 28 ? (stats.loTemp < -10 || stats.hiTemp > 35 ? 'danger' : 'warn') : 'good'}">
+      <div class="activity-metric-label">Temperatur</div>
+      <div class="activity-metric-value">${stats.meanTemp.toFixed(1)}°C</div>
+      <div class="activity-metric-sub">Medel · ${stats.loTemp.toFixed(0)}–${stats.hiTemp.toFixed(0)}°C (min–max)</div>
+    </div>
+    <div class="activity-metric ${metricCls(stats.maxGust, 10, 15)}">
+      <div class="activity-metric-label">Vind</div>
+      <div class="activity-metric-value">${stats.avgWind.toFixed(1)} m/s</div>
+      <div class="activity-metric-sub">Medelvind · byar max ${stats.maxGust.toFixed(1)} m/s</div>
+    </div>
+    <div class="activity-metric ${metricCls(stats.maxUV, 4, 8)}">
+      <div class="activity-metric-label">UV Index</div>
+      <div class="activity-metric-value">${stats.maxUV.toFixed(1)}</div>
+      <div class="activity-metric-sub">Max under perioden</div>
+    </div>
+    <div class="activity-metric">
+      <div class="activity-metric-label">Period</div>
+      <div class="activity-metric-value" style="font-size:0.72rem;">${stats.hours}h</div>
+      <div class="activity-metric-sub">${timeLabel}</div>
+    </div>`;
+
+  document.getElementById('activityResult').classList.add('visible');
+}
+
+// Auto-calculate from the current view window (called by _refreshAll).
+function autoCalculateActivity() {
+  if (!weatherData) return;
+  const s = sliceData(currentRange);
+  if (!s.times.length) return;
+  const stats = computeActivityStats(s.times[0], s.times[s.times.length - 1]);
+  renderActivityStats(stats);
+  // Keep activity inputs in sync with the current window
+  document.getElementById('actStart').value = s.times[0].toISOString().slice(0, 16);
+  document.getElementById('actEnd').value   = s.times[s.times.length - 1].toISOString().slice(0, 16);
+}
+
 function calculateActivityRisk() {
   if (!weatherData) return;
-
-  function parseLocalDT(s) {
-    const [date, time] = s.split('T');
-    const [y, mo, d]  = date.split('-').map(Number);
-    const [h, mi]     = (time || '00:00').split(':').map(Number);
-    return new Date(y, mo - 1, d, h, mi, 0, 0);
-  }
 
   const startVal = document.getElementById('actStart').value;
   const endVal   = document.getElementById('actEnd').value;
@@ -2061,119 +2112,11 @@ function calculateActivityRisk() {
   const endDate   = parseLocalDT(endVal);
   if (startDate >= endDate) { showError('Starttid måste vara före sluttid'); return; }
 
-  let si = weatherData.times.findIndex(t => t >= startDate);
-  let ei = weatherData.times.findIndex(t => t > endDate);
-  if (si === -1) si = 0;
-  if (ei === -1) ei = weatherData.times.length;
+  const stats = computeActivityStats(startDate, endDate);
+  if (!stats) { showError('Ingen data i valt intervall'); return; }
 
-  if (si >= ei) { showError('Ingen data i valt intervall'); return; }
 
-  const d      = weatherData.data;
-  const idxs   = Array.from({ length: ei - si }, (_, k) => si + k);
-  const hours  = Math.round((endDate - startDate) / 3.6e6);
-
-  const temps  = idxs.map(i => d.temp[i]).filter(v => v !== null);
-  const winds  = idxs.map(i => d.wind[i]).filter(v => v !== null);
-  const gusts  = idxs.map(i => d.gust[i]).filter(v => v !== null);
-  const probs  = idxs.map(i => d.precip_prob[i]).filter(v => v !== null);
-  const precip = idxs.map(i => d.precip[i]).filter(v => v !== null);
-  const uvs    = idxs.map(i => d.uv[i]).filter(v => v !== null);
-
-  const hiTemp  = Math.max(...temps);
-  const loTemp  = Math.min(...temps);
-  const avgWind = winds.reduce((a, b) => a + b, 0) / winds.length;
-  const maxGust = Math.max(...gusts);
-  const totalMm = precip.reduce((a, b) => a + b, 0);
-  const maxUV   = Math.max(...uvs);
-
-  // Compound rain probability over the whole window
-  const rainProb = probs.length
-    ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1)) * 100)
-    : null;
-
-  // ── Scoring ──
-  // Each factor returns 0 (fine), 1 (caution), or 2 (bad)
-  const scores = [];
-  const flags  = [];
-
-  // Rain probability
-  if (rainProb !== null) {
-    if      (rainProb >= 70) { scores.push(2); flags.push(`Hög regnrisk (${rainProb}%)`); }
-    else if (rainProb >= 35) { scores.push(1); flags.push(`Viss regnrisk (${rainProb}%)`); }
-    else                     { scores.push(0); }
-  }
-
-  // Wind
-  if      (maxGust >= 15)  { scores.push(2); flags.push(`Kraftiga byar (${maxGust.toFixed(1)} m/s)`); }
-  else if (maxGust >= 10)  { scores.push(1); flags.push(`Frisk vind (${maxGust.toFixed(1)} m/s)`); }
-  else                     { scores.push(0); }
-
-  // Temperature extremes
-  if      (loTemp < -10 || hiTemp > 35) { scores.push(2); flags.push(`Extrem temperatur (${loTemp.toFixed(0)}–${hiTemp.toFixed(0)}°C)`); }
-  else if (loTemp < 0   || hiTemp > 28) { scores.push(1); flags.push(`Kyla/värme (${loTemp.toFixed(0)}–${hiTemp.toFixed(0)}°C)`); }
-  else                                  { scores.push(0); }
-
-  // UV
-  if      (maxUV >= 8) { scores.push(2); flags.push(`Mycket högt UV (${maxUV.toFixed(1)})`); }
-  else if (maxUV >= 4) { scores.push(1); flags.push(`Högt UV (${maxUV.toFixed(1)})`); }
-  else                 { scores.push(0); }
-
-  const worstScore = Math.max(...scores);
-  const timeLabel  = `${startDate.toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' })} – ${endDate.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' })} (${hours}h)`;
-
-  const scoreConfig = [
-    { cls: 'score-good', emoji: '✅', label: 'Bra förhållanden',   sub: 'Inga större riskfaktorer' },
-    { cls: 'score-ok',   emoji: '⚠️', label: 'Acceptabelt',        sub: flags.join(' · ') || 'Mindre avvikelser' },
-    { cls: 'score-bad',  emoji: '🚫', label: 'Ogynnsamt',          sub: flags.join(' · ') || 'Flera riskfaktorer' },
-  ][worstScore];
-
-  // Render
-  const resultEl  = document.getElementById('activityResult');
-  const scoreRow  = document.getElementById('actScoreRow');
-  scoreRow.className = `activity-score-row ${scoreConfig.cls}`;
-  document.getElementById('actScoreEmoji').textContent = scoreConfig.emoji;
-  document.getElementById('actScoreLabel').textContent = scoreConfig.label;
-  document.getElementById('actScoreSub').textContent   = scoreConfig.sub;
-
-  function metricCls(val, warnThreshold, dangerThreshold) {
-    if (val >= dangerThreshold) return 'danger';
-    if (val >= warnThreshold)   return 'warn';
-    return 'good';
-  }
-
-  document.getElementById('actMetrics').innerHTML = `
-    <div class="activity-metric ${metricCls(rainProb ?? 0, 35, 70)}">
-      <div class="activity-metric-label">Regnrisk</div>
-      <div class="activity-metric-value">${rainProb !== null ? rainProb + '%' : '—'}</div>
-      <div class="activity-metric-sub">Sammansatt</div>
-    </div>
-    <div class="activity-metric">
-      <div class="activity-metric-label">Nederbörd</div>
-      <div class="activity-metric-value">${totalMm.toFixed(1)} mm</div>
-      <div class="activity-metric-sub">Totalt</div>
-    </div>
-    <div class="activity-metric ${metricCls(avgWind, 8, 13)}">
-      <div class="activity-metric-label">Vind</div>
-      <div class="activity-metric-value">${avgWind.toFixed(1)} m/s</div>
-      <div class="activity-metric-sub">Byar max ${maxGust.toFixed(1)} m/s</div>
-    </div>
-    <div class="activity-metric ${loTemp < 0 || hiTemp > 28 ? (loTemp < -10 || hiTemp > 35 ? 'danger' : 'warn') : 'good'}">
-      <div class="activity-metric-label">Temperatur</div>
-      <div class="activity-metric-value">${loTemp.toFixed(0)}–${hiTemp.toFixed(0)}°C</div>
-      <div class="activity-metric-sub">Min–Max</div>
-    </div>
-    <div class="activity-metric ${metricCls(maxUV, 4, 8)}">
-      <div class="activity-metric-label">UV Index</div>
-      <div class="activity-metric-value">${maxUV.toFixed(1)}</div>
-      <div class="activity-metric-sub">Max</div>
-    </div>
-    <div class="activity-metric">
-      <div class="activity-metric-label">Period</div>
-      <div class="activity-metric-value" style="font-size:0.72rem;">${hours}h</div>
-      <div class="activity-metric-sub">${timeLabel}</div>
-    </div>`;
-
-  resultEl.classList.add('visible');
+  renderActivityStats(stats);
 }
 
 // ── DATE PICKER TOGGLE ───────────────────────────────────────────────────────
