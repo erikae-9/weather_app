@@ -968,11 +968,8 @@ body {
                 <th>Temp (°C)</th>
                 <th>Känns (°C)</th>
                 <th>Nederb (mm)</th>
-                <th>3h risk (%)</th>
+                <th>Nederb risk (%)</th>
                 <th>Vind (m/s)</th>
-                <th>Moln (%)</th>
-                <th>Luftfukt. (%)</th>
-                <th>Tryck (hPa)</th>
                 <th>UV</th>
               </tr>
             </thead>
@@ -1019,8 +1016,6 @@ function buildBeaufortShapes(yMax, isMobile) {
 }
 
 // ── FIND CURRENT-TIME INDEX ───────────────────────────────────────────────────
-// Returns the index in weatherData.times closest to now.
-// Returns null if weatherData is empty.
 function findNowIndex() {
   if (!weatherData || !weatherData.times.length) return null;
   const now = Date.now();
@@ -1033,9 +1028,6 @@ function findNowIndex() {
 }
 
 // ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
-// For each index i, compute the probability that it rains in the 3-hour window
-// centered on i (i-1, i, i+1): P(rain) = 1 - ∏(1 - p_k).
-// Clamps to available data at boundaries.
 function compute3hRollingProb(precip_prob) {
   return precip_prob.map((_, i) => {
     const window = [];
@@ -1051,8 +1043,6 @@ function compute3hRollingProb(precip_prob) {
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
-// Format a Date as a local datetime-local string ("YYYY-MM-DDTHH:MM")
-// using local time components — avoids the UTC offset bug from .toISOString().
 function toLocalDTString(date) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -1190,18 +1180,15 @@ async function fetchWeather() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'flex';
     document.getElementById('locationLabel').textContent = currentCity;
-    setRange(currentRange);
     if (weatherData && weatherData.times.length > 0) {
       const firstTime = weatherData.times[0];
       const lastTime = weatherData.times[weatherData.times.length - 1];
-      document.getElementById('startDateTime').value = toLocalDTString(firstTime);
-      document.getElementById('endDateTime').value = toLocalDTString(lastTime);
       document.getElementById('startDateTime').min = toLocalDTString(firstTime);
       document.getElementById('startDateTime').max = toLocalDTString(lastTime);
       document.getElementById('endDateTime').min = toLocalDTString(firstTime);
       document.getElementById('endDateTime').max = toLocalDTString(lastTime);
-
     }
+    setDefaultDayRange();
   } catch(e) {
     showError('Kunde inte hämta väderdata: ' + e.message);
     document.getElementById('loading').style.display = 'none';
@@ -1254,7 +1241,6 @@ function processWeatherData(data) {
     uv.push(inst.ultraviolet_index_clear_sky || 0);
   });
 
-  // Compute 3-hour rolling probability for each data point
   const rolling3h = compute3hRollingProb(precip_prob);
 
   weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols } };
@@ -1289,23 +1275,20 @@ function setDayPreset(preset) {
   const tabId = { today:'btn-today', tomorrow:'btn-tomorrow', weekend:'btn-weekend', week:'btn-week' }[preset];
   if (tabId) document.getElementById(tabId)?.classList.add('active');
 
-  // Build dates from explicit local year/month/day components to avoid
-  // timezone-offset bugs when using setHours() on a Date whose UTC value
-  // has already been shifted by the local offset.
   function localMidnight(offsetDays) {
     const d = new Date();
-    d.setHours(0, 0, 0, 0);          // local midnight today
+    d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + (offsetDays || 0));
     return d;
   }
   function localEndOfDay(midnightDate) {
     const d = new Date(midnightDate);
-    d.setHours(23, 59, 59, 999);     // local end-of-day on the same calendar date
+    d.setHours(23, 59, 59, 999);
     return d;
   }
 
   const now = new Date();
-  const dow = now.getDay();           // 0=Sun … 6=Sat
+  const dow = now.getDay();
   let startDate, endDate;
 
   switch(preset) {
@@ -1326,7 +1309,7 @@ function setDayPreset(preset) {
     }
     case 'week':
       startDate = localMidnight(0);
-      endDate   = localEndOfDay(localMidnight(6));  // 7 days incl. today
+      endDate   = localEndOfDay(localMidnight(6));
       break;
   }
 
@@ -1338,14 +1321,46 @@ function setDayPreset(preset) {
   _refreshAll();
 }
 
+// ── DEFAULT DAY RANGE ─────────────────────────────────────────────────────────
+// Called on first load: shows today by default.
+// If the current time is 20:00 or later, also includes tomorrow.
+
+function setDefaultDayRange() {
+  if (!weatherData) return;
+  clearAllRangeTabs();
+
+  function localMidnight(offsetDays) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + (offsetDays || 0));
+    return d;
+  }
+  function localEndOfDay(midnightDate) {
+    const d = new Date(midnightDate);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  const now = new Date();
+  const startDate = localMidnight(0);
+  const endDate = now.getHours() >= 20
+    ? localEndOfDay(localMidnight(1))   // today + tomorrow
+    : localEndOfDay(startDate);          // today only
+
+  let startIdx = weatherData.times.findIndex(t => t >= startDate);
+  let endIdx   = weatherData.times.findIndex(t => t > endDate);
+  if (startIdx === -1) startIdx = 0;
+  if (endIdx   === -1) endIdx   = weatherData.times.length;
+
+  window.customRangeWindow = { start: startIdx, end: endIdx };
+  _refreshAll();
+}
+
 function applyDateTimeRange() {
   if (!weatherData) return;
   const startInput = document.getElementById('startDateTime').value;
   const endInput = document.getElementById('endDateTime').value;
   if (!startInput || !endInput) { showError('Välj både start- och sluttid'); return; }
-  // datetime-local values ("2025-05-31T14:00") must be parsed as LOCAL time.
-  // Appending ":00" and passing to Date() is ambiguous across browsers; instead
-  // split the components and use the Date constructor with explicit local parts.
   const startDate = parseLocalDT(startInput), endDate = parseLocalDT(endInput);
   if (startDate >= endDate) { showError('Starttiden måste vara före sluttiden'); return; }
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
@@ -1376,7 +1391,6 @@ function _refreshAll() {
   syncDatePickers();
 }
 
-// Keep the date pickers showing the current view window in local time.
 function syncDatePickers() {
   if (!weatherData) return;
   const s = sliceData(currentRange);
@@ -1411,8 +1425,7 @@ function updateCurrentCards() {
     ? Math.round((1 - allProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100,0),1)), 1)) * 100)
     : null;
   document.getElementById('cPrecipSub').innerHTML =
-    (maxRolling !== null ? `Max 3h risk: ${maxRolling}%` : '—') +
-    (compoundRisk !== null ? `<br>Sammansatt risk: ${compoundRisk}%` : '');
+    (compoundRisk !== null ? `Risk över perioden: ${compoundRisk}%` : '');
 
   const cloud = s.data.cloud;
   const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
@@ -1462,8 +1475,6 @@ function updateCurrentCards() {
 }
 
 // ── RISK BADGES ──────────────────────────────────────────────────────────────
-// Always reads from weatherData via findNowIndex() — the /complete endpoint
-// has all fields (including UV) and covers any selected time window.
 
 function updateRiskBadges() {
   if (!weatherData) return;
@@ -1507,7 +1518,6 @@ function updateRiskBadges() {
 
 function drawCharts() {
   const s = sliceData(currentRange);
-  // Mobile pinch-zoom: scrollZoom + zoom dragmode, no fixedrange overrides
   const cfg = {
     responsive: true,
     displayModeBar: false,
@@ -1520,11 +1530,9 @@ function drawCharts() {
   const leftMargin = isMobile ? 34 : 48;
   const bottomMargin = isMobile ? 36 : 44;
 
-  // Explicit x-axis range so Plotly doesn't auto-expand to the full dataset
   const xStart = s.times[0];
   const xEnd   = s.times[s.times.length - 1];
 
-  // Show time only; add a date label once per day via tickformat + dtick
   const spanHours = (xEnd - xStart) / 3.6e6;
   const tickFormat = spanHours <= 36 ? '%H:%M' : '%d/%m %H:%M';
 
@@ -1549,7 +1557,6 @@ function drawCharts() {
     hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
   };
 
-  // Get the "now" index within the sliced data for vertical line marker
   const nowIdx = findNowIndex();
   const nowTime = weatherData && nowIdx !== null ? weatherData.times[nowIdx] : null;
   const nowShape = nowTime ? [{
@@ -1583,9 +1590,6 @@ function drawCharts() {
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
   const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax, isMobile);
 
-  // Space arrows evenly by TIME, not by array index.
-  // Met.no data is hourly for the first ~48h then switches to 6-hourly,
-  // so index-based stepping clusters arrows at the start of the window.
   const MAX_ARROWS = isMobile ? 7 : 12;
   const spanMs = s.times[s.times.length - 1] - s.times[0];
   const intervalMs = spanMs / MAX_ARROWS;
@@ -1657,7 +1661,7 @@ function updateTable() {
   const tbody = document.getElementById('weatherDataBody');
   tbody.innerHTML = '';
   let lastDateStr = null;
-  const colCount = 11;
+  const colCount = 8;
   let nowRowEl = null;
 
   for (let i = 0; i < s.times.length; i++) {
@@ -1675,7 +1679,6 @@ function updateTable() {
 
     const row = tbody.insertRow();
 
-    // Find the global index for this sliced entry to compare with nowIdx
     let globalIdx = i;
     if (window.customRangeWindow) {
       globalIdx = window.customRangeWindow.start + i;
@@ -1710,13 +1713,12 @@ function updateTable() {
       pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]</span>`;
     } else { pCell.textContent = '—'; }
 
-    // 3h rolling probability column
-    const r3h = s.data.rolling3h[i];
-    const r3hCell = row.insertCell();
-    if (r3h !== null && r3h !== undefined) {
-      r3hCell.textContent = `${r3h}%`;
-      r3hCell.style.color = r3h >= 70 ? 'var(--red)' : r3h >= 40 ? 'var(--amber)' : 'var(--text-dim)';
-    } else { r3hCell.textContent = '—'; }
+    const r1h = s.data.precip_prob[i];
+    const r1hCell = row.insertCell();
+    if (r1h !== null && r1h !== undefined) {
+      r1hCell.textContent = `${r1h}%`;
+      r1hCell.style.color = r1h >= 70 ? 'var(--red)' : r1h >= 40 ? 'var(--amber)' : 'var(--text-dim)';
+    } else { r1hCell.textContent = '—'; }
 
     const wv = s.data.wind[i], gv = s.data.gust[i], wdir = getWindDirection(s.data.wind_direction[i]);
     const wCell = row.insertCell();
@@ -1725,13 +1727,8 @@ function updateTable() {
       wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wdir}</span>`;
     } else { wCell.textContent = '—'; }
 
-    row.insertCell().textContent = s.data.cloud[i]?.toFixed(0) ?? '—';
-    row.insertCell().textContent = s.data.humidity[i]?.toFixed(0) ?? '—';
-    row.insertCell().textContent = s.data.pressure[i]?.toFixed(1) ?? '—';
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
   }
-
-
 }
 
 
@@ -1742,10 +1739,9 @@ function buildDayStrip() {
   const strip = document.getElementById('dayStrip');
   strip.innerHTML = '';
 
-  // Group data points by local calendar date
   const days = {};
   weatherData.times.forEach((t, i) => {
-    const key = t.toLocaleDateString('sv-SE'); // "2026-05-28"
+    const key = t.toLocaleDateString('sv-SE');
     if (!days[key]) days[key] = { times: [], indices: [] };
     days[key].times.push(t);
     days[key].indices.push(i);
@@ -1761,12 +1757,10 @@ function buildDayStrip() {
 
     const hi   = Math.max(...temps);
     const lo   = Math.min(...temps);
-    // Compound rain probability for the day
     const dayRainProb = probs.length
       ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1)) * 100)
       : null;
 
-    // Pick the most representative daytime symbol (prefer midday hours)
     const middayIdx = indices.find(i => {
       const h = weatherData.times[i].getHours();
       return h >= 11 && h <= 14;
@@ -1790,7 +1784,6 @@ function buildDayStrip() {
       </div>`;
 
     card.addEventListener('click', () => {
-      // Zoom charts + table to this day
       document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
       zoomToDay(dateKey);
@@ -1802,7 +1795,6 @@ function buildDayStrip() {
 
 function zoomToDay(dateKey) {
   if (!weatherData) return;
-  // Build local midnight and end-of-day for the given date string
   const [y, mo, d] = dateKey.split('-').map(Number);
   const startDate = new Date(y, mo - 1, d, 0, 0, 0, 0);
   const endDate   = new Date(y, mo - 1, d, 23, 59, 59, 999);
@@ -1817,20 +1809,12 @@ function zoomToDay(dateKey) {
   _refreshAll();
 }
 
-// ── ACTIVITY RISK CALCULATOR ──────────────────────────────────────────────────
-
 function parseLocalDT(s) {
   const [date, time] = s.split('T');
   const [y, mo, d]  = date.split('-').map(Number);
   const [h, mi]     = (time || '00:00').split(':').map(Number);
   return new Date(y, mo - 1, d, h, mi, 0, 0);
 }
-
-// Core computation — accepts Date objects, returns a stats object or null.
-
-// Render pre-computed stats into the activity result panel.
-
-// Auto-calculate from the current view window (called by _refreshAll).
 
 // ── DATE PICKER TOGGLE ───────────────────────────────────────────────────────
 function toggleDatePickers() {
