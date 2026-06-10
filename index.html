@@ -779,6 +779,13 @@ body {
 }
 .day-card-precip.wet { color: var(--accent); }
 
+/* Thunder marker on day cards */
+.day-card-thunder {
+  font-size: 0.6rem;
+  color: var(--amber);
+  margin-top: 1px;
+  min-height: 0.8em;
+}
 
 </style>
 </head>
@@ -882,6 +889,12 @@ body {
           <div class="current-card-sub" id="cPrecipSub">—</div>
           <div class="current-card-spark" id="sparkPrecip"></div>
         </div>
+        <div class="current-card" style="--card-color:var(--amber)">
+          <div class="current-card-label">Åskrisk (max)</div>
+          <div class="current-card-value" id="cThunder">—</div>
+          <div class="current-card-sub" id="cThunderSub">—</div>
+          <div class="current-card-spark" id="sparkThunder"></div>
+        </div>
         <div class="current-card" style="--card-color:#f97316">
           <div class="current-card-label">UV Index</div>
           <div class="current-card-value" id="cUV">—</div>
@@ -943,12 +956,13 @@ body {
 
         <div class="chart-panel">
           <div class="chart-panel-header">
-            <span class="chart-panel-title">Nederbörd</span>
+            <span class="chart-panel-title">Nederbörd &amp; Åska</span>
             <span class="chart-panel-live" id="chartPrecipLive"></span>
             <div class="chart-legend">
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#67e8f9"></span>mm</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>1h%</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#f97316"></span>3h%</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:#a78bfa"></span>⚡%</span>
             </div>
           </div>
           <div id="precipChart"></div>
@@ -969,6 +983,7 @@ body {
                 <th>Känns (°C)</th>
                 <th>Nederb (mm)</th>
                 <th>Nederb risk (%)</th>
+                <th>Åska (%)</th>
                 <th>Vind (m/s)</th>
                 <th>UV</th>
               </tr>
@@ -997,6 +1012,14 @@ const BEAUFORT_ZONES = [
   { name: 'Storm',       min: 24.4, max: 32.6, color: 'rgba(220,60,60,0.15)',   lineColor: 'rgba(220,60,60,0.5)' },
   { name: 'Orkan',       min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)' },
 ];
+
+// ── THUNDER THRESHOLDS (% probability, SMHI) ─────────────────────────────────
+const THUNDER_MED  = 15;  // "värt att hålla koll"
+const THUNDER_HIGH = 40;  // "trolig åska"
+
+function thunderClass(p) {
+  return p >= THUNDER_HIGH ? 'high' : p >= THUNDER_MED ? 'medium' : 'low';
+}
 
 function buildBeaufortShapes(yMax, isMobile) {
   const shapes = [], annotations = [];
@@ -1160,6 +1183,41 @@ function useGeolocation() {
   );
 }
 
+// ── SMHI THUNDER FETCH ────────────────────────────────────────────────────────
+// SMHI:s punktprognos har thunderstorm_probability (%) per timsteg.
+// Täckningen är begränsad till Norden/Östersjöområdet – utanför den
+// returnerar API:t fel, och då lämnas åskdata som null (UI visar "—").
+
+async function fetchSMHIThunder(lat, lon) {
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon.toFixed(6)}/lat/${lat.toFixed(6)}/data.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`SMHI HTTP ${res.status}`);
+  const data = await res.json();
+  const points = [];
+  (data.timeSeries || []).forEach(ts => {
+    const v = ts.data?.thunderstorm_probability;
+    if (v !== undefined && v !== null && v >= 0) {
+      points.push({ t: new Date(ts.time).getTime(), v });
+    }
+  });
+  return points;
+}
+
+// Mappa SMHI:s tidsserie till met.no:s tidsstämplar (närmaste punkt inom 3.5h).
+function mergeThunder(smhiPoints) {
+  if (!weatherData) return;
+  const MAX_GAP_MS = 3.5 * 3600 * 1000;
+  weatherData.data.thunder = weatherData.times.map(t => {
+    const ms = t.getTime();
+    let best = null, bestDiff = Infinity;
+    for (const p of smhiPoints) {
+      const diff = Math.abs(p.t - ms);
+      if (diff < bestDiff) { bestDiff = diff; best = p.v; }
+    }
+    return bestDiff <= MAX_GAP_MS ? best : null;
+  });
+}
+
 // ── DATA FETCH & PROCESS ──────────────────────────────────────────────────────
 
 async function fetchWeather() {
@@ -1172,11 +1230,22 @@ async function fetchWeather() {
   document.getElementById('error').style.display = 'none';
 
   try {
-    const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
-      { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Hämta met.no och SMHI parallellt; SMHI får misslyckas tyst (utanför täckning)
+    const [metRes, smhiRes] = await Promise.allSettled([
+      fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
+        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } }),
+      fetchSMHIThunder(lat, lon)
+    ]);
+
+    if (metRes.status === 'rejected') throw metRes.reason;
+    if (!metRes.value.ok) throw new Error(`HTTP ${metRes.value.status}`);
+    const data = await metRes.value.json();
     processWeatherData(data);
+
+    if (smhiRes.status === 'fulfilled') {
+      mergeThunder(smhiRes.value);
+    }
+
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'flex';
     document.getElementById('locationLabel').textContent = currentCity;
@@ -1243,7 +1312,10 @@ function processWeatherData(data) {
 
   const rolling3h = compute3hRollingProb(precip_prob);
 
-  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols } };
+  // thunder fylls i av mergeThunder() om SMHI-data finns; annars null överallt
+  const thunder = times.map(() => null);
+
+  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols, thunder } };
 }
 
 // ── SLICE ─────────────────────────────────────────────────────────────────────
@@ -1427,6 +1499,27 @@ function updateCurrentCards() {
   document.getElementById('cPrecipSub').innerHTML =
     (compoundRisk !== null ? `Risk över perioden: ${compoundRisk}%` : '');
 
+  // ── ÅSKA (SMHI) ──
+  const thAll = s.data.thunder;
+  const thValid = thAll.filter(v => v !== null && v !== undefined);
+  if (thValid.length) {
+    const maxTh = Math.max(...thValid);
+    let maxIdx = -1;
+    for (let i = 0; i < thAll.length; i++) {
+      if (thAll[i] !== null && thAll[i] === maxTh) { maxIdx = i; break; }
+    }
+    document.getElementById('cThunder').textContent = `${Math.round(maxTh)}%`;
+    if (maxTh >= THUNDER_MED && maxIdx >= 0) {
+      const tStr = s.times[maxIdx].toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' });
+      document.getElementById('cThunderSub').textContent = `⚡ Störst risk ${tStr}`;
+    } else {
+      document.getElementById('cThunderSub').textContent = 'Låg åskrisk under perioden';
+    }
+  } else {
+    document.getElementById('cThunder').textContent = '—';
+    document.getElementById('cThunderSub').textContent = 'Ingen data (utanför SMHI-täckning)';
+  }
+
   const cloud = s.data.cloud;
   const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
   document.getElementById('cCloud').textContent = meanC != null ? `${meanC.toFixed(0)}%` : '—';
@@ -1472,6 +1565,12 @@ function updateCurrentCards() {
   Plotly.newPlot('sparkCloud',    mk('rgb(148,163,184)', s.data.cloud,    '%'),      sl, sc);
   Plotly.newPlot('sparkHumidity', mk('rgb(167,139,250)', s.data.humidity, '%'),      sl, sc);
   Plotly.newPlot('sparkUV',       mk('rgb(249,115,22)',  s.data.uv,       ''),       sl, sc);
+  if (thValid.length) {
+    Plotly.newPlot('sparkThunder', mk('rgb(251,191,36)', s.data.thunder, '%'), sl, sc);
+  } else {
+    Plotly.purge('sparkThunder');
+    document.getElementById('sparkThunder').innerHTML = '';
+  }
 }
 
 // ── RISK BADGES ──────────────────────────────────────────────────────────────
@@ -1490,6 +1589,7 @@ function updateRiskBadges() {
   const p0    = d.precip[nowIdx]       || 0;
   const prob0 = d.precip_prob[nowIdx];
   const roll3h = d.rolling3h[nowIdx];
+  const th0   = d.thunder[nowIdx];
 
   const timeStr = weatherData.times[nowIdx].toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' });
   document.getElementById('nowSectionTitle').textContent = `Just nu · ${timeStr}`;
@@ -1511,7 +1611,10 @@ function updateRiskBadges() {
     badge('☀️', `UV ${uv0.toFixed(1)}`,
       uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
     badge('🌧️', precipLabel,
-      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low');
+      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low') +
+    (th0 !== null && th0 !== undefined
+      ? badge('⚡', `Åska ${Math.round(th0)}%`, thunderClass(th0))
+      : '');
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
@@ -1621,14 +1724,16 @@ function drawCharts() {
     annotations: [...windAnnotations, ...bfAnnotations]
   }, cfg);
 
-  // ── PRECIP ──
+  // ── PRECIP + ÅSKA ──
   const nowPrecip = weatherData.data.precip[nowDataIdx] || 0;
   const nowProb1h = weatherData.data.precip_prob[nowDataIdx];
   const nowRoll   = weatherData.data.rolling3h[nowDataIdx];
+  const nowThunder = weatherData.data.thunder[nowDataIdx];
   document.getElementById('chartPrecipLive').innerHTML =
    `<span class="blink">●</span>${(nowPrecip||0).toFixed(1)} mm` +
    (nowProb1h !== null && nowProb1h !== undefined ? ` · 1h ${Math.round(nowProb1h)}%` : '') +
-   (nowRoll !== null ? ` · 3h ${nowRoll}%` : '');
+   (nowRoll !== null ? ` · 3h ${nowRoll}%` : '') +
+   (nowThunder !== null && nowThunder !== undefined ? ` · ⚡ ${Math.round(nowThunder)}%` : '');
 
   const pd = s.times.map((_,i) => ({
     t: s.times[i],
@@ -1636,20 +1741,54 @@ function drawCharts() {
     p10: s.data.precip_p10[i]||0,
     p90: s.data.precip_p90[i]||0,
     prob: s.data.precip_prob[i],
-    roll: s.data.rolling3h[i]
+    roll: s.data.rolling3h[i],
+    th: s.data.thunder[i]
   }));
 
-  Plotly.newPlot('precipChart', [
+  const hasThunder = pd.some(d => d.th !== null && d.th !== undefined);
+
+  // Markera tydliga åsktoppar (≥ THUNDER_MED) med ⚡ ovanför kurvan
+  const thunderAnnotations = [];
+  if (hasThunder) {
+    let lastMarkMs = -Infinity;
+    const minGapMs = 2 * 3600e3;
+    for (const d of pd) {
+      if (d.th !== null && d.th >= THUNDER_MED && d.t.getTime() - lastMarkMs >= minGapMs) {
+        thunderAnnotations.push({
+          x: d.t, y: Math.min(d.th + 6, 98), xref:'x', yref:'y2',
+          text: '⚡', showarrow: false,
+          font: { size: isMobile ? 12 : 14 }
+        });
+        lastMarkMs = d.t.getTime();
+      }
+    }
+  }
+
+  const precipTraces = [
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'P90: %{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'1h risk: %{y:.0f}%<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:2,dash:'dot'}, name:'3h risk', hovertemplate:'3h risk: %{y:.0f}%<extra></extra>' },
-  ], {
+  ];
+
+  if (hasThunder) {
+    precipTraces.push({
+      x: pd.map(d=>d.t), y: pd.map(d=>d.th),
+      type:'scatter', mode:'lines', yaxis:'y2',
+      line:{ color:'#a78bfa', width:2 },
+      fill:'tozeroy', fillcolor:'rgba(167,139,250,0.08)',
+      connectgaps: true,
+      name:'Åska', hovertemplate:'⚡ Åska: %{y:.0f}%<extra></extra>'
+    });
+  }
+
+  Plotly.newPlot('precipChart', precipTraces, {
     ...base,
     yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null] },
     yaxis2: { overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
-    shapes: nowShape
+    shapes: nowShape,
+    annotations: thunderAnnotations
   }, cfg);
 }
 
@@ -1661,7 +1800,7 @@ function updateTable() {
   const tbody = document.getElementById('weatherDataBody');
   tbody.innerHTML = '';
   let lastDateStr = null;
-  const colCount = 8;
+  const colCount = 9;
   let nowRowEl = null;
 
   for (let i = 0; i < s.times.length; i++) {
@@ -1720,6 +1859,15 @@ function updateTable() {
       r1hCell.style.color = r1h >= 70 ? 'var(--red)' : r1h >= 40 ? 'var(--amber)' : 'var(--text-dim)';
     } else { r1hCell.textContent = '—'; }
 
+    // ── ÅSKA (SMHI) ──
+    const th = s.data.thunder[i];
+    const thCell = row.insertCell();
+    if (th !== null && th !== undefined) {
+      thCell.textContent = th >= THUNDER_MED ? `⚡ ${Math.round(th)}%` : `${Math.round(th)}%`;
+      thCell.style.color = th >= THUNDER_HIGH ? 'var(--red)' : th >= THUNDER_MED ? 'var(--amber)' : 'var(--text-dim)';
+      if (th >= THUNDER_MED) thCell.style.fontWeight = '600';
+    } else { thCell.textContent = '—'; }
+
     const wv = s.data.wind[i], gv = s.data.gust[i], wdir = getWindDirection(s.data.wind_direction[i]);
     const wCell = row.insertCell();
     if (wv != null) {
@@ -1751,6 +1899,7 @@ function buildDayStrip() {
     const d = weatherData.data;
     const temps  = indices.map(i => d.temp[i]).filter(v => v !== null);
     const probs  = indices.map(i => d.precip_prob[i]).filter(v => v !== null);
+    const thunds = indices.map(i => d.thunder[i]).filter(v => v !== null && v !== undefined);
     const syms   = indices.map(i => d.symbols[i]).filter(s => s !== 'unknown');
 
     if (!temps.length) return;
@@ -1760,6 +1909,7 @@ function buildDayStrip() {
     const dayRainProb = probs.length
       ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1)) * 100)
       : null;
+    const dayMaxThunder = thunds.length ? Math.max(...thunds) : null;
 
     const middayIdx = indices.find(i => {
       const h = weatherData.times[i].getHours();
@@ -1781,7 +1931,8 @@ function buildDayStrip() {
       <div class="day-card-temps">${Math.round(hi)}° <span>${Math.round(lo)}°</span></div>
       <div class="day-card-precip ${dayRainProb !== null && dayRainProb >= 30 ? 'wet' : ''}">
         ${dayRainProb !== null ? dayRainProb + '%' : '—'}
-      </div>`;
+      </div>
+      <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>`;
 
     card.addEventListener('click', () => {
       document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
