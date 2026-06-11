@@ -787,6 +787,14 @@ body {
   min-height: 0.8em;
 }
 
+.day-card-sun {
+  font-size: 0.58rem;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  min-height: 0.8em;
+}
+
 </style>
 </head>
 <body>
@@ -927,6 +935,7 @@ body {
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#38bdf8"></span>Temp</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#a78bfa"></span>Känns</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(56,189,248,0.35);height:8px;border-radius:2px"></span>P10–90</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
             </div>
           </div>
           <div id="tempChart"></div>
@@ -940,6 +949,7 @@ body {
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#34d399"></span>Medel</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>Byar</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(52,211,153,0.35);height:8px;border-radius:2px"></span>P10–90</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
             </div>
           </div>
           <div id="windChart"></div>
@@ -959,7 +969,9 @@ body {
             <span class="chart-panel-title">Nederbörd &amp; Åska</span>
             <span class="chart-panel-live" id="chartPrecipLive"></span>
             <div class="chart-legend">
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:#67e8f9"></span>mm</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(103,232,249,0.6);height:9px;width:9px;border-radius:2px"></span>mm</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(103,232,249,0.22);height:9px;width:5px;border-radius:2px"></span>P10–90</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:9px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>1h%</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#f97316"></span>3h%</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#a78bfa"></span>⚡%</span>
@@ -1001,6 +1013,8 @@ body {
 let weatherData = null;
 let currentRange = 24;
 let currentCity = 'Skellefteå';
+let lastFetchTime = null;   // när data senast hämtades (för "uppdaterad HH:MM" + auto-refresh)
+let sunTimes = {};          // 'YYYY-MM-DD' -> { sunrise: Date|null, sunset: Date|null }
 
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
 const BEAUFORT_ZONES = [
@@ -1062,6 +1076,23 @@ function compute3hRollingProb(precip_prob) {
     const noRain = validProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1);
     return Math.round((1 - noRain) * 100);
   });
+}
+
+// ── STATISTIK-HJÄLPARE (ignorerar null/undefined/NaN) ────────────────────────
+const validVals = a => a.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+function meanOf(a) { const v = validVals(a); return v.length ? v.reduce((x,y) => x+y, 0) / v.length : null; }
+function minOf(a)  { const v = validVals(a); return v.length ? Math.min(...v) : null; }
+function maxOf(a)  { const v = validVals(a); return v.length ? Math.max(...v) : null; }
+
+// Cirkulärt medel för vindriktning (vektormedel) – aritmetiskt medel av
+// t.ex. 350° och 10° ger 180° (fel håll); detta ger korrekt 0° (N).
+function circularMeanDeg(degs) {
+  const v = validVals(degs);
+  if (!v.length) return null;
+  let sx = 0, sy = 0;
+  for (const d of v) { const r = d * Math.PI / 180; sx += Math.cos(r); sy += Math.sin(r); }
+  if (Math.hypot(sx, sy) < 1e-9) return null; // riktningar tar ut varandra
+  return (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1218,6 +1249,92 @@ function mergeThunder(smhiPoints) {
   });
 }
 
+// ── SOL UPP/NED (met.no sunrise 3.0) ─────────────────────────────────────────
+// En förfrågan per dygn i prognosen (~10 st), körs i bakgrunden.
+// Vid midnattssol/polarnatt returnerar API:t null – då utelämnas tider/skuggning.
+
+function dateKeyLocal(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+async function fetchSunTimes(lat, lon) {
+  sunTimes = {};
+  if (!weatherData) return;
+  const keys = [...new Set(weatherData.times.map(dateKeyLocal))];
+  const om = -new Date().getTimezoneOffset();
+  const sign = om >= 0 ? '+' : '-';
+  const abs = Math.abs(om);
+  const offset = `${sign}${String(Math.floor(abs/60)).padStart(2,'0')}:${String(abs%60).padStart(2,'0')}`;
+  await Promise.all(keys.map(async key => {
+    try {
+      const res = await fetch(
+        `https://api.met.no/weatherapi/sunrise/3.0/sun?lat=${lat}&lon=${lon}&date=${key}&offset=${encodeURIComponent(offset)}`,
+        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } });
+      if (!res.ok) return;
+      const j = await res.json();
+      sunTimes[key] = {
+        sunrise: j.properties?.sunrise?.time ? new Date(j.properties.sunrise.time) : null,
+        sunset:  j.properties?.sunset?.time  ? new Date(j.properties.sunset.time)  : null
+      };
+    } catch {}
+  }));
+}
+
+// Nattskuggning: sammanhängande intervall solnedgång → nästa soluppgång.
+// Saknas soluppgång/-nedgång (midnattssol) ritas ingen skuggning för dygnet.
+function nightRect(x0, x1) {
+  return { type:'rect', xref:'x', yref:'paper', x0, x1, y0:0, y1:1,
+    fillcolor:'rgba(3,6,14,0.40)', line:{width:0}, layer:'below' };
+}
+
+function buildNightIntervals() {
+  const keys = Object.keys(sunTimes).sort();
+  const intervals = [];
+  for (let i = 0; i < keys.length; i++) {
+    const cur = sunTimes[keys[i]];
+    if (!cur) continue;
+    const [y, mo, d] = keys[i].split('-').map(Number);
+    // Natt före första dygnets soluppgång
+    if (i === 0 && cur.sunrise) {
+      intervals.push([new Date(y, mo-1, d, 0, 0, 0, 0), cur.sunrise]);
+    }
+    if (cur.sunset) {
+      const next = sunTimes[keys[i+1]];
+      if (next?.sunrise) intervals.push([cur.sunset, next.sunrise]);
+      else intervals.push([cur.sunset, new Date(y, mo-1, d, 23, 59, 59, 999)]);
+    }
+  }
+  return intervals;
+}
+
+function buildNightShapes() {
+  return buildNightIntervals().map(([a, b]) => nightRect(a, b));
+}
+
+// ☾-markör överst i varje nattband så skuggningen förklarar sig själv.
+// Band vars synliga del är < 4% av x-spannet hoppas över (markören får inte plats).
+function buildNightAnnotations(xStart, xEnd) {
+  const span = xEnd - xStart;
+  return buildNightIntervals()
+    .filter(([a, b]) => b > xStart && a < xEnd &&
+      (Math.min(b, xEnd) - Math.max(a, xStart)) > span * 0.04)
+    .map(([a, b]) => ({
+      x: new Date((Math.max(a, xStart) + Math.min(b, xEnd)) / 2),
+      xref:'x', y: 1, yref:'paper', yanchor:'top',
+      text:'☾', showarrow:false,
+      font:{ size:11, color:'rgba(122,148,184,0.6)' }
+    }));
+}
+
+function updateLocationLabel() {
+  const el = document.getElementById('locationLabel');
+  const ts = lastFetchTime
+    ? lastFetchTime.toLocaleTimeString('sv-SE', { hour:'2-digit', minute:'2-digit' })
+    : '';
+  el.textContent = ts ? `${currentCity} · uppdaterad ${ts}` : currentCity;
+}
+
 // ── DATA FETCH & PROCESS ──────────────────────────────────────────────────────
 
 async function fetchWeather() {
@@ -1246,9 +1363,13 @@ async function fetchWeather() {
       mergeThunder(smhiRes.value);
     }
 
+    lastFetchTime = new Date();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'flex';
-    document.getElementById('locationLabel').textContent = currentCity;
+    updateLocationLabel();
+
+    // Sol upp/ned hämtas i bakgrunden; rita om när tiderna finns
+    fetchSunTimes(lat, lon).then(() => { if (weatherData) _refreshAll(); });
     if (weatherData && weatherData.times.length > 0) {
       const firstTime = weatherData.times[0];
       const lastTime = weatherData.times[weatherData.times.length - 1];
@@ -1267,7 +1388,7 @@ async function fetchWeather() {
 function processWeatherData(data) {
   const times=[], temp=[], temp_p10=[], temp_p90=[], feels_like=[];
   const wind=[], wind_p10=[], wind_p90=[], gust=[], wind_direction=[];
-  const precip=[], precip_p10=[], precip_p90=[], precip_prob=[];
+  const precip=[], precip_p10=[], precip_p90=[], precip_prob=[], precip_step=[];
   const cloud=[], humidity=[], pressure=[], uv=[], symbols=[];
 
   data.properties.timeseries.forEach(entry => {
@@ -1289,19 +1410,22 @@ function processWeatherData(data) {
 
     if (next1h) {
       precip.push(next1h.details.precipitation_amount);
+      precip_step.push(next1h.details.precipitation_amount ?? null); // faktisk mängd i steget (1h)
       precip_p10.push(next1h.details.precipitation_amount_min || next1h.details.precipitation_amount);
       precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
       precip_prob.push(next1h.details.probability_of_precipitation ?? null);
       symbols.push(next1h.summary?.symbol_code || 'unknown');
     } else if (next6h) {
       const precip6h = next6h.details.precipitation_amount || 0;
-      precip.push(precip6h / 6);
+      precip.push(precip6h / 6);                 // timtakt för grafer
+      precip_step.push(precip6h);                // hela 6h-blockets mängd för summering
       precip_p10.push((next6h.details.precipitation_amount_min || precip6h) / 6);
       precip_p90.push((next6h.details.precipitation_amount_max || precip6h) / 6);
       precip_prob.push(next6h.details.probability_of_precipitation ?? null);
       symbols.push(next6h.summary?.symbol_code || 'unknown');
     } else {
       precip.push(null); precip_p10.push(null); precip_p90.push(null); precip_prob.push(null);
+      precip_step.push(null);
       symbols.push('unknown');
     }
     cloud.push(inst.cloud_area_fraction);
@@ -1315,7 +1439,7 @@ function processWeatherData(data) {
   // thunder fylls i av mergeThunder() om SMHI-data finns; annars null överallt
   const thunder = times.map(() => null);
 
-  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols, thunder } };
+  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_step, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols, thunder } };
 }
 
 // ── SLICE ─────────────────────────────────────────────────────────────────────
@@ -1477,18 +1601,20 @@ function updateCurrentCards() {
   const s = sliceData(currentRange);
 
   const tm = s.data.temp;
-  const meanT = tm.reduce((a,b) => a + (b || 0), 0) / tm.length;
-  document.getElementById('cTemp').textContent = meanT != null ? `${meanT.toFixed(1)}°C` : '—';
-  document.getElementById('cTempRange').textContent = `Min ${Math.min(...tm).toFixed(0)}°C, Max ${Math.max(...tm).toFixed(0)}°C`;
+  const meanT = meanOf(tm), minT = minOf(tm), maxT = maxOf(tm);
+  document.getElementById('cTemp').textContent = meanT !== null ? `${meanT.toFixed(1)}°C` : '—';
+  document.getElementById('cTempRange').textContent = (minT !== null && maxT !== null)
+    ? `Min ${minT.toFixed(0)}°C, Max ${maxT.toFixed(0)}°C` : '—';
 
   const wm = s.data.wind, gm = s.data.gust, wd = s.data.wind_direction;
-  const meanW = wm.reduce((a,b) => a + (b || 0), 0) / wm.length;
-  const meanD = wd.reduce((a,b) => a + (b || 0), 0) / wd.length;
-  document.getElementById('cWind').textContent = meanW != null ? `${meanW.toFixed(1)} m/s` : '—';
-  document.getElementById('cWindsub').textContent = `Max ${Math.max(...wm)?.toFixed(0) || '—'}(${Math.max(...gm)?.toFixed(0) || '—'}) m/s · ${getWindDirection(meanD) || '—'}`;
+  const meanW = meanOf(wm), maxW = maxOf(wm), maxG = maxOf(gm);
+  const meanD = circularMeanDeg(wd); // vektormedel, inte aritmetiskt
+  document.getElementById('cWind').textContent = meanW !== null ? `${meanW.toFixed(1)} m/s` : '—';
+  document.getElementById('cWindsub').textContent =
+    `Max ${maxW !== null ? maxW.toFixed(0) : '—'}(${maxG !== null ? maxG.toFixed(0) : '—'}) m/s · ${meanD !== null ? getWindDirection(meanD) : '—'}`;
 
-  const pm = s.data.precip;
-  const totalP = pm.reduce((a,b) => a+(b||0), 0);
+  // Summera faktisk mängd per tidssteg (1h-värden + hela 6h-block), inte timtakten
+  const totalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
   document.getElementById('cPrecip').textContent = `${totalP.toFixed(1)} mm`;
   const rolling = s.data.rolling3h.filter(p => p !== null);
   const maxRolling = rolling.length ? Math.max(...rolling) : null;
@@ -1520,21 +1646,17 @@ function updateCurrentCards() {
     document.getElementById('cThunderSub').textContent = 'Ingen data (utanför SMHI-täckning)';
   }
 
-  const cloud = s.data.cloud;
-  const meanC = cloud.reduce((a,b) => a + (b || 0), 0) / cloud.length;
-  document.getElementById('cCloud').textContent = meanC != null ? `${meanC.toFixed(0)}%` : '—';
-  document.getElementById('cCloudRange').textContent = `${Math.min(...cloud).toFixed(0)}–${Math.max(...cloud).toFixed(0)}%`;
+  const meanC = meanOf(s.data.cloud), minC = minOf(s.data.cloud), maxC = maxOf(s.data.cloud);
+  document.getElementById('cCloud').textContent = meanC !== null ? `${meanC.toFixed(0)}%` : '—';
+  document.getElementById('cCloudRange').textContent = (minC !== null) ? `${minC.toFixed(0)}–${maxC.toFixed(0)}%` : '—';
 
-  const hum = s.data.humidity;
-  const meanH = hum.reduce((a,b) => a + (b || 0), 0) / hum.length;
-  document.getElementById('cHumidity').textContent = meanH != null ? `${meanH.toFixed(0)}%` : '—';
-  document.getElementById('cHumidityRange').textContent = `${Math.min(...hum).toFixed(0)}–${Math.max(...hum).toFixed(0)}%`;
+  const meanH = meanOf(s.data.humidity), minH = minOf(s.data.humidity), maxH = maxOf(s.data.humidity);
+  document.getElementById('cHumidity').textContent = meanH !== null ? `${meanH.toFixed(0)}%` : '—';
+  document.getElementById('cHumidityRange').textContent = (minH !== null) ? `${minH.toFixed(0)}–${maxH.toFixed(0)}%` : '—';
 
-  const uv = s.data.uv;
-  const maxUV = Math.max(...uv);
-  const minUV = Math.min(...uv);
-  document.getElementById('cUV').textContent = maxUV != null ? maxUV.toFixed(1) : '—';
-  document.getElementById('cUVRange').textContent = `${minUV.toFixed(1)}–${maxUV.toFixed(1)}`;
+  const maxUV = maxOf(s.data.uv), minUV = minOf(s.data.uv);
+  document.getElementById('cUV').textContent = maxUV !== null ? maxUV.toFixed(1) : '—';
+  document.getElementById('cUVRange').textContent = (minUV !== null) ? `${minUV.toFixed(1)}–${maxUV.toFixed(1)}` : '—';
 
   const sc = { displayModeBar: false, responsive: true };
   const sl = {
@@ -1668,6 +1790,10 @@ function drawCharts() {
     line: { color: 'rgba(56,189,248,0.4)', width: 1.5, dash: 'dot' }
   }] : [];
 
+  // Nattskuggning (solnedgång → soluppgång) – tom array tills sol-data hämtats
+  const nightShapes = buildNightShapes();
+  const nightAnn = buildNightAnnotations(xStart, xEnd);
+
   // ── TEMP ──
   const nowDataIdx = nowIdx !== null ? nowIdx : 0;
   const nowTemp = weatherData.data.temp[nowDataIdx];
@@ -1680,7 +1806,7 @@ function drawCharts() {
     { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(56,189,248,0.1)', line:{width:1,color:'rgba(56,189,248,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color:'#38bdf8',width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
-  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}}, shapes: nowShape }, cfg);
+  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
 
   // ── WIND with Beaufort shading ──
   const nowWind = weatherData.data.wind[nowDataIdx];
@@ -1720,8 +1846,8 @@ function drawCharts() {
   ], {
     ...base,
     yaxis: { ...base.yaxis, title:{ text:'m/s', font:{size:11, color:'#4a6080'} }, range:[0, yMax], fixedrange:false },
-    shapes: [...bfShapes, ...nowShape],
-    annotations: [...windAnnotations, ...bfAnnotations]
+    shapes: [...bfShapes, ...nightShapes, ...nowShape],
+    annotations: [...windAnnotations, ...bfAnnotations, ...nightAnn]
   }, cfg);
 
   // ── PRECIP + ÅSKA ──
@@ -1764,10 +1890,30 @@ function drawCharts() {
     }
   }
 
+  // Stapelbredder per tidssteg (1h i början, 6h i svansen) så att
+  // staplarna fyller lagom oavsett upplösning och vald period.
+  const stepMs = s.times.map((t, i) => {
+    if (i < s.times.length - 1) return s.times[i+1] - t;
+    return i > 0 ? t - s.times[i-1] : 3600e3;
+  });
+
   const precipTraces = [
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p10), type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p90), type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(103,232,249,0.1)', line:{width:1,color:'rgba(103,232,249,0.2)'}, name:'Min–Max', hovertemplate:'P90: %{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p),   type:'scatter', mode:'lines', line:{color:'#67e8f9',width:2.5}, name:'Nederb', hovertemplate:'%{y:.1f} mm<extra></extra>' },
+    // P10–P90 som smal, blek bakgrundsstapel (base = P10, höjd = P90-P10).
+    // Syns tydligt även när väntevärdet är 0 men P90 > 0.
+    { x:pd.map(d=>d.t),
+      y:pd.map(d => Math.max(0, d.p90 - d.p10)),
+      base: pd.map(d => d.p10),
+      type:'bar', width: stepMs.map(w => w * 0.26),
+      marker:{ color:'rgba(103,232,249,0.22)' },
+      customdata: pd.map(d => [d.p10, d.p90]),
+      name:'P10–90',
+      hovertemplate:'P10–P90: %{customdata[0]:.1f}–%{customdata[1]:.1f} mm<extra></extra>' },
+    // Väntevärdet som huvudstapel ovanpå
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.p),
+      type:'bar', width: stepMs.map(w => w * 0.6),
+      marker:{ color:'rgba(103,232,249,0.6)' },
+      name:'Nederb',
+      hovertemplate:'%{y:.1f} mm<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'1h risk: %{y:.0f}%<extra></extra>' },
     { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color:'#f97316',width:2,dash:'dot'}, name:'3h risk', hovertemplate:'3h risk: %{y:.0f}%<extra></extra>' },
   ];
@@ -1785,10 +1931,11 @@ function drawCharts() {
 
   Plotly.newPlot('precipChart', precipTraces, {
     ...base,
+    barmode: 'overlay',
     yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null] },
     yaxis2: { overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
-    shapes: nowShape,
-    annotations: thunderAnnotations
+    shapes: [...nightShapes, ...nowShape],
+    annotations: [...thunderAnnotations, ...nightAnn]
   }, cfg);
 }
 
@@ -1922,6 +2069,11 @@ function buildDayStrip() {
     const isToday = date.toLocaleDateString('sv-SE') === today.toLocaleDateString('sv-SE');
     const dayName = isToday ? 'Idag' : date.toLocaleDateString('sv-SE', { weekday: 'short' });
 
+    const sun = sunTimes[dateKey];
+    const fmtT = dt => dt.toLocaleTimeString('sv-SE', { hour:'2-digit', minute:'2-digit' });
+    const sunLine = (sun && sun.sunrise && sun.sunset)
+      ? `↑${fmtT(sun.sunrise)} ↓${fmtT(sun.sunset)}` : '';
+
     const card = document.createElement('div');
     card.className = 'day-card';
     card.dataset.date = dateKey;
@@ -1932,16 +2084,22 @@ function buildDayStrip() {
       <div class="day-card-precip ${dayRainProb !== null && dayRainProb >= 30 ? 'wet' : ''}">
         ${dayRainProb !== null ? dayRainProb + '%' : '—'}
       </div>
-      <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>`;
+      <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>
+      <div class="day-card-sun">${sunLine}</div>`;
 
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      zoomToDay(dateKey);
-    });
+    card.addEventListener('click', () => zoomToDay(dateKey));
 
     strip.appendChild(card);
   });
+
+  // Markera kortet vars dygn är exakt det som visas just nu.
+  // Körs efter ombyggnad så markeringen överlever _refreshAll (gäller även
+  // standardintervallet vid laddning => "Idag" blir aktivt).
+  const sNow = sliceData(currentRange);
+  const daysInView = [...new Set(sNow.times.map(t => t.toLocaleDateString('sv-SE')))];
+  if (daysInView.length === 1) {
+    strip.querySelector(`.day-card[data-date="${daysInView[0]}"]`)?.classList.add('active');
+  }
 }
 
 function zoomToDay(dateKey) {
@@ -1978,6 +2136,15 @@ function toggleDatePickers() {
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   selectCity('Skellefteå', 64.762519, 20.923440);
+});
+
+// Hämta om data automatiskt när fliken blir synlig igen och datan är >30 min gammal
+const STALE_MS = 30 * 60 * 1000;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && lastFetchTime &&
+      Date.now() - lastFetchTime.getTime() > STALE_MS) {
+    fetchWeather();
+  }
 });
 </script>
 </body>
