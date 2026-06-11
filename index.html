@@ -1079,6 +1079,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
 
         <div class="preset-strip">
           <button class="preset-btn" onclick="selectCity('Sjungande dalen',64.762528,20.923429)">Sjungande dalen</button>
+          <button class="preset-btn" onclick="selectCity('Skråmträsk',64.661972, 20.624056)">Skråmträsk</button>
           <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
           <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
         </div>
@@ -1890,11 +1891,10 @@ function drawCharts() {
   const nightAnn = buildNightAnnotations(xStart, xEnd);
 
   // ── TEMP ──
-  const nowDataIdx = nowIdx !== null ? nowIdx : 0;
-  const nowTemp = weatherData.data.temp[nowDataIdx];
-  const nowFeels = weatherData.data.feels_like[nowDataIdx];
-  document.getElementById('chartTempLive').innerHTML =
-   `<span class="blink">●</span> ${nowTemp?.toFixed(1)||'—'}°C · Känns ${nowFeels?.toFixed(1)||'—'}°C`;
+  const hMeanT = meanOf(s.data.temp), hMinT = minOf(s.data.temp), hMaxT = maxOf(s.data.temp);
+  document.getElementById('chartTempLive').textContent = hMeanT !== null
+    ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
+    : '';
 
   Plotly.newPlot('tempChart', [
     { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f}°C<extra></extra>' },
@@ -1904,11 +1904,11 @@ function drawCharts() {
   ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
 
   // ── WIND with Beaufort shading ──
-  const nowWind = weatherData.data.wind[nowDataIdx];
-  const nowGust = weatherData.data.gust[nowDataIdx];
-  const nowWindDir = weatherData.data.wind_direction[nowDataIdx];
-  document.getElementById('chartWindLive').innerHTML =
-   `<span class="blink">●</span>${nowWind?.toFixed(1)||'—'} m/s · Byar ${nowGust?.toFixed(1)||'—'} m/s · ${getWindDirection(nowWindDir)}`;
+  const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
+  const hMeanD = circularMeanDeg(s.data.wind_direction);
+  document.getElementById('chartWindLive').textContent = hMeanW !== null
+    ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
+    : '';
 
   const maxGustAll = Math.max(...s.data.gust.filter(v => v != null));
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
@@ -1946,15 +1946,16 @@ function drawCharts() {
   }, cfg);
 
   // ── PRECIP + ÅSKA ──
-  const nowPrecip = weatherData.data.precip[nowDataIdx] || 0;
-  const nowProb1h = weatherData.data.precip_prob[nowDataIdx];
-  const nowRoll   = weatherData.data.rolling3h[nowDataIdx];
-  const nowThunder = weatherData.data.thunder[nowDataIdx];
-  document.getElementById('chartPrecipLive').innerHTML =
-   `<span class="blink">●</span>${(nowPrecip||0).toFixed(1)} mm` +
-   (nowProb1h !== null && nowProb1h !== undefined ? ` · 1h ${Math.round(nowProb1h)}%` : '') +
-   (nowRoll !== null ? ` · 3h ${nowRoll}%` : '') +
-   (nowThunder !== null && nowThunder !== undefined ? ` · ⚡ ${Math.round(nowThunder)}%` : '');
+  const hTotalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
+  const hProbs = validVals(s.data.precip_prob);
+  const hRisk = hProbs.length
+    ? Math.round((1 - hProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100, 0), 1)), 1)) * 100)
+    : null;
+  const hMaxTh = maxOf(s.data.thunder);
+  document.getElementById('chartPrecipLive').textContent =
+    `Σ ${hTotalP.toFixed(1)} mm` +
+    (hRisk !== null ? ` · risk ${hRisk}%` : '') +
+    (hMaxTh !== null ? ` · ⚡ max ${Math.round(hMaxTh)}%` : '');
 
   const pd = s.times.map((_,i) => ({
     t: s.times[i],
@@ -2028,7 +2029,7 @@ function drawCharts() {
     ...base,
     barmode: 'overlay',
     yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null] },
-    yaxis2: { overlaying:'y', side:'right', range:[0,100], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
+    yaxis2: { overlaying:'y', side:'right', range:[0,105], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
     shapes: [...nightShapes, ...nowShape],
     annotations: [...thunderAnnotations, ...nightAnn]
   }, cfg);
