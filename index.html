@@ -358,7 +358,7 @@ body {
 
 .current-card-spark {
   margin-top: 6px;
-  height: 32px;
+  height: 40px;
 }
 
 .stats-row {
@@ -544,7 +544,8 @@ body {
 }
 
 .timeline-scroll {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 70vh; /* gör behållaren till vertikal scroller => sticky thead fungerar */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -567,6 +568,7 @@ body {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
+  z-index: 2; /* över den klistrade Tid-kolumnens celler */
 }
 
 .timeline-table td {
@@ -630,7 +632,7 @@ body {
 
 .timeline-table th:first-child {
   background: var(--surface2);
-  z-index: 2;
+  z-index: 3; /* hörnet: över både rubrikrad och Tid-kolumn */
 }
 
 .cond-cell {
@@ -712,8 +714,7 @@ body {
   .preset-btn { font-size: 0.75rem; padding: 6px 9px; }
   .risk-badge { font-size: 0.67rem; padding: 5px 9px; gap: 5px; }
   .app { padding: 10px 10px 32px; gap: 8px; }
-  .current-card-spark { display: none; }
-  .current-card { padding: 8px 10px 8px; }
+  .current-card { padding: 8px 10px 10px; }
   .chart-legend { display: none; }
 }
 
@@ -803,20 +804,27 @@ body {
 .day-strip-global {
   padding: 2px 0 4px;
 }
+.day-hint {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
 
-/* Större kort på Idag-vyn (desktop) – fasta kolumner ger flera rader */
+/* Större kort på Översikt-vyn (desktop) – fasta kolumner ger flera rader */
 @media (min-width: 768px) {
-  #view-idag .current-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  #view-idag .current-card { padding: 16px 18px 18px; border-radius: 12px; }
-  #view-idag .current-card-label { font-size: 0.72rem; margin-bottom: 8px; }
-  #view-idag .current-card-value { font-size: 2.2rem; margin-bottom: 6px; }
-  #view-idag .current-card-sub { font-size: 0.85rem; }
-  #view-idag .current-card-spark { height: 56px; margin-top: 10px; }
-  #view-idag .risk-badge { font-size: 0.85rem; padding: 9px 16px; gap: 8px; }
-  #view-idag .risk-badge-icon { font-size: 1.05rem; }
+  #view-oversikt .current-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  #view-oversikt .current-card { padding: 16px 18px 18px; border-radius: 12px; }
+  #view-oversikt .current-card-label { font-size: 0.72rem; margin-bottom: 8px; }
+  #view-oversikt .current-card-value { font-size: 2.2rem; margin-bottom: 6px; }
+  #view-oversikt .current-card-sub { font-size: 0.85rem; }
+  #view-oversikt .current-card-spark { height: 56px; margin-top: 10px; }
+  #view-oversikt .risk-badge { font-size: 0.85rem; padding: 9px 16px; gap: 8px; }
+  #view-oversikt .risk-badge-icon { font-size: 1.05rem; }
 }
 @media (min-width: 1100px) {
-  #view-idag .current-row { grid-template-columns: repeat(4, 1fr); }
+  #view-oversikt .current-row { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* Desktop-flikar i headern */
@@ -870,7 +878,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
   <div class="header-title">🌤 Eriks <span>väderapp</span></div>
   <div class="header-sub" style="font-size:0.62rem;">Väderprognos</div>
   <nav class="top-nav">
-    <button data-nav="idag"   onclick="navigate('idag')">Idag</button>
+    <button data-nav="oversikt" onclick="navigate('oversikt')">Översikt</button>
     <button data-nav="grafer" onclick="navigate('grafer')">Grafer</button>
     <button data-nav="tabell" onclick="navigate('tabell')">Tabell</button>
     <button data-nav="plats"  onclick="navigate('plats')">Plats</button>
@@ -888,19 +896,9 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
     <div id="globalControls" style="display:none; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:8px;">
       <div class="range-control">
         <div class="range-row">
-          <span class="range-group-label">Timmar</span>
-          <button class="range-tab" id="btn-6"   onclick="setRange(6)">6h</button>
-          <button class="range-tab" id="btn-12"  onclick="setRange(12)">12h</button>
-          <button class="range-tab" id="btn-24"  onclick="setRange(24)">24h</button>
-          <button class="range-tab" id="btn-48"  onclick="setRange(48)">48h</button>
+          <span class="range-group-label">Period</span>
           <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-          <div class="range-sep"></div>
-          <span class="range-group-label">Dag</span>
-          <button class="range-tab" id="btn-weekend"  onclick="setDayPreset('weekend')">Helg</button>
-          <button class="range-tab" id="btn-week"     onclick="setDayPreset('week')">Vecka</button>
-        </div>
-        <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
-          <button class="range-tab" id="btn-datepicker" onclick="toggleDatePickers()" title="Välj tidsperiod" style="font-size:1rem; padding:5px 10px; min-height:34px;">📅</button>
+          <button class="range-tab" id="btn-datepicker" onclick="toggleDatePickers()" title="Välj egen tidsperiod">📅 Anpassa</button>
         </div>
         <div class="date-pickers-row" id="datePickers">
           <span class="date-picker-label">Från</span>
@@ -915,11 +913,12 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
 
     <!-- GLOBAL DAG-STRIP (överblick + dagväljare på varje vy) -->
     <div class="day-strip-global" id="dayStripGlobal" style="display:none;">
+      <div class="day-hint">Dagar · tryck för att välja en eller flera</div>
       <div class="day-strip" id="dayStrip"></div>
     </div>
 
     <!-- VY: IDAG -->
-    <section class="view active" id="view-idag">
+    <section class="view active" id="view-oversikt">
 
     <div>
       <div id="nowSectionTitle" class="section-title" style="margin-bottom:6px;">Just nu</div>
@@ -1100,7 +1099,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
 </div>
 
 <nav class="bottom-nav">
-  <button data-nav="idag"   onclick="navigate('idag')"><span class="nav-icon">☀️</span>Idag</button>
+  <button data-nav="oversikt" onclick="navigate('oversikt')"><span class="nav-icon">☀️</span>Översikt</button>
   <button data-nav="grafer" onclick="navigate('grafer')"><span class="nav-icon">📈</span>Grafer</button>
   <button data-nav="tabell" onclick="navigate('tabell')"><span class="nav-icon">📋</span>Tabell</button>
   <button data-nav="plats"  onclick="navigate('plats')"><span class="nav-icon">📍</span>Plats</button>
@@ -1476,7 +1475,7 @@ async function fetchWeather() {
     setDefaultDayRange();
 
     // Hämtning startad från Plats-vyn → hoppa till översikten med ny data
-    if (currentView() === 'plats') navigate('idag');
+    if (currentView() === 'plats') navigate('oversikt');
   } catch(e) {
     showError('Kunde inte hämta väderdata: ' + e.message);
     document.getElementById('loading').style.display = 'none';
@@ -1566,58 +1565,6 @@ function clearAllRangeTabs() {
   document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
 }
 
-function setDayPreset(preset) {
-  if (!weatherData) return;
-  clearAllRangeTabs();
-  const tabId = { today:'btn-today', tomorrow:'btn-tomorrow', weekend:'btn-weekend', week:'btn-week' }[preset];
-  if (tabId) document.getElementById(tabId)?.classList.add('active');
-
-  function localMidnight(offsetDays) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + (offsetDays || 0));
-    return d;
-  }
-  function localEndOfDay(midnightDate) {
-    const d = new Date(midnightDate);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }
-
-  const now = new Date();
-  const dow = now.getDay();
-  let startDate, endDate;
-
-  switch(preset) {
-    case 'today':
-      startDate = localMidnight(0);
-      endDate   = localEndOfDay(startDate);
-      break;
-    case 'tomorrow':
-      startDate = localMidnight(1);
-      endDate   = localEndOfDay(startDate);
-      break;
-    case 'weekend': {
-      const daysUntilSat = (6 - dow + 7) % 7 || 7;
-      startDate = localMidnight(daysUntilSat);
-      const sunStart = localMidnight(daysUntilSat + 1);
-      endDate   = localEndOfDay(sunStart);
-      break;
-    }
-    case 'week':
-      startDate = localMidnight(0);
-      endDate   = localEndOfDay(localMidnight(6));
-      break;
-  }
-
-  let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx   = weatherData.times.findIndex(t => t > endDate);
-  if (startIdx === -1) startIdx = 0;
-  if (endIdx   === -1) endIdx   = weatherData.times.length;
-  window.customRangeWindow = { start: startIdx, end: endIdx };
-  _refreshAll();
-}
-
 // ── DEFAULT DAY RANGE ─────────────────────────────────────────────────────────
 // Called on first load: shows today by default.
 // If the current time is 20:00 or later, also includes tomorrow.
@@ -1625,6 +1572,7 @@ function setDayPreset(preset) {
 function setDefaultDayRange() {
   if (!weatherData) return;
   clearAllRangeTabs();
+  selectedDays.clear();
 
   function localMidnight(offsetDays) {
     const d = new Date();
@@ -1666,6 +1614,7 @@ function applyDateTimeRange() {
   if (endIdx === -1) endIdx = weatherData.times.length;
   if (startIdx >= endIdx) { showError('Ingen data i det valda tidsintervallet'); return; }
   clearAllRangeTabs();
+  selectedDays.clear();
   window.customRangeWindow = { start: startIdx, end: endIdx };
   _refreshAll();
 }
@@ -1674,22 +1623,23 @@ function setRange(hours) {
   window.customRangeWindow = null;
   currentRange = hours;
   clearAllRangeTabs();
+  selectedDays.clear();
   const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
   document.getElementById(id)?.classList.add('active');
   _refreshAll();
 }
 
 // ── VYER / ROUTER ─────────────────────────────────────────────────────────────
-// Hash-routade vyer i samma fil: #/idag, #/grafer, #/tabell, #/plats.
+// Hash-routade vyer i samma fil: #/oversikt, #/grafer, #/tabell, #/plats.
 // Endast den aktiva vyn ritas om vid ändringar; övriga markeras "dirty"
 // och ritas först när de visas (Plotly mäter fel bredd i dolda element).
 
-const VIEWS = ['idag', 'grafer', 'tabell', 'plats'];
-const viewDirty = { idag: true, grafer: true, tabell: true };
+const VIEWS = ['oversikt', 'grafer', 'tabell', 'plats'];
+const viewDirty = { oversikt: true, grafer: true, tabell: true };
 
 function currentView() {
   const h = location.hash.replace(/^#\/?/, '');
-  return VIEWS.includes(h) ? h : 'idag';
+  return VIEWS.includes(h) ? h : 'oversikt';
 }
 
 function navigate(v) {
@@ -1709,8 +1659,8 @@ function applyRoute() {
 
 function renderView(v) {
   if (!weatherData) return;
-  if (v === 'idag') {
-    if (viewDirty.idag) { updateRiskBadges(); updateCurrentCards(); viewDirty.idag = false; }
+  if (v === 'oversikt') {
+    if (viewDirty.oversikt) { updateRiskBadges(); updateCurrentCards(); viewDirty.oversikt = false; }
   } else if (v === 'grafer') {
     if (viewDirty.grafer) { drawCharts(); viewDirty.grafer = false; }
     else ['tempChart', 'windChart', 'precipChart'].forEach(id => {
@@ -1727,7 +1677,7 @@ window.addEventListener('hashchange', applyRoute);
 function _refreshAll() {
   buildDayStrip();      // global – alltid synlig
   syncDatePickers();    // globalt kontrollfält
-  viewDirty.idag = viewDirty.grafer = viewDirty.tabell = true;
+  viewDirty.oversikt = viewDirty.grafer = viewDirty.tabell = true;
   renderView(currentView());
 }
 
@@ -2232,26 +2182,38 @@ function buildDayStrip() {
       <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>
       <div class="day-card-sun">${sunLine}</div>`;
 
-    card.addEventListener('click', () => zoomToDay(dateKey));
+    card.addEventListener('click', () => toggleDaySelection(dateKey));
 
     strip.appendChild(card);
   });
 
-  // Markera kortet vars dygn är exakt det som visas just nu.
-  // Körs efter ombyggnad så markeringen överlever _refreshAll (gäller även
-  // standardintervallet vid laddning => "Idag" blir aktivt).
+  // Markera alla dagkort som ingår i det visade fönstret – en dag, ett
+  // flerdagarsval, eller hela spannet vid "Samtliga". Kortmarkeringen
+  // speglar alltid exakt vad graferna/tabellen visar.
   const sNow = sliceData(currentRange);
-  const daysInView = [...new Set(sNow.times.map(t => t.toLocaleDateString('sv-SE')))];
-  if (daysInView.length === 1) {
-    strip.querySelector(`.day-card[data-date="${daysInView[0]}"]`)?.classList.add('active');
-  }
+  const daysInView = new Set(sNow.times.map(t => t.toLocaleDateString('sv-SE')));
+  strip.querySelectorAll('.day-card').forEach(c => {
+    if (daysInView.has(c.dataset.date)) c.classList.add('active');
+  });
 }
 
-function zoomToDay(dateKey) {
+// ── DAGVAL (multi-select i dag-strippen) ─────────────────────────────────────
+// Tryck togglar en dag av/på. Fönstret blir spannet från tidigaste till
+// senaste valda dag, inklusive mellanliggande dagar. Tomt val => standard.
+let selectedDays = new Set();
+
+function toggleDaySelection(dateKey) {
   if (!weatherData) return;
-  const [y, mo, d] = dateKey.split('-').map(Number);
-  const startDate = new Date(y, mo - 1, d, 0, 0, 0, 0);
-  const endDate   = new Date(y, mo - 1, d, 23, 59, 59, 999);
+  if (selectedDays.has(dateKey)) selectedDays.delete(dateKey);
+  else selectedDays.add(dateKey);
+
+  if (!selectedDays.size) { setDefaultDayRange(); return; }
+
+  const keys = [...selectedDays].sort();
+  const [y1, m1, d1] = keys[0].split('-').map(Number);
+  const [y2, m2, d2] = keys[keys.length - 1].split('-').map(Number);
+  const startDate = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
+  const endDate   = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
 
   let startIdx = weatherData.times.findIndex(t => t >= startDate);
   let endIdx   = weatherData.times.findIndex(t => t > endDate);
@@ -2281,7 +2243,7 @@ function toggleDatePickers() {
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   // Starta på Plats-vyn utan automatisk hämtning – användaren väljer plats,
-  // och vid lyckad hämtning hoppar appen själv vidare till Idag.
+  // och vid lyckad hämtning hoppar appen själv vidare till Översikt.
   navigate('plats');
 });
 
