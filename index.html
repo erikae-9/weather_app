@@ -795,6 +795,73 @@ body {
   min-height: 0.8em;
 }
 
+/* ── VYER (hash-routade sidor i samma fil) ──────────────────────────── */
+.view { display: none; }
+.view.active { display: flex; flex-direction: column; gap: 12px; }
+
+/* Global dag-strip – överst på varje vy som överblick + dagväljare (ej klistrad) */
+.day-strip-global {
+  padding: 2px 0 4px;
+}
+
+/* Större kort på Idag-vyn (desktop) – fasta kolumner ger flera rader */
+@media (min-width: 768px) {
+  #view-idag .current-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  #view-idag .current-card { padding: 16px 18px 18px; border-radius: 12px; }
+  #view-idag .current-card-label { font-size: 0.72rem; margin-bottom: 8px; }
+  #view-idag .current-card-value { font-size: 2.2rem; margin-bottom: 6px; }
+  #view-idag .current-card-sub { font-size: 0.85rem; }
+  #view-idag .current-card-spark { height: 56px; margin-top: 10px; }
+  #view-idag .risk-badge { font-size: 0.85rem; padding: 9px 16px; gap: 8px; }
+  #view-idag .risk-badge-icon { font-size: 1.05rem; }
+}
+@media (min-width: 1100px) {
+  #view-idag .current-row { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Desktop-flikar i headern */
+.top-nav { display: none; gap: 4px; margin-left: auto; align-self: center; }
+.top-nav button {
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text-dim); font-family: 'Inter', sans-serif; font-size: 0.82rem;
+  padding: 7px 14px; cursor: pointer; transition: all 0.15s; min-height: 38px;
+}
+.top-nav button:hover { color: var(--text); background: var(--surface2); }
+.top-nav button.active { color: var(--accent); background: var(--surface2); border-color: var(--border); }
+
+/* Mobil bottennavigering */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+  display: flex; background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav button {
+  flex: 1; background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.6rem;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 8px 4px 9px; min-height: 54px;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-nav .nav-icon { font-size: 1.15rem; line-height: 1; }
+.bottom-nav button.active { color: var(--accent); }
+
+body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
+
+@media (min-width: 768px) {
+  .top-nav { display: flex; }
+  .bottom-nav { display: none; }
+  body { padding-bottom: 0; }
+}
+
+/* Grafer: två kolumner på bred desktop, nederbörd i full bredd */
+.charts-grid { display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 1000px) {
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .charts-grid .chart-panel:nth-child(3) { grid-column: 1 / -1; }
+}
+
 </style>
 </head>
 <body>
@@ -802,34 +869,15 @@ body {
 <div class="header">
   <div class="header-title">🌤 Eriks <span>väderapp</span></div>
   <div class="header-sub" style="font-size:0.62rem;">Väderprognos</div>
+  <nav class="top-nav">
+    <button data-nav="idag"   onclick="navigate('idag')">Idag</button>
+    <button data-nav="grafer" onclick="navigate('grafer')">Grafer</button>
+    <button data-nav="tabell" onclick="navigate('tabell')">Tabell</button>
+    <button data-nav="plats"  onclick="navigate('plats')">Plats</button>
+  </nav>
 </div>
 
 <div class="app">
-
-  <div style="display:flex; flex-direction:column; gap:8px;">
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <div class="location-pill">
-        <input type="text" id="citySearchInput" placeholder="Sök plats... (plats, kommun, län, postnr, land)" onkeypress="if(event.key==='Enter') searchCity()">
-        <button class="pill-btn" onclick="searchCity()">🔍 Sök</button>
-      </div>
-      <button class="geo-btn" onclick="useGeolocation()">📍 Min plats</button>
-    </div>
-
-    <div class="preset-strip">
-      <button class="preset-btn" onclick="selectCity('Sjungande dalen',64.762528,20.923429)">Sjungande dalen</button>
-      <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
-      <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
-      <button class="coord-toggle-btn" onclick="toggleCoords()">⚙ Koordinater</button>
-    </div>
-
-    <div id="coordRow" class="coord-row">
-      <span class="coord-label">LAT</span>
-      <input type="number" id="lat" class="coord-input" step="0.0001" value="64.762519">
-      <span class="coord-label">LON</span>
-      <input type="number" id="lon" class="coord-input" step="0.0001" value="20.923440">
-      <button class="fetch-btn" onclick="fetchWeather()">📡 Hämta</button>
-    </div>
-  </div>
 
   <div id="error" style="display:none;" class="error-box"></div>
   <div id="loading" class="loading-box" style="display:none;">Laddar väderdata</div>
@@ -837,7 +885,7 @@ body {
   <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
 
     <!-- UNIFIED RANGE CONTROL -->
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <div id="globalControls" style="display:none; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:8px;">
       <div class="range-control">
         <div class="range-row">
           <span class="range-group-label">Timmar</span>
@@ -865,15 +913,17 @@ body {
       <div id="locationLabel" class="header-sub" style="padding-top:6px;"></div>
     </div>
 
+    <!-- GLOBAL DAG-STRIP (överblick + dagväljare på varje vy) -->
+    <div class="day-strip-global" id="dayStripGlobal" style="display:none;">
+      <div class="day-strip" id="dayStrip"></div>
+    </div>
+
+    <!-- VY: IDAG -->
+    <section class="view active" id="view-idag">
+
     <div>
       <div id="nowSectionTitle" class="section-title" style="margin-bottom:6px;">Just nu</div>
       <div id="riskRow" class="risk-row"></div>
-    </div>
-
-    <!-- DAY SUMMARY STRIP -->
-    <div>
-      <div class="section-title" style="margin-bottom:6px;">Dagar</div>
-      <div class="day-strip" id="dayStrip"></div>
     </div>
 
     <div>
@@ -924,9 +974,13 @@ body {
       </div>
     </div>
 
+    </section>
+
+    <!-- VY: GRAFER -->
+    <section class="view" id="view-grafer">
     <div>
       <div class="section-title" style="margin-bottom:6px;">Grafer</div>
-      <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="charts-grid">
         <div class="chart-panel">
           <div class="chart-panel-header">
             <span class="chart-panel-title">Temperatur</span>
@@ -982,6 +1036,10 @@ body {
       </div>
     </div>
 
+    </section>
+
+    <!-- VY: TABELL -->
+    <section class="view" id="view-tabell">
     <div>
       <div class="section-title" style="margin-bottom:6px;">Detaljer</div>
       <div class="timeline-section">
@@ -1005,9 +1063,48 @@ body {
         </div>
       </div>
     </div>
+    </section>
+
+    <!-- VY: PLATS -->
+    <section class="view" id="view-plats">
+    <div>
+      <div class="section-title" style="margin-bottom:6px;">Plats</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <div class="location-pill">
+            <input type="text" id="citySearchInput" placeholder="Sök plats... (plats, kommun, län, postnr, land)" onkeypress="if(event.key==='Enter') searchCity()">
+            <button class="pill-btn" onclick="searchCity()">🔍 Sök</button>
+          </div>
+          <button class="geo-btn" onclick="useGeolocation()">📍 Min plats</button>
+        </div>
+
+        <div class="preset-strip">
+          <button class="preset-btn" onclick="selectCity('Sjungande dalen',64.762528,20.923429)">Sjungande dalen</button>
+          <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
+          <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">Koordinater</div>
+        <div id="coordRow" class="coord-row visible">
+          <span class="coord-label">LAT</span>
+          <input type="number" id="lat" class="coord-input" step="0.0001" value="64.762519">
+          <span class="coord-label">LON</span>
+          <input type="number" id="lon" class="coord-input" step="0.0001" value="20.923440">
+          <button class="fetch-btn" onclick="fetchWeather()">📡 Hämta</button>
+        </div>
+      </div>
+    </div>
+    </section>
 
   </div>
 </div>
+
+<nav class="bottom-nav">
+  <button data-nav="idag"   onclick="navigate('idag')"><span class="nav-icon">☀️</span>Idag</button>
+  <button data-nav="grafer" onclick="navigate('grafer')"><span class="nav-icon">📈</span>Grafer</button>
+  <button data-nav="tabell" onclick="navigate('tabell')"><span class="nav-icon">📋</span>Tabell</button>
+  <button data-nav="plats"  onclick="navigate('plats')"><span class="nav-icon">📍</span>Plats</button>
+</nav>
 
 <script>
 let weatherData = null;
@@ -1100,10 +1197,6 @@ function circularMeanDeg(degs) {
 function toLocalDTString(date) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function toggleCoords() {
-  document.getElementById('coordRow').classList.toggle('visible');
 }
 
 function showError(msg) {
@@ -1366,6 +1459,8 @@ async function fetchWeather() {
     lastFetchTime = new Date();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'flex';
+    document.getElementById('globalControls').style.display = 'flex';
+    document.getElementById('dayStripGlobal').style.display = 'block';
     updateLocationLabel();
 
     // Sol upp/ned hämtas i bakgrunden; rita om när tiderna finns
@@ -1379,9 +1474,15 @@ async function fetchWeather() {
       document.getElementById('endDateTime').max = toLocalDTString(lastTime);
     }
     setDefaultDayRange();
+
+    // Hämtning startad från Plats-vyn → hoppa till översikten med ny data
+    if (currentView() === 'plats') navigate('idag');
   } catch(e) {
     showError('Kunde inte hämta väderdata: ' + e.message);
     document.getElementById('loading').style.display = 'none';
+    // Visa appens skal ändå så att Plats-vyn går att nå för nytt försök
+    document.getElementById('content').style.display = 'flex';
+    navigate('plats');
   }
 }
 
@@ -1578,13 +1679,56 @@ function setRange(hours) {
   _refreshAll();
 }
 
+// ── VYER / ROUTER ─────────────────────────────────────────────────────────────
+// Hash-routade vyer i samma fil: #/idag, #/grafer, #/tabell, #/plats.
+// Endast den aktiva vyn ritas om vid ändringar; övriga markeras "dirty"
+// och ritas först när de visas (Plotly mäter fel bredd i dolda element).
+
+const VIEWS = ['idag', 'grafer', 'tabell', 'plats'];
+const viewDirty = { idag: true, grafer: true, tabell: true };
+
+function currentView() {
+  const h = location.hash.replace(/^#\/?/, '');
+  return VIEWS.includes(h) ? h : 'idag';
+}
+
+function navigate(v) {
+  if (currentView() === v) { applyRoute(); return; }
+  location.hash = '#/' + v;
+}
+
+function applyRoute() {
+  const v = currentView();
+  VIEWS.forEach(x =>
+    document.getElementById('view-' + x)?.classList.toggle('active', x === v));
+  document.querySelectorAll('[data-nav]').forEach(b =>
+    b.classList.toggle('active', b.dataset.nav === v));
+  renderView(v);
+  window.scrollTo({ top: 0 });
+}
+
+function renderView(v) {
+  if (!weatherData) return;
+  if (v === 'idag') {
+    if (viewDirty.idag) { updateRiskBadges(); updateCurrentCards(); viewDirty.idag = false; }
+  } else if (v === 'grafer') {
+    if (viewDirty.grafer) { drawCharts(); viewDirty.grafer = false; }
+    else ['tempChart', 'windChart', 'precipChart'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.data) Plotly.Plots.resize(el); // fönstret kan ha ändrats medan vyn var dold
+    });
+  } else if (v === 'tabell') {
+    if (viewDirty.tabell) { updateTable(); viewDirty.tabell = false; }
+  }
+}
+
+window.addEventListener('hashchange', applyRoute);
+
 function _refreshAll() {
-  buildDayStrip();
-  updateCurrentCards();
-  updateRiskBadges();
-  drawCharts();
-  updateTable();
-  syncDatePickers();
+  buildDayStrip();      // global – alltid synlig
+  syncDatePickers();    // globalt kontrollfält
+  viewDirty.idag = viewDirty.grafer = viewDirty.tabell = true;
+  renderView(currentView());
 }
 
 function syncDatePickers() {
@@ -1659,6 +1803,7 @@ function updateCurrentCards() {
   document.getElementById('cUVRange').textContent = (minUV !== null) ? `${minUV.toFixed(1)}–${maxUV.toFixed(1)}` : '—';
 
   const sc = { displayModeBar: false, responsive: true };
+  const sparkH = window.innerWidth >= 768 ? 56 : 40; // matchar CSS-höjden på desktop
   const sl = {
     margin: {t:2,r:2,b:2,l:2},
     xaxis: { visible:false, fixedrange:true },
@@ -1666,7 +1811,7 @@ function updateCurrentCards() {
     showlegend: false,
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    height: 40,
+    height: sparkH,
     autosize: true,
     dragmode: false,
     hovermode: 'x'
@@ -2135,7 +2280,9 @@ function toggleDatePickers() {
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
-  selectCity('Skellefteå', 64.762519, 20.923440);
+  // Starta på Plats-vyn utan automatisk hämtning – användaren väljer plats,
+  // och vid lyckad hämtning hoppar appen själv vidare till Idag.
+  navigate('plats');
 });
 
 // Hämta om data automatiskt när fliken blir synlig igen och datan är >30 min gammal
