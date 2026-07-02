@@ -21,11 +21,37 @@
   --text:      #e2eaf7;
   --text-dim:  #7a94b8;
   --accent:    #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-contrast: #000;
   --green:     #34d399;
   --amber:     #fbbf24;
   --red:       #f87171;
   --purple:    #a78bfa;
   --cyan:      #67e8f9;
+  --night-swatch: rgba(3,6,14,0.85);
+  --border-soft: rgba(31,46,71,0.5);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg:        #eef3f9;
+  --surface:   #ffffff;
+  --surface2:  #e3ebf4;
+  --border:    #d0dcea;
+  --muted:     #6b7f99;
+  --text:      #1a2740;
+  --text-dim:  #49607e;
+  --accent:    #0284c7;
+  --accent-hover: #0369a1;
+  --accent-contrast: #fff;
+  --green:     #059669;
+  --amber:     #b45309;
+  --red:       #dc2626;
+  --purple:    #7c3aed;
+  --cyan:      #0e7490;
+  --night-swatch: rgba(71,85,105,0.30);
+  --border-soft: rgba(208,220,234,0.8);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -127,7 +153,7 @@ body {
   min-height: 44px;
 }
 .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
-.preset-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+.preset-btn.active { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); font-weight: 600; }
 
 .coord-row {
   display: none;
@@ -154,7 +180,7 @@ body {
   background: var(--accent);
   border: none;
   border-radius: 6px;
-  color: #000;
+  color: var(--accent-contrast);
   font-family: 'Inter', sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
@@ -164,7 +190,7 @@ body {
   touch-action: manipulation;
   min-height: 44px;
 }
-.fetch-btn:hover { background: #7dd3fc; }
+.fetch-btn:hover { background: var(--accent-hover); }
 .fetch-btn:disabled { background: var(--muted); cursor: not-allowed; }
 
 .geo-btn {
@@ -573,7 +599,7 @@ body {
 
 .timeline-table td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(31,46,71,0.5);
+  border-bottom: 1px solid var(--border-soft);
   color: var(--text-dim);
   font-size: 0.73rem;
 }
@@ -827,6 +853,24 @@ body {
   #view-oversikt .current-row { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* Tema-växlare (ljust/mörkt läge) */
+.theme-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 38px;
+  align-self: center;
+  margin-left: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+@media (min-width: 768px) { .theme-toggle { margin-left: 0; } }
+
 /* Desktop-flikar i headern */
 .top-nav { display: none; gap: 4px; margin-left: auto; align-self: center; }
 .top-nav button {
@@ -883,6 +927,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
     <button data-nav="tabell" onclick="navigate('tabell')">Tabell</button>
     <button data-nav="plats"  onclick="navigate('plats')">Plats</button>
   </nav>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Växla ljust/mörkt läge" aria-label="Växla ljust/mörkt läge">☀️</button>
 </div>
 
 <div class="app">
@@ -988,7 +1033,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#38bdf8"></span>Temp</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#a78bfa"></span>Känns</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(56,189,248,0.35);height:8px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
             </div>
           </div>
           <div id="tempChart"></div>
@@ -1002,7 +1047,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#34d399"></span>Medel</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>Byar</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(52,211,153,0.35);height:8px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
             </div>
           </div>
           <div id="windChart"></div>
@@ -1024,7 +1069,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
             <div class="chart-legend">
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(103,232,249,0.6);height:9px;width:9px;border-radius:2px"></span>mm</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(103,232,249,0.22);height:9px;width:5px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:rgba(3,6,14,0.85);height:9px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:9px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:#fbbf24"></span>1h%</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:#f97316"></span>3h%</span>
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:#a78bfa"></span>⚡%</span>
@@ -1113,6 +1158,58 @@ let currentCity = 'Skellefteå';
 let lastFetchTime = null;   // när data senast hämtades (för "uppdaterad HH:MM" + auto-refresh)
 let sunTimes = {};          // 'YYYY-MM-DD' -> { sunrise: Date|null, sunset: Date|null }
 
+// ── TEMA (ljust/mörkt läge) ───────────────────────────────────────────────────
+// Sparas i localStorage; utan sparat val följs systemets färgschema.
+const THEME_KEY = 'weatherAppTheme';
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+// Plotly-färger som matchar CSS-variablerna för respektive tema
+function chartColors() {
+  if (currentTheme() === 'light') {
+    return {
+      bg: '#ffffff', grid: '#e2e9f2', axisLine: '#d0dcea',
+      tick: '#6b7f99', font: '#49607e',
+      hoverBg: '#ffffff', hoverBorder: '#c6d4e4', hoverText: '#1a2740',
+      night: 'rgba(71,85,105,0.13)', moon: 'rgba(73,96,126,0.75)',
+      zoneLabelBg: 'rgba(255,255,255,0.65)',
+      windArrow: 'rgba(30,41,59,0.85)'
+    };
+  }
+  return {
+    bg: '#111827', grid: '#1f2e47', axisLine: '#1f2e47',
+    tick: '#4a6080', font: '#7a94b8',
+    hoverBg: '#1a2438', hoverBorder: '#2d4060', hoverText: '#e2eaf7',
+    night: 'rgba(3,6,14,0.40)', moon: 'rgba(122,148,184,0.6)',
+    zoneLabelBg: 'rgba(17,24,39,0.6)',
+    windArrow: 'rgba(255,255,255,0.85)'
+  };
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', theme === 'light' ? '#eef3f9' : '#090e1a');
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️'; // visar läget man växlar till
+  if (weatherData) _refreshAll(); // rita om grafer/sparklines med rätt färger
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  applyTheme(next);
+}
+
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch {}
+  const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+  applyTheme(saved === 'light' || saved === 'dark' ? saved : (prefersLight ? 'light' : 'dark'));
+})();
+
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
 const BEAUFORT_ZONES = [
   { name: 'Lugnt',       min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)' },
@@ -1143,7 +1240,7 @@ function buildBeaufortShapes(yMax, isMobile) {
     if ((Math.min(zone.max, yMax) - y0) > 1.5 && !isMobile) {
       annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'right', y:midY, yanchor:'middle',
         text: zone.name, showarrow:false, font:{ size:9, color:zone.lineColor },
-        bgcolor:'rgba(17,24,39,0.6)', borderpad:2 });
+        bgcolor: chartColors().zoneLabelBg, borderpad:2 });
     }
   }
   return { shapes, annotations };
@@ -1378,7 +1475,7 @@ async function fetchSunTimes(lat, lon) {
 // Saknas soluppgång/-nedgång (midnattssol) ritas ingen skuggning för dygnet.
 function nightRect(x0, x1) {
   return { type:'rect', xref:'x', yref:'paper', x0, x1, y0:0, y1:1,
-    fillcolor:'rgba(3,6,14,0.40)', line:{width:0}, layer:'below' };
+    fillcolor: chartColors().night, line:{width:0}, layer:'below' };
 }
 
 function buildNightIntervals() {
@@ -1416,7 +1513,7 @@ function buildNightAnnotations(xStart, xEnd) {
       x: new Date((Math.max(a, xStart) + Math.min(b, xEnd)) / 2),
       xref:'x', y: 1, yref:'paper', yanchor:'top',
       text:'☾', showarrow:false,
-      font:{ size:11, color:'rgba(122,148,184,0.6)' }
+      font:{ size:11, color: chartColors().moon }
     }));
 }
 
@@ -1857,25 +1954,26 @@ function drawCharts() {
   const spanHours = (xEnd - xStart) / 3.6e6;
   const tickFormat = spanHours <= 36 ? '%H:%M' : '%d/%m %H:%M';
 
+  const cc = chartColors();
   const base = {
     margin: {t:6, r:38, b:bottomMargin, l:leftMargin},
     height: chartH,
     autosize: true,
     hovermode: 'x unified',
     showlegend: false,
-    plot_bgcolor: '#111827',
-    paper_bgcolor: '#111827',
-    font: { family: 'Inter, sans-serif', size: 10, color: '#7a94b8' },
+    plot_bgcolor: cc.bg,
+    paper_bgcolor: cc.bg,
+    font: { family: 'Inter, sans-serif', size: 10, color: cc.font },
     xaxis: {
-      gridcolor:'#1f2e47', linecolor:'#1f2e47',
-      tickfont:{color:'#4a6080', size:9},
+      gridcolor: cc.grid, linecolor: cc.axisLine,
+      tickfont:{color: cc.tick, size:9},
       fixedrange:false,
       tickangle: -30,
       range:[xStart, xEnd],
       tickformat: tickFormat,
     },
-    yaxis: { gridcolor:'#1f2e47', linecolor:'#1f2e47', tickfont:{color:'#4a6080', size:9}, fixedrange:false },
-    hoverlabel: { bgcolor:'#1a2438', bordercolor:'#2d4060', font:{family:'Inter, sans-serif', size:12, color:'#e2eaf7'} }
+    yaxis: { gridcolor: cc.grid, linecolor: cc.axisLine, tickfont:{color: cc.tick, size:9}, fixedrange:false },
+    hoverlabel: { bgcolor: cc.hoverBg, bordercolor: cc.hoverBorder, font:{family:'Inter, sans-serif', size:12, color: cc.hoverText} }
   };
 
   const nowIdx = findNowIndex();
@@ -1901,7 +1999,7 @@ function drawCharts() {
     { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor:'rgba(56,189,248,0.1)', line:{width:1,color:'rgba(56,189,248,0.2)'}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color:'#38bdf8',width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color:'#a78bfa',width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
-  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color:'#4a6080'}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
+  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color: cc.tick}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
 
   // ── WIND with Beaufort shading ──
   const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
@@ -1925,7 +2023,7 @@ function drawCharts() {
       windAnnotations.push({
         x: s.times[i], y: s.data.wind[i],
         text: '↓', showarrow: false,
-        font: { size: isMobile ? 16 : 18, color: 'rgba(255,255,255,0.85)' },
+        font: { size: isMobile ? 16 : 18, color: cc.windArrow },
         textangle: s.data.wind_direction[i] % 360,
         xanchor: 'center', yanchor: 'middle'
       });
@@ -1940,7 +2038,7 @@ function drawCharts() {
     { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color:'#fbbf24',width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
   ], {
     ...base,
-    yaxis: { ...base.yaxis, title:{ text:'m/s', font:{size:11, color:'#4a6080'} }, range:[0, yMax], fixedrange:false },
+    yaxis: { ...base.yaxis, title:{ text:'m/s', font:{size:11, color: cc.tick} }, range:[0, yMax], fixedrange:false },
     shapes: [...bfShapes, ...nightShapes, ...nowShape],
     annotations: [...windAnnotations, ...bfAnnotations, ...nightAnn]
   }, cfg);
@@ -2028,8 +2126,8 @@ function drawCharts() {
   Plotly.newPlot('precipChart', precipTraces, {
     ...base,
     barmode: 'overlay',
-    yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color:'#4a6080'}}, rangemode:'nonnegative', range:[-0.05, null] },
-    yaxis2: { overlaying:'y', side:'right', range:[0,105], gridcolor:'rgba(0,0,0,0)', linecolor:'#1f2e47', tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
+    yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color: cc.tick}}, rangemode:'nonnegative', range:[-0.05, null] },
+    yaxis2: { overlaying:'y', side:'right', range:[0,105], gridcolor:'rgba(0,0,0,0)', linecolor: cc.axisLine, tickfont:{color:'#f97316', size:10}, title:{text:'%', font:{size:11, color:'#f97316'}}, fixedrange:true },
     shapes: [...nightShapes, ...nowShape],
     annotations: [...thunderAnnotations, ...nightAnn]
   }, cfg);
