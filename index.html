@@ -684,6 +684,20 @@ body {
   padding: 10px 14px;
   color: var(--red);
   font-size: 0.8rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  flex-shrink: 0;
 }
 
 .loading-box {
@@ -1296,11 +1310,19 @@ function toLocalDTString(date) {
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// Felmeddelanden ligger kvar tills de stängs (eller en ny hämtning startar)
 function showError(msg) {
   const el = document.getElementById('error');
-  el.style.display = 'block';
-  el.textContent = msg;
-  setTimeout(() => { el.style.display = 'none'; }, 5000);
+  el.style.display = 'flex';
+  el.innerHTML = '';
+  const text = document.createElement('span');
+  text.textContent = msg;
+  const btn = document.createElement('button');
+  btn.className = 'error-dismiss';
+  btn.setAttribute('aria-label', 'Stäng felmeddelande');
+  btn.textContent = '✕';
+  btn.onclick = () => { el.style.display = 'none'; };
+  el.append(text, btn);
 }
 
 function getWindDirection(degrees) {
@@ -1597,28 +1619,28 @@ function processWeatherData(data) {
 
     times.push(t);
     temp.push(inst.air_temperature);
-    temp_p10.push(inst.air_temperature_percentile_10 || inst.air_temperature);
-    temp_p90.push(inst.air_temperature_percentile_90 || inst.air_temperature);
+    temp_p10.push(inst.air_temperature_percentile_10 ?? inst.air_temperature);
+    temp_p90.push(inst.air_temperature_percentile_90 ?? inst.air_temperature);
     feels_like.push(calculateFeelsLike(inst.air_temperature, inst.wind_speed, inst.relative_humidity));
     wind.push(inst.wind_speed);
-    wind_p10.push(inst.wind_speed_percentile_10 || inst.wind_speed);
-    wind_p90.push(inst.wind_speed_percentile_90 || inst.wind_speed);
-    gust.push(inst.wind_speed_of_gust || inst.wind_speed * 1.5);
+    wind_p10.push(inst.wind_speed_percentile_10 ?? inst.wind_speed);
+    wind_p90.push(inst.wind_speed_percentile_90 ?? inst.wind_speed);
+    gust.push(inst.wind_speed_of_gust ?? null); // ingen påhittad byvind när API:t saknar värde
     wind_direction.push(inst.wind_from_direction);
 
     if (next1h) {
       precip.push(next1h.details.precipitation_amount);
       precip_step.push(next1h.details.precipitation_amount ?? null); // faktisk mängd i steget (1h)
-      precip_p10.push(next1h.details.precipitation_amount_min || next1h.details.precipitation_amount);
-      precip_p90.push(next1h.details.precipitation_amount_max || next1h.details.precipitation_amount);
+      precip_p10.push(next1h.details.precipitation_amount_min ?? next1h.details.precipitation_amount);
+      precip_p90.push(next1h.details.precipitation_amount_max ?? next1h.details.precipitation_amount);
       precip_prob.push(next1h.details.probability_of_precipitation ?? null);
       symbols.push(next1h.summary?.symbol_code || 'unknown');
     } else if (next6h) {
       const precip6h = next6h.details.precipitation_amount || 0;
       precip.push(precip6h / 6);                 // timtakt för grafer
       precip_step.push(precip6h);                // hela 6h-blockets mängd för summering
-      precip_p10.push((next6h.details.precipitation_amount_min || precip6h) / 6);
-      precip_p90.push((next6h.details.precipitation_amount_max || precip6h) / 6);
+      precip_p10.push((next6h.details.precipitation_amount_min ?? precip6h) / 6);
+      precip_p90.push((next6h.details.precipitation_amount_max ?? precip6h) / 6);
       precip_prob.push(next6h.details.probability_of_precipitation ?? null);
       symbols.push(next6h.summary?.symbol_code || 'unknown');
     } else {
@@ -1629,7 +1651,7 @@ function processWeatherData(data) {
     cloud.push(inst.cloud_area_fraction);
     humidity.push(inst.relative_humidity);
     pressure.push(inst.air_pressure_at_sea_level);
-    uv.push(inst.ultraviolet_index_clear_sky || 0);
+    uv.push(inst.ultraviolet_index_clear_sky ?? null); // saknat värde ≠ 0
   });
 
   const rolling3h = compute3hRollingProb(precip_prob);
@@ -1896,12 +1918,12 @@ function updateRiskBadges() {
   if (nowIdx === null) return;
 
   const d = weatherData.data;
-  const t0    = d.temp[nowIdx]         || 0;
-  const f0    = d.feels_like[nowIdx]   || 0;
-  const w0    = d.wind[nowIdx]         || 0;
-  const g0    = d.gust[nowIdx]         || 0;
-  const uv0   = d.uv[nowIdx]           || 0;
-  const p0    = d.precip[nowIdx]       || 0;
+  const t0    = d.temp[nowIdx];
+  const f0    = d.feels_like[nowIdx];
+  const w0    = d.wind[nowIdx];
+  const g0    = d.gust[nowIdx];
+  const uv0   = d.uv[nowIdx];
+  const p0    = d.precip[nowIdx];
   const prob0 = d.precip_prob[nowIdx];
   const roll3h = d.rolling3h[nowIdx];
   const th0   = d.thunder[nowIdx];
@@ -1912,24 +1934,29 @@ function updateRiskBadges() {
   const badge = (icon, text, cls) =>
     `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
 
-  let precipLabel = `${p0.toFixed(1)} mm`;
-  if (prob0 !== null && prob0 !== undefined) precipLabel += ` · ${Math.round(prob0)}%`;
-  if (roll3h !== null) precipLabel += ` · 3h ${roll3h}%`;
+  // Badges utan data utelämnas i stället för att visa 0
+  let html = '';
+  if (t0 != null) html += badge('🌡️', `${t0.toFixed(1)}°C`,
+    t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low');
+  if (f0 != null) html += badge('☝🏼', `${f0.toFixed(1)}°C`,
+    f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low');
+  if (w0 != null) {
+    const gLabel = g0 != null ? ` (${g0.toFixed(1)})` : '';
+    html += badge('💨', `${w0.toFixed(1)}${gLabel} m/s`,
+      w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low');
+  }
+  if (uv0 != null) html += badge('☀️', `UV ${uv0.toFixed(1)}`,
+    uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low');
+  if (p0 != null) {
+    let precipLabel = `${p0.toFixed(1)} mm`;
+    if (prob0 !== null && prob0 !== undefined) precipLabel += ` · ${Math.round(prob0)}%`;
+    if (roll3h !== null) precipLabel += ` · 3h ${roll3h}%`;
+    html += badge('🌧️', precipLabel,
+      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low');
+  }
+  if (th0 !== null && th0 !== undefined) html += badge('⚡', `Åska ${Math.round(th0)}%`, thunderClass(th0));
 
-  document.getElementById('riskRow').innerHTML =
-    badge('🌡️', `${t0.toFixed(1)}°C`,
-      t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low') +
-    badge('☝🏼', `${f0.toFixed(1)}°C`,
-      f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low') +
-    badge('💨', `${w0.toFixed(1)} (${g0.toFixed(1)}) m/s`,
-      w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low') +
-    badge('☀️', `UV ${uv0.toFixed(1)}`,
-      uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low') +
-    badge('🌧️', precipLabel,
-      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low') +
-    (th0 !== null && th0 !== undefined
-      ? badge('⚡', `Åska ${Math.round(th0)}%`, thunderClass(th0))
-      : '');
+  document.getElementById('riskRow').innerHTML = html;
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
@@ -2008,7 +2035,8 @@ function drawCharts() {
     ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
     : '';
 
-  const maxGustAll = Math.max(...s.data.gust.filter(v => v != null));
+  // Skala efter byar när de finns, annars efter medelvinden
+  const maxGustAll = Math.max(...validVals(s.data.gust), ...validVals(s.data.wind));
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
   const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax, isMobile);
 
@@ -2213,7 +2241,7 @@ function updateTable() {
     const wCell = row.insertCell();
     if (wv != null) {
       wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv.toFixed(1)}) ${wdir}</span>`;
+      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv != null ? gv.toFixed(1) : '—'}) ${wdir}</span>`;
     } else { wCell.textContent = '—'; }
 
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
