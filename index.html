@@ -1184,7 +1184,7 @@ let lastFetchTime = null;   // när data senast hämtades (för "uppdaterad HH:M
 let sunTimes = {};          // 'YYYY-MM-DD' -> { sunrise: Date|null, sunset: Date|null }
 
 // ── TEMA (ljust/mörkt läge) ───────────────────────────────────────────────────
-// Sparas i localStorage; utan sparat val följs systemets färgschema.
+// Mörkt läge är standard; växling via knappen sparas i localStorage.
 const THEME_KEY = 'weatherAppTheme';
 
 function currentTheme() {
@@ -1255,8 +1255,7 @@ function toggleTheme() {
 (function initTheme() {
   let saved = null;
   try { saved = localStorage.getItem(THEME_KEY); } catch {}
-  const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
-  applyTheme(saved === 'light' || saved === 'dark' ? saved : (prefersLight ? 'light' : 'dark'));
+  applyTheme(saved === 'light' ? 'light' : 'dark');
 })();
 
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
