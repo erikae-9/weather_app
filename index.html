@@ -250,6 +250,65 @@ body {
 }
 .plats-hero .preset-btn { font-size: 0.84rem; padding: 10px 14px; }
 
+/* Avancerat: manuella koordinater, hopfällt bakom en textlänk */
+.coord-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 6px 8px;
+  min-height: 34px;
+  margin-top: 6px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+.coord-toggle:hover { color: var(--accent); }
+
+.coord-row {
+  display: none;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.coord-row.open { display: flex; }
+
+.coord-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; font-weight: 500; }
+
+.coord-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  padding: 9px 10px;
+  width: 120px;
+  outline: none;
+  min-height: 44px;
+}
+.coord-input:focus { border-color: var(--accent); }
+
+.coord-fetch-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--accent-contrast);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+.coord-fetch-btn:hover { background: var(--accent-hover); }
+
 /* ── UNIFIED RANGE CONTROL ─────────────────────────────────────────── */
 .range-control {
   display: flex;
@@ -1168,6 +1227,17 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
         <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
         <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
       </div>
+
+      <button class="coord-toggle" id="coordToggle" onclick="toggleCoords()" aria-expanded="false">Avancerat: ange koordinater ▾</button>
+      <div class="coord-row" id="coordRow">
+        <span class="coord-label">LAT</span>
+        <input type="number" id="latInput" class="coord-input" step="0.0001" min="-90" max="90" placeholder="64.7625"
+               onkeypress="if(event.key==='Enter') fetchFromCoords()">
+        <span class="coord-label">LON</span>
+        <input type="number" id="lonInput" class="coord-input" step="0.0001" min="-180" max="180" placeholder="20.9234"
+               onkeypress="if(event.key==='Enter') fetchFromCoords()">
+        <button class="coord-fetch-btn" onclick="fetchFromCoords()">📡 Hämta</button>
+      </div>
     </div>
     </section>
 
@@ -1468,6 +1538,35 @@ function useGeolocation() {
     },
     err => { showError('Kunde inte hämta plats: ' + err.message); restore(); }
   );
+}
+
+// ── AVANCERAT: MANUELLA KOORDINATER ──────────────────────────────────────────
+
+function toggleCoords() {
+  const row = document.getElementById('coordRow');
+  const btn = document.getElementById('coordToggle');
+  const open = row.classList.toggle('open');
+  btn.textContent = `Avancerat: ange koordinater ${open ? '▴' : '▾'}`;
+  btn.setAttribute('aria-expanded', open);
+  if (open) {
+    // Förifyll med aktuell plats som utgångspunkt
+    document.getElementById('latInput').value = currentLat.toFixed(6);
+    document.getElementById('lonInput').value = currentLon.toFixed(6);
+  }
+}
+
+async function fetchFromCoords() {
+  const lat = parseFloat(document.getElementById('latInput').value);
+  const lon = parseFloat(document.getElementById('lonInput').value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    showError('Ogiltiga koordinater (lat −90…90, lon −180…180)');
+    return;
+  }
+  currentLat = lat;
+  currentLon = lon;
+  currentCity = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  await fetchWeather();
 }
 
 // ── SMHI THUNDER FETCH ────────────────────────────────────────────────────────
