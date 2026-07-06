@@ -2415,7 +2415,7 @@ function buildDayStrip() {
   Object.entries(days).forEach(([dateKey, { indices }]) => {
     const d = weatherData.data;
     const temps  = indices.map(i => d.temp[i]).filter(v => v !== null);
-    const probs  = indices.map(i => d.precip_prob[i]).filter(v => v !== null);
+    const steps  = validVals(indices.map(i => d.precip_step[i]));
     const thunds = indices.map(i => d.thunder[i]).filter(v => v !== null && v !== undefined);
     const syms   = indices.map(i => d.symbols[i]).filter(s => s !== 'unknown');
 
@@ -2423,9 +2423,9 @@ function buildDayStrip() {
 
     const hi   = Math.max(...temps);
     const lo   = Math.min(...temps);
-    const dayRainProb = probs.length
-      ? Math.round((1 - probs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1)) * 100)
-      : null;
+    // Ackumulerad nederbörd för dygnet (1h-värden + hela 6h-block).
+    // Detaljer som sannolikheter finns i graferna/tabellen.
+    const dayPrecip = steps.length ? steps.reduce((a, b) => a + b, 0) : null;
     const dayMaxThunder = thunds.length ? Math.max(...thunds) : null;
 
     const middayIdx = indices.find(i => {
@@ -2451,8 +2451,8 @@ function buildDayStrip() {
       <div class="day-card-name">${dayName}</div>
       <div class="day-card-icon">${getWeatherEmoji(sym)}</div>
       <div class="day-card-temps">${Math.round(hi)}° <span>${Math.round(lo)}°</span></div>
-      <div class="day-card-precip ${dayRainProb !== null && dayRainProb >= 30 ? 'wet' : ''}">
-        ${dayRainProb !== null ? '💧 ' + dayRainProb + '%' : '—'}
+      <div class="day-card-precip ${dayPrecip !== null && dayPrecip >= 1 ? 'wet' : ''}">
+        ${dayPrecip !== null ? '💧 ' + (dayPrecip < 10 ? dayPrecip.toFixed(1) : Math.round(dayPrecip)) + ' mm' : '—'}
       </div>
       <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>
       <div class="day-card-sun">${sunLine}</div>`;
