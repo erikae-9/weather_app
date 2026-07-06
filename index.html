@@ -2165,9 +2165,9 @@ function drawCharts() {
     : '';
 
   Plotly.newPlot('tempChart', [
-    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'P10–P90', hovertemplate:'P90: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color: cc.temp,width:2.5}, name:'Temp', hovertemplate:'%{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'P10–P90', hovertemplate:'Max: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color: cc.temp,width:2.5}, name:'Temp', hovertemplate:'Förväntat: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color: cc.feels,width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
   ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color: cc.tick}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
 
@@ -2203,9 +2203,9 @@ function drawCharts() {
   }
 
   Plotly.newPlot('windChart', [
-    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'P10: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.windBandFill, line:{width:1,color: cc.windBandLine}, name:'P10–P90', hovertemplate:'P90: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color: cc.wind,width:2.5}, name:'Medelvind', hovertemplate:'%{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.windBandFill, line:{width:1,color: cc.windBandLine}, name:'P10–P90', hovertemplate:'Max: %{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color: cc.wind,width:2.5}, name:'Medelvind', hovertemplate:'Medelvind: %{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color: cc.gust,width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
   ], {
     ...base,
@@ -2272,15 +2272,15 @@ function drawCharts() {
       marker:{ color: cc.precipBand },
       customdata: pd.map(d => [d.p10, d.p90]),
       name:'P10–90',
-      hovertemplate:'P10–P90: %{customdata[0]:.1f}–%{customdata[1]:.1f} mm<extra></extra>' },
+      hovertemplate:'Min-Max: %{customdata[0]:.1f}–%{customdata[1]:.1f} mm<extra></extra>' },
     // Väntevärdet som huvudstapel ovanpå
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),
       type:'bar', width: stepMs.map(w => w * 0.6),
       marker:{ color: cc.precipBar },
       name:'Nederb',
-      hovertemplate:'%{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob1h,width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'1h risk: %{y:.0f}%<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob3h,width:2,dash:'dot'}, name:'3h risk', hovertemplate:'3h risk: %{y:.0f}%<extra></extra>' },
+      hovertemplate:'Förväntat: %{y:.1f} mm<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob1h,width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'Risk inom 1h: %{y:.0f}%<extra></extra>' },
+    { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob3h,width:2,dash:'dot'}, name:'3h risk', hovertemplate:'Risk inom 3h: %{y:.0f}%<extra></extra>' },
   ];
 
   if (hasThunder) {
@@ -2290,7 +2290,7 @@ function drawCharts() {
       line:{ color: cc.thunder, width:2 },
       fill:'tozeroy', fillcolor: cc.thunderFill,
       connectgaps: true,
-      name:'Åska', hovertemplate:'⚡ Åska: %{y:.0f}%<extra></extra>'
+      name:'Åska', hovertemplate:'Åskrisk: %{y:.0f}%<extra></extra>'
     });
   }
 
@@ -2452,7 +2452,7 @@ function buildDayStrip() {
       <div class="day-card-icon">${getWeatherEmoji(sym)}</div>
       <div class="day-card-temps">${Math.round(hi)}° <span>${Math.round(lo)}°</span></div>
       <div class="day-card-precip ${dayRainProb !== null && dayRainProb >= 30 ? 'wet' : ''}">
-        ${dayRainProb !== null ? dayRainProb + '%' : '—'}
+        ${dayRainProb !== null ? '💧 ' + dayRainProb + '%' : '—'}
       </div>
       <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>
       <div class="day-card-sun">${sunLine}</div>`;
