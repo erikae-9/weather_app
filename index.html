@@ -1281,6 +1281,7 @@ function chartColors() {
       zoneLabelBg: 'rgba(255,255,255,0.65)',
       windArrow: 'rgba(30,41,59,0.85)',
       nowLine: 'rgba(2,132,199,0.45)',
+      zeroLine: 'rgba(90,111,140,0.55)',
       temp: '#0284c7', feels: '#7c3aed',
       tempBandFill: 'rgba(2,132,199,0.14)', tempBandLine: 'rgba(2,132,199,0.45)',
       wind: '#059669', gust: '#b45309',
@@ -1301,6 +1302,7 @@ function chartColors() {
     zoneLabelBg: 'rgba(17,24,39,0.6)',
     windArrow: 'rgba(255,255,255,0.85)',
     nowLine: 'rgba(56,189,248,0.4)',
+    zeroLine: 'rgba(122,148,184,0.5)',
     temp: '#38bdf8', feels: '#a78bfa',
     tempBandFill: 'rgba(56,189,248,0.1)', tempBandLine: 'rgba(56,189,248,0.2)',
     wind: '#34d399', gust: '#fbbf24',
@@ -2164,12 +2166,30 @@ function drawCharts() {
     ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
     : '';
 
+  // Fast fönster på minst ±10° kring temperaturens mittpunkt så att skalan
+  // inte zoomar in på små variationer; vidgas om data (P10/P90, känns som)
+  // sticker utanför. Gränserna avrundas utåt till hela 5°-steg och grafen
+  // får gradlinjer var 5:e grad.
+  const tAll = [...validVals(s.data.temp), ...validVals(s.data.temp_p10),
+                ...validVals(s.data.temp_p90), ...validVals(s.data.feels_like)];
+  let tempRange = null;
+  if (tAll.length && hMinT !== null) {
+    const tMid = (hMinT + hMaxT) / 2;
+    const lo = Math.min(tMid - 10, Math.min(...tAll) - 1);
+    const hi = Math.max(tMid + 10, Math.max(...tAll) + 1);
+    tempRange = [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5];
+  }
+
   Plotly.newPlot('tempChart', [
     { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'P10–P90', hovertemplate:'Max: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color: cc.temp,width:2.5}, name:'Temp', hovertemplate:'Förväntat: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color: cc.feels,width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
-  ], { ...base, yaxis:{...base.yaxis, title:{text:'°C', font:{size:11, color: cc.tick}}}, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
+  ], { ...base, yaxis:{...base.yaxis,
+        title:{text:'°C', font:{size:11, color: cc.tick}},
+        ...(tempRange ? { range: tempRange, dtick: 5, tick0: 0 } : {}),
+        zeroline: true, zerolinecolor: cc.zeroLine, zerolinewidth: 1.5  // 0°C (frysgräns) markeras extra
+      }, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
 
   // ── WIND with Beaufort shading ──
   const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
