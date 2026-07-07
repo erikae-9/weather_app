@@ -2182,7 +2182,7 @@ function drawCharts() {
 
   Plotly.newPlot('tempChart', [
     { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'P10–P90', hovertemplate:'Max: %{y:.1f}°C<extra></extra>' },
+    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'Min-Max', hovertemplate:'Max: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color: cc.temp,width:2.5}, name:'Temp', hovertemplate:'Förväntat: %{y:.1f}°C<extra></extra>' },
     { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color: cc.feels,width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
   ], { ...base, yaxis:{...base.yaxis,
@@ -2224,7 +2224,7 @@ function drawCharts() {
 
   Plotly.newPlot('windChart', [
     { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.windBandFill, line:{width:1,color: cc.windBandLine}, name:'P10–P90', hovertemplate:'Max: %{y:.1f} m/s<extra></extra>' },
+    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.windBandFill, line:{width:1,color: cc.windBandLine}, name:'Min-Max', hovertemplate:'Max: %{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color: cc.wind,width:2.5}, name:'Medelvind', hovertemplate:'Medelvind: %{y:.1f} m/s<extra></extra>' },
     { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color: cc.gust,width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
   ], {
@@ -2291,7 +2291,7 @@ function drawCharts() {
       type:'bar', width: stepMs.map(w => w * 0.26),
       marker:{ color: cc.precipBand },
       customdata: pd.map(d => [d.p10, d.p90]),
-      name:'P10–90',
+      name:'Min-Max',
       hovertemplate:'Min-Max: %{customdata[0]:.1f}–%{customdata[1]:.1f} mm<extra></extra>' },
     // Väntevärdet som huvudstapel ovanpå
     { x:pd.map(d=>d.t), y:pd.map(d=>d.p),
