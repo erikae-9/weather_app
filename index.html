@@ -1388,17 +1388,110 @@ function findNowIndex() {
   return bestIdx;
 }
 
-// ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
-function compute3hRollingProb(precip_prob) {
-  return precip_prob.map((_, i) => {
-    const window = [];
-    for (let k = Math.max(0, i - 1); k <= Math.min(precip_prob.length - 1, i + 1); k++) {
-      window.push(precip_prob[k]);
+// ── PERSISTENSMEDVETEN SANNOLIKHET ───────────────────────────────────────────
+// Timvisa nederbördssannolikheter är starkt autokorrelerade: regnar det 14:00
+// är det mycket troligare att det regnar 15:00. Ett oberoendeantagande (att
+// multiplicera ihop alla timmar) mättar därför mot 100 % över långa perioder.
+// unionProb interpolerar mellan oberoende (L = 1) och full persistens
+// (L → ∞, svaret blir högsta enskilda sannolikheten).
+// items: [{ p: 0..1, hours: stegets längd i timmar }]
+
+function unionProb(items, L) {
+  const v = items
+    .filter(o => o && o.p !== null && o.p !== undefined && !Number.isNaN(o.p))
+    .map(o => ({ p: Math.min(Math.max(o.p, 0), 1), hours: o.hours || 1 }))
+    .sort((a, b) => b.p - a.p);
+  if (!v.length) return null;
+  let q = 1 - v[0].p;                       // dominerande steget räknas fullt
+  for (let i = 1; i < v.length; i++) {
+    q *= Math.pow(1 - v[i].p, Math.min(1, v[i].hours / L));
+  }
+  return 1 - q;
+}
+
+// Hitta det L som får unionProb att träffa ett känt facit (t.ex. met.no:s
+// publicerade 6h-sannolikhet). unionProb avtar monotont med L → bisektion.
+function fitL(items, target) {
+  const lo0 = 1, hi0 = 240;
+  if (unionProb(items, hi0) > target) return hi0;
+  if (unionProb(items, lo0) < target) return lo0;
+  let lo = lo0, hi = hi0;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (unionProb(items, mid) > target) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// Kalibrera L mot varje 6h-fönster där både timsannolikheter och met.no:s
+// next_6_hours finns. Median är robust mot enstaka avvikare.
+function estimatePersistence() {
+  const { times, data } = weatherData;
+  const Ls = [];
+  for (let i = 0; i + 5 < times.length; i++) {
+    const target = data.prob6h[i];
+    if (target === null || target === undefined) continue;
+    if (times[i + 5] - times[i] !== 5 * 3600e3) continue;      // kräver timsteg
+    const hourly = data.precip_prob.slice(i, i + 6);
+    if (hourly.some(p => p === null || p === undefined)) continue;
+    const items = hourly.map(p => ({ p: p / 100, hours: 1 }));
+    const t = target / 100;
+    if (t <= Math.max(...hourly) / 100 + 0.01) continue;        // degenererat
+    if (t >= unionProb(items, 1) - 0.01) continue;
+    Ls.push(fitL(items, t));
+  }
+  if (!Ls.length) return 4;                 // fallback när 6h-data saknas
+  Ls.sort((a, b) => a - b);
+  return Ls[Math.floor(Ls.length / 2)];
+}
+
+// Risk för nederbörd någon gång under den visade perioden. Klamras mot
+// met.no:s publicerade block: ett 6h/12h-block helt inom fönstret är ett
+// golv, ett block som omsluter hela fönstret är ett tak.
+function periodRisk(sliced, L) {
+  if (!sliced.times.length) return null;
+  const n = sliced.times.length;
+  const items = sliced.times.map((t, i) => ({
+    p: sliced.data.precip_prob[i] == null ? null : sliced.data.precip_prob[i] / 100,
+    hours: sliced.data.step_hours[i] ?? 1
+  }));
+  let p = unionProb(items, L);
+  if (p === null) return null;
+
+  const t0 = sliced.times[0].getTime();
+  const t1 = sliced.times[n - 1].getTime() + (sliced.data.step_hours[n - 1] ?? 1) * 3600e3;
+
+  const { times, data } = weatherData;
+  let floor = 0, ceil = 1;
+  for (let i = 0; i < times.length; i++) {
+    const s = times[i].getTime();
+    for (const [h, v] of [[6, data.prob6h[i]], [12, data.prob12h[i]]]) {
+      if (v === null || v === undefined) continue;
+      const e = s + h * 3600e3;
+      if (s >= t0 && e <= t1) floor = Math.max(floor, v / 100);
+      if (s <= t0 && e >= t1) ceil  = Math.min(ceil,  v / 100);
     }
-    const validProbs = window.filter(p => p !== null && p !== undefined);
-    if (!validProbs.length) return null;
-    const noRain = validProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p / 100, 0), 1)), 1);
-    return Math.round((1 - noRain) * 100);
+  }
+  p = Math.max(p, floor);
+  p = Math.min(p, Math.max(ceil, floor));   // taket får aldrig tvinga under golvet
+  return Math.round(p * 100);
+}
+
+// ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
+// Framåtblickande: risken inom [t, t+3h). Null i svansen där stegen är 6h
+// (då vore fönstret 18 timmar, inte 3).
+function compute3hRollingProb(precip_prob, step_hours, L) {
+  return precip_prob.map((_, i) => {
+    if (step_hours[i] !== 1) return null;
+    const items = [];
+    for (let k = i; k < Math.min(precip_prob.length, i + 3); k++) {
+      if (step_hours[k] !== 1) break;
+      const p = precip_prob[k];
+      if (p !== null && p !== undefined) items.push({ p: p / 100, hours: 1 });
+    }
+    if (!items.length) return null;
+    const u = unionProb(items, L);
+    return u === null ? null : Math.round(u * 100);
   });
 }
 
@@ -1753,6 +1846,7 @@ function processWeatherData(data) {
   const times=[], temp=[], temp_p10=[], temp_p90=[], feels_like=[];
   const wind=[], wind_p10=[], wind_p90=[], gust=[], wind_direction=[];
   const precip=[], precip_p10=[], precip_p90=[], precip_prob=[], precip_step=[];
+  const prob6h=[], prob12h=[], step_hours=[];
   const cloud=[], humidity=[], pressure=[], uv=[], symbols=[];
 
   data.properties.timeseries.forEach(entry => {
@@ -1760,6 +1854,13 @@ function processWeatherData(data) {
     const inst = entry.data.instant.details;
     const next1h = entry.data.next_1_hours;
     const next6h = entry.data.next_6_hours;
+
+    // met.no publicerar egna sannolikheter för hela 6h-/12h-block. I den
+    // korta delen av serien finns de parallellt med timvärdena – de används
+    // både för att kalibrera persistensen och som golv/tak i periodRisk.
+    prob6h.push(next6h?.details?.probability_of_precipitation ?? null);
+    prob12h.push(entry.data.next_12_hours?.details?.probability_of_precipitation ?? null);
+    step_hours.push(next1h ? 1 : (next6h ? 6 : null));
 
     times.push(t);
     temp.push(inst.air_temperature);
@@ -1798,12 +1899,16 @@ function processWeatherData(data) {
     uv.push(inst.ultraviolet_index_clear_sky ?? null); // saknat värde ≠ 0
   });
 
-  const rolling3h = compute3hRollingProb(precip_prob);
-
   // thunder fylls i av mergeThunder() om SMHI-data finns; annars null överallt
   const thunder = times.map(() => null);
 
-  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_step, precip_p10, precip_p90, precip_prob, rolling3h, cloud, humidity, pressure, uv, symbols, thunder } };
+  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_step, precip_p10, precip_p90, precip_prob, prob6h, prob12h, step_hours, rolling3h: [], cloud, humidity, pressure, uv, symbols, thunder } };
+
+  // Persistensen kalibreras mot met.no:s 6h-block och används sedan för
+  // både 3h-serien och periodRisk.
+  weatherData.persistenceL = estimatePersistence();
+  weatherData.data.rolling3h =
+    compute3hRollingProb(precip_prob, step_hours, weatherData.persistenceL);
 }
 
 // ── SLICE ─────────────────────────────────────────────────────────────────────
@@ -1974,12 +2079,7 @@ function updateCurrentCards() {
   // Summera faktisk mängd per tidssteg (1h-värden + hela 6h-block), inte timtakten
   const totalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
   document.getElementById('cPrecip').textContent = `${totalP.toFixed(1)} mm`;
-  const rolling = s.data.rolling3h.filter(p => p !== null);
-  const maxRolling = rolling.length ? Math.max(...rolling) : null;
-  const allProbs = s.data.precip_prob.filter(p => p !== null);
-  const compoundRisk = allProbs.length
-    ? Math.round((1 - allProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100,0),1)), 1)) * 100)
-    : null;
+  const compoundRisk = periodRisk(s, weatherData.persistenceL);
   document.getElementById('cPrecipSub').innerHTML =
     (compoundRisk !== null ? `Risk över perioden: ${compoundRisk}%` : '');
 
@@ -2236,10 +2336,7 @@ function drawCharts() {
 
   // ── PRECIP + ÅSKA ──
   const hTotalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
-  const hProbs = validVals(s.data.precip_prob);
-  const hRisk = hProbs.length
-    ? Math.round((1 - hProbs.reduce((acc, p) => acc * (1 - Math.min(Math.max(p/100, 0), 1)), 1)) * 100)
-    : null;
+  const hRisk = periodRisk(s, weatherData.persistenceL);
   const hMaxTh = maxOf(s.data.thunder);
   document.getElementById('chartPrecipLive').textContent =
     `Σ ${hTotalP.toFixed(1)} mm` +
