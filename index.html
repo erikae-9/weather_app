@@ -31,6 +31,8 @@
   --orange:    #f97316;
   --night-swatch: rgba(3,6,14,0.85);
   --border-soft: rgba(31,46,71,0.5);
+  --row-hover: rgba(56,189,248,0.06);
+  --row-now:   rgba(56,189,248,0.10);
   /* P10–P90-band och nederbördsstaplar (matchar graffärgerna i chartColors) */
   --band-accent: rgba(56,189,248,0.35);
   --band-green:  rgba(52,211,153,0.35);
@@ -58,6 +60,8 @@
   --orange:    #ea580c;
   --night-swatch: rgba(71,85,105,0.30);
   --border-soft: rgba(208,220,234,0.8);
+  --row-hover: rgba(2,132,199,0.06);
+  --row-now:   rgba(2,132,199,0.10);
   --band-accent: rgba(2,132,199,0.30);
   --band-green:  rgba(5,150,105,0.30);
   --precip-bar:  rgba(14,116,144,0.60);
@@ -677,7 +681,7 @@ body {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 2; /* över den klistrade Tid-kolumnens celler */
+  z-index: 3; /* överst: över både Tid-kolumnen och dagrubrikerna */
 }
 
 .timeline-table td {
@@ -692,8 +696,12 @@ body {
   font-weight: 500;
 }
 
+/* Radtoningar läggs som background-image så att de kan tona ovanpå den
+   klistrade Tid-kolumnens ogenomskinliga background-color. Med "background"
+   (kortformen) skulle de i stället ersätta bottenfärgen och kolumnen bli
+   genomskinlig – då syns raderna som scrollar förbi bakom tidsstämplarna. */
 .timeline-table tr:hover td {
-  background: rgba(56,189,248,0.04);
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
   color: var(--text);
 }
 
@@ -706,7 +714,7 @@ body {
 
 /* Highlight current-time row in table */
 .timeline-table tr.now-row td {
-  background: rgba(56,189,248,0.07) !important;
+  background-image: linear-gradient(var(--row-now), var(--row-now));
   color: var(--text) !important;
 }
 .timeline-table tr.now-row .time-cell {
@@ -714,7 +722,11 @@ body {
   font-weight: 600 !important;
 }
 
-.day-separator td {
+/* Dagrubriken klistrar sig strax under kolumnrubrikerna och följer med tills
+   nästa dag skjuter upp den. --thead-h mäts i updateTable().
+   Selektorn måste vara minst lika specifik som .timeline-table td:first-child
+   nedan – annars vinner den regelns z-index och dataraderna ritas ovanpå. */
+.timeline-table tr.day-separator td {
   background: var(--surface2) !important;
   color: var(--accent) !important;
   font-size: 0.68rem !important;
@@ -724,24 +736,34 @@ body {
   padding: 6px 10px !important;
   border-bottom: 1px solid var(--border) !important;
   border-top: 2px solid var(--border) !important;
+  position: sticky;
+  top: calc(var(--thead-h, 30px) - 1px);
+  left: 0;                 /* datumet syns även när tabellen scrollas i sidled */
+  z-index: 2;              /* över Tid-kolumnen, under kolumnrubrikerna */
+  border-right: none !important;
+  /* border-collapse döljer kanter på klistrade celler – rita dem som skugga */
+  box-shadow: inset 0 -1px 0 var(--border), inset 0 2px 0 var(--border);
 }
 
-.day-separator td:first-child {
-  background: var(--surface2) !important;
+/* Datumtexten följer med i sidled så den syns även när tabellen scrollas höger */
+.day-sep-label {
+  position: sticky;
+  left: 10px;
+  display: inline-block;
 }
 
 .timeline-table th:first-child,
 .timeline-table td:first-child {
   position: sticky;
   left: 0;
-  background: var(--surface);
+  background-color: var(--surface);   /* ogenomskinlig botten under radtoningar */
   z-index: 1;
   border-right: 1px solid var(--border);
 }
 
 .timeline-table th:first-child {
-  background: var(--surface2);
-  z-index: 3; /* hörnet: över både rubrikrad och Tid-kolumn */
+  background-color: var(--surface2);
+  z-index: 4; /* hörnet: över både rubrikrad och Tid-kolumn */
 }
 
 .cond-cell {
@@ -1478,14 +1500,15 @@ function periodRisk(sliced, L) {
 }
 
 // ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
-// Framåtblickande: risken inom [t, t+3h). Null i svansen där stegen är 6h
-// (då vore fönstret 18 timmar, inte 3).
+// Centrerad kring tidpunkten: timmen före, timmen själv och timmen efter
+// (kl 17 → 16, 17 och 18) så att värdet beskriver risken *runt* den tiden.
+// Null i svansen där stegen är 6h – där vore fönstret 18 timmar, inte 3.
 function compute3hRollingProb(precip_prob, step_hours, L) {
   return precip_prob.map((_, i) => {
     if (step_hours[i] !== 1) return null;
     const items = [];
-    for (let k = i; k < Math.min(precip_prob.length, i + 3); k++) {
-      if (step_hours[k] !== 1) break;
+    for (let k = Math.max(0, i - 1); k <= Math.min(precip_prob.length - 1, i + 1); k++) {
+      if (step_hours[k] !== 1) continue;      // hoppa över 6h-steg vid gränsen
       const p = precip_prob[k];
       if (p !== null && p !== undefined) items.push({ p: p / 100, hours: 1 });
     }
@@ -2447,7 +2470,12 @@ function updateTable() {
       sepRow.className = 'day-separator';
       const sepCell = sepRow.insertCell();
       sepCell.colSpan = colCount;
-      sepCell.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+      // Etiketten ligger i ett eget klistrat span: cellen själv fyller hela
+      // sin containing block (colspan) och kan därför inte klistras i sidled.
+      const sepLabel = document.createElement('span');
+      sepLabel.className = 'day-sep-label';
+      sepLabel.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+      sepCell.appendChild(sepLabel);
     }
 
     const row = tbody.insertRow();
@@ -2510,6 +2538,13 @@ function updateTable() {
     } else { wCell.textContent = '—'; }
 
     row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
+  }
+
+  // Dagrubrikerna klistras direkt under kolumnrubrikerna – mät deras höjd
+  // (varierar med typsnitt/radbrytning) och lägg den i --thead-h.
+  const thead = document.querySelector('#weatherDataTable thead');
+  if (thead && thead.offsetHeight) {
+    document.documentElement.style.setProperty('--thead-h', thead.offsetHeight + 'px');
   }
 }
 
