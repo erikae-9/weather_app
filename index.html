@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#090e1a">
 <title>Eriks väderapp</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="forecast-sources.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
 
@@ -40,6 +41,8 @@
   --precip-band: rgba(103,232,249,0.22);
   --risk-rgb:    103,232,249;
   --thunder-rgb: 167,139,250;
+  --src-met:     #0b94d4;
+  --src-smhi:    #ea580c;
   color-scheme: dark;
 }
 
@@ -70,6 +73,8 @@
   --precip-band: rgba(14,116,144,0.25);
   --risk-rgb:    14,116,144;
   --thunder-rgb: 124,58,237;
+  --src-met:     #0284c7;
+  --src-smhi:    #c2410c;
   color-scheme: light;
 }
 
@@ -368,6 +373,16 @@ body {
 }
 .range-tab:hover { color: var(--text); background: var(--surface2); }
 .range-tab.active { background: var(--surface2); color: var(--accent); border-color: var(--border); }
+.range-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+.range-tab:disabled:hover { background: none; color: var(--text-dim); }
+.src-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: 0;
+}
 
 .date-pickers-row {
   display: none;
@@ -1115,6 +1130,13 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
           <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
           <button class="range-tab" id="btn-datepicker" onclick="toggleDatePickers()" title="Välj egen tidsperiod">📅 Anpassa</button>
         </div>
+        <div class="range-row" id="forecastSwitch" role="group" aria-label="Prognoskälla">
+          <span class="range-group-label">Prognos</span>
+          <button class="range-tab source-tab" data-mode="met" onclick="setForecastMode('met')">met.no</button>
+          <button class="range-tab source-tab" data-mode="smhi" onclick="setForecastMode('smhi')">SMHI</button>
+          <button class="range-tab source-tab" data-mode="blend" onclick="setForecastMode('blend')" title="Viktat medel av met.no och SMHI">Viktad</button>
+          <button class="range-tab source-tab" data-mode="both" onclick="setForecastMode('both')" title="met.no och SMHI bredvid varandra i graferna">Båda</button>
+        </div>
         <div class="date-pickers-row" id="datePickers">
           <span class="date-picker-label">Från</span>
           <input type="datetime-local" id="startDateTime" class="date-picker-input">
@@ -1200,7 +1222,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
           <div class="chart-panel-header">
             <span class="chart-panel-title">Temperatur</span>
             <span class="chart-panel-live" id="chartTempLive"></span>
-            <div class="chart-legend">
+            <div class="chart-legend" id="legendTemp">
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--accent)"></span>Temp</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:var(--purple)"></span>Känns som</span>
               <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-accent)"></span>P10–90</span>
@@ -1213,7 +1235,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
           <div class="chart-panel-header">
             <span class="chart-panel-title">Vind</span>
             <span class="chart-panel-live" id="chartWindLive"></span>
-            <div class="chart-legend">
+            <div class="chart-legend" id="legendWind">
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--green)"></span>Medelvind</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:var(--amber)"></span>Byar</span>
               <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-green)"></span>P10–90</span>
@@ -1227,7 +1249,7 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
           <div class="chart-panel-header">
             <span class="chart-panel-title">Nederbörd &amp; Åska</span>
             <span class="chart-panel-live" id="chartPrecipLive"></span>
-            <div class="chart-legend">
+            <div class="chart-legend" id="legendPrecip">
               <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-bar);width:9px"></span>mm/h</span>
               <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-band);width:5px"></span>P10–90</span>
               <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, rgba(var(--risk-rgb),0.08), rgba(var(--risk-rgb),0.9))"></span>Risk</span>
@@ -1342,6 +1364,7 @@ function chartColors() {
       night: 'rgba(71,85,105,0.08)', moon: 'rgba(73,96,126,0.75)',
       dayLine: 'rgba(90,111,140,0.45)',
       riskRGB: '14,116,144', thunderRGB: '124,58,237',
+      src: { met: '#0284c7', smhi: '#c2410c' }, srcRGB: { met: '2,132,199', smhi: '194,65,12' },
       zoneLabelBg: 'rgba(255,255,255,0.65)',
       windArrow: 'rgba(30,41,59,0.85)',
       nowLine: 'rgba(2,132,199,0.45)',
@@ -1365,6 +1388,7 @@ function chartColors() {
     night: 'rgba(3,6,14,0.40)', moon: 'rgba(122,148,184,0.6)',
     dayLine: 'rgba(122,148,184,0.35)',
     riskRGB: '103,232,249', thunderRGB: '167,139,250',
+    src: { met: '#0b94d4', smhi: '#ea580c' }, srcRGB: { met: '11,148,212', smhi: '234,88,12' },
     zoneLabelBg: 'rgba(17,24,39,0.6)',
     windArrow: 'rgba(255,255,255,0.85)',
     nowLine: 'rgba(56,189,248,0.4)',
@@ -1739,39 +1763,87 @@ async function fetchFromCoords() {
   await fetchWeather();
 }
 
-// ── SMHI THUNDER FETCH ────────────────────────────────────────────────────────
-// SMHI:s punktprognos har thunderstorm_probability (%) per timsteg.
-// Täckningen är begränsad till Norden/Östersjöområdet – utanför den
-// returnerar API:t fel, och då lämnas åskdata som null (UI visar "—").
+// ── SMHI-HÄMTNING ─────────────────────────────────────────────────────────────
+// SMHI:s punktprognos (snow1g). Täckningen är begränsad till Norden/Östersjö-
+// området – utanför den returnerar API:t fel, och då används bara met.no.
 
-async function fetchSMHIThunder(lat, lon) {
+async function fetchSMHI(lat, lon) {
   const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon.toFixed(6)}/lat/${lat.toFixed(6)}/data.json`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`SMHI HTTP ${res.status}`);
-  const data = await res.json();
-  const points = [];
-  (data.timeSeries || []).forEach(ts => {
-    const v = ts.data?.thunderstorm_probability;
-    if (v !== undefined && v !== null && v >= 0) {
-      points.push({ t: new Date(ts.time).getTime(), v });
-    }
-  });
-  return points;
+  return res.json();
 }
 
-// Mappa SMHI:s tidsserie till met.no:s tidsstämplar (närmaste punkt inom 3.5h).
-function mergeThunder(smhiPoints) {
-  if (!weatherData) return;
-  const MAX_GAP_MS = 3.5 * 3600 * 1000;
-  weatherData.data.thunder = weatherData.times.map(t => {
-    const ms = t.getTime();
-    let best = null, bestDiff = Infinity;
-    for (const p of smhiPoints) {
-      const diff = Math.abs(p.t - ms);
-      if (diff < bestDiff) { bestDiff = diff; best = p.v; }
+// ── PROGNOSKÄLLA ──────────────────────────────────────────────────────────────
+// met.no, SMHI, Viktad (viktat medel) eller Båda (båda källorna i graferna,
+// viktat medel i dagstrip, översikt och tabell). Valet sparas i localStorage.
+
+const FORECAST_MODE_KEY = 'weatherAppForecastMode';
+const FORECAST_MODES = ['met', 'smhi', 'blend', 'both'];
+const SOURCE_LABELS = { met: 'met.no', smhi: 'SMHI' };
+let forecastMode = 'met';
+try {
+  const saved = localStorage.getItem(FORECAST_MODE_KEY);
+  if (FORECAST_MODES.includes(saved)) forecastMode = saved;
+} catch {}
+let rawForecasts = { met: null, smhi: null };
+
+// Läget som faktiskt kan visas med de källor som gick att hämta
+function effectiveMode() {
+  if (!rawForecasts.smhi) return 'met';
+  if (!rawForecasts.met) return 'smhi';
+  return forecastMode;
+}
+
+function applyForecastMode() {
+  const mode = effectiveMode();
+  const built = ForecastSources.buildForecast(mode === 'both' ? 'blend' : mode, rawForecasts);
+  weatherData = { times: built.times, data: built.data, mode, sourceIds: built.sourceIds };
+  const d = weatherData.data;
+  d.feels_like = d.temp.map((t, i) => calculateFeelsLike(t, d.wind[i], d.humidity[i]));
+  if (mode === 'both') {
+    for (const id of built.sourceIds) {
+      d[`feels_like_src_${id}`] = d[`temp_src_${id}`].map((t, i) =>
+        t === null ? null : calculateFeelsLike(t, d[`wind_src_${id}`][i], d[`humidity_src_${id}`][i]));
     }
-    return bestDiff <= MAX_GAP_MS ? best : null;
+  }
+  // Persistensen kalibreras mot met.no:s 6h-block när de finns (fallback annars)
+  d.rolling3h = [];
+  weatherData.persistenceL = estimatePersistence();
+  d.rolling3h = compute3hRollingProb(d.precip_prob, d.step_hours, weatherData.persistenceL);
+  updateForecastSwitch();
+}
+
+function updateForecastSwitch() {
+  const mode = effectiveMode();
+  document.querySelectorAll('#forecastSwitch .source-tab').forEach(b => {
+    const m = b.dataset.mode;
+    if (b.dataset.title === undefined) b.dataset.title = b.title;
+    b.disabled = (m !== 'met' && !rawForecasts.smhi) || (m !== 'smhi' && !rawForecasts.met);
+    b.title = b.disabled ? 'Saknar prognos från båda källorna för den här platsen' : b.dataset.title;
+    b.classList.toggle('active', m === mode);
   });
+}
+
+function setForecastMode(mode) {
+  if (!FORECAST_MODES.includes(mode)) return;
+  forecastMode = mode;
+  try { localStorage.setItem(FORECAST_MODE_KEY, mode); } catch {}
+  if (!weatherData) { updateForecastSwitch(); return; }
+  // Tidsaxeln kan skilja mellan källorna: spara perioden som tider, inte index
+  const win = window.customRangeWindow;
+  const T = weatherData.times;
+  const keep = win ? [T[win.start].getTime(), T[win.end - 1].getTime()] : null;
+  applyForecastMode();
+  if (keep) {
+    const N = weatherData.times;
+    let start = N.findIndex(t => t.getTime() >= keep[0]);
+    let end = N.findIndex(t => t.getTime() > keep[1]);
+    if (start === -1) start = 0;
+    if (end === -1) end = N.length;
+    window.customRangeWindow = { start, end: Math.max(end, start + 1) };
+  }
+  _refreshAll();
 }
 
 // ── SOL UPP/NED (met.no sunrise 3.0) ─────────────────────────────────────────
@@ -1869,21 +1941,20 @@ async function fetchWeather() {
   document.getElementById('error').style.display = 'none';
 
   try {
-    // Hämta met.no och SMHI parallellt; SMHI får misslyckas tyst (utanför täckning)
+    // Hämta met.no och SMHI parallellt. SMHI får misslyckas tyst (utanför
+    // täckning); då visas bara met.no. Fel bara om ingen källa svarar.
     const [metRes, smhiRes] = await Promise.allSettled([
       fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
-        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } }),
-      fetchSMHIThunder(lat, lon)
+        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
+      fetchSMHI(lat, lon)
     ]);
-
-    if (metRes.status === 'rejected') throw metRes.reason;
-    if (!metRes.value.ok) throw new Error(`HTTP ${metRes.value.status}`);
-    const data = await metRes.value.json();
-    processWeatherData(data);
-
-    if (smhiRes.status === 'fulfilled') {
-      mergeThunder(smhiRes.value);
-    }
+    if (metRes.status === 'rejected' && smhiRes.status === 'rejected') throw metRes.reason;
+    rawForecasts = {
+      met:  metRes.status  === 'fulfilled' ? metRes.value  : null,
+      smhi: smhiRes.status === 'fulfilled' ? smhiRes.value : null,
+    };
+    applyForecastMode();
 
     lastFetchTime = new Date();
     document.getElementById('loading').style.display = 'none';
@@ -1915,75 +1986,6 @@ async function fetchWeather() {
   }
 }
 
-function processWeatherData(data) {
-  const times=[], temp=[], temp_p10=[], temp_p90=[], feels_like=[];
-  const wind=[], wind_p10=[], wind_p90=[], gust=[], wind_direction=[];
-  const precip=[], precip_p10=[], precip_p90=[], precip_prob=[], precip_step=[];
-  const prob6h=[], prob12h=[], step_hours=[];
-  const cloud=[], humidity=[], pressure=[], uv=[], symbols=[];
-
-  data.properties.timeseries.forEach(entry => {
-    const t = new Date(entry.time);
-    const inst = entry.data.instant.details;
-    const next1h = entry.data.next_1_hours;
-    const next6h = entry.data.next_6_hours;
-
-    // met.no publicerar egna sannolikheter för hela 6h-/12h-block. I den
-    // korta delen av serien finns de parallellt med timvärdena – de används
-    // både för att kalibrera persistensen och som golv/tak i periodRisk.
-    prob6h.push(next6h?.details?.probability_of_precipitation ?? null);
-    prob12h.push(entry.data.next_12_hours?.details?.probability_of_precipitation ?? null);
-    step_hours.push(next1h ? 1 : (next6h ? 6 : null));
-
-    times.push(t);
-    temp.push(inst.air_temperature);
-    temp_p10.push(inst.air_temperature_percentile_10 ?? inst.air_temperature);
-    temp_p90.push(inst.air_temperature_percentile_90 ?? inst.air_temperature);
-    feels_like.push(calculateFeelsLike(inst.air_temperature, inst.wind_speed, inst.relative_humidity));
-    wind.push(inst.wind_speed);
-    wind_p10.push(inst.wind_speed_percentile_10 ?? inst.wind_speed);
-    wind_p90.push(inst.wind_speed_percentile_90 ?? inst.wind_speed);
-    gust.push(inst.wind_speed_of_gust ?? null); // ingen påhittad byvind när API:t saknar värde
-    wind_direction.push(inst.wind_from_direction);
-
-    if (next1h) {
-      precip.push(next1h.details.precipitation_amount);
-      precip_step.push(next1h.details.precipitation_amount ?? null); // faktisk mängd i steget (1h)
-      precip_p10.push(next1h.details.precipitation_amount_min ?? next1h.details.precipitation_amount);
-      precip_p90.push(next1h.details.precipitation_amount_max ?? next1h.details.precipitation_amount);
-      precip_prob.push(next1h.details.probability_of_precipitation ?? null);
-      symbols.push(next1h.summary?.symbol_code || 'unknown');
-    } else if (next6h) {
-      const precip6h = next6h.details.precipitation_amount || 0;
-      precip.push(precip6h / 6);                 // timtakt för grafer
-      precip_step.push(precip6h);                // hela 6h-blockets mängd för summering
-      precip_p10.push((next6h.details.precipitation_amount_min ?? precip6h) / 6);
-      precip_p90.push((next6h.details.precipitation_amount_max ?? precip6h) / 6);
-      precip_prob.push(next6h.details.probability_of_precipitation ?? null);
-      symbols.push(next6h.summary?.symbol_code || 'unknown');
-    } else {
-      precip.push(null); precip_p10.push(null); precip_p90.push(null); precip_prob.push(null);
-      precip_step.push(null);
-      symbols.push('unknown');
-    }
-    cloud.push(inst.cloud_area_fraction);
-    humidity.push(inst.relative_humidity);
-    pressure.push(inst.air_pressure_at_sea_level);
-    uv.push(inst.ultraviolet_index_clear_sky ?? null); // saknat värde ≠ 0
-  });
-
-  // thunder fylls i av mergeThunder() om SMHI-data finns; annars null överallt
-  const thunder = times.map(() => null);
-
-  weatherData = { times, data: { temp, temp_p10, temp_p90, feels_like, wind, wind_p10, wind_p90, gust, wind_direction, precip, precip_step, precip_p10, precip_p90, precip_prob, prob6h, prob12h, step_hours, rolling3h: [], cloud, humidity, pressure, uv, symbols, thunder } };
-
-  // Persistensen kalibreras mot met.no:s 6h-block och används sedan för
-  // både 3h-serien och periodRisk.
-  weatherData.persistenceL = estimatePersistence();
-  weatherData.data.rolling3h =
-    compute3hRollingProb(precip_prob, step_hours, weatherData.persistenceL);
-}
-
 // ── SLICE ─────────────────────────────────────────────────────────────────────
 
 function sliceData(hours) {
@@ -2004,7 +2006,7 @@ function sliceData(hours) {
 // ── RANGE ─────────────────────────────────────────────────────────────────────
 
 function clearAllRangeTabs() {
-  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.range-tab:not(.source-tab)').forEach(b => b.classList.remove('active'));
 }
 
 // ── DEFAULT DAY RANGE ─────────────────────────────────────────────────────────
@@ -2327,6 +2329,91 @@ function buildTimeTicks(fromMs, toMs, windowH, isMobile) {
   return { vals, text, midnights };
 }
 
+// Sammanfattning i graf-rubrikerna för vald period (samma period som
+// dagstripen och tabellen visar; följer med vid panorering)
+function updateChartSummaries(s) {
+  const hMeanT = meanOf(s.data.temp), hMinT = minOf(s.data.temp), hMaxT = maxOf(s.data.temp);
+  document.getElementById('chartTempLive').textContent = hMeanT !== null
+    ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
+    : '';
+  const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
+  const hMeanD = circularMeanDeg(s.data.wind_direction);
+  document.getElementById('chartWindLive').textContent = hMeanW !== null
+    ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
+    : '';
+  const hTotalP = validVals(s.data.precip_step).reduce((a, b) => a + b, 0);
+  const hRisk = periodRisk(s, weatherData.persistenceL);
+  const hMaxTh = maxOf(s.data.thunder);
+  document.getElementById('chartPrecipLive').textContent =
+    `Σ ${hTotalP.toFixed(1)} mm` +
+    (hRisk !== null ? ` · risk ${hRisk}%` : '') +
+    (hMaxTh !== null ? ` · ⚡ max ${Math.round(hMaxTh)}%` : '');
+}
+
+// Legender: ordinarie innehåll, eller en källegend (met.no / SMHI) i Båda-läget
+const legendDefaults = {};
+function setChartLegends(both, showThunder) {
+  const swatch = (bg, w = 14) => `<span class="chart-legend-swatch" style="background:${bg};width:${w}px"></span>`;
+  const srcItems = (kind) => ['met', 'smhi'].map(id => kind === 'bar'
+    ? `<span class="chart-legend-item">${swatch(`var(--src-${id})`, 9)}${SOURCE_LABELS[id]}</span>`
+    : `<span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--src-${id})"></span>${SOURCE_LABELS[id]}</span>`).join('');
+  const thunder = `<span class="chart-legend-item">${swatch('linear-gradient(90deg, rgba(var(--thunder-rgb),0.08), rgba(var(--thunder-rgb),0.9))')}Åska</span>`;
+  const bothHtml = {
+    legendTemp: srcItems('line'),
+    legendWind: srcItems('line') + '<span class="chart-legend-item">↓ Vindriktning</span>',
+    legendPrecip: srcItems('bar') + `<span class="chart-legend-item">${swatch('linear-gradient(90deg, rgba(128,128,128,0.1), rgba(128,128,128,0.8))')}Risk</span>` + (showThunder ? thunder : ''),
+  };
+  for (const id of Object.keys(bothHtml)) {
+    const el = document.getElementById(id);
+    if (legendDefaults[id] === undefined) legendDefaults[id] = el.innerHTML;
+    el.innerHTML = both ? bothHtml[id] : legendDefaults[id];
+  }
+  const lt = document.getElementById('legendThunder');
+  if (lt) lt.style.display = showThunder ? '' : 'none';
+}
+
+// Markera dagkorten som ingår i vald period
+function markDayStripActive() {
+  const strip = document.getElementById('dayStrip');
+  const days = new Set(sliceData(currentRange).times.map(t => t.toLocaleDateString('sv-SE')));
+  let first = null;
+  strip.querySelectorAll('.day-card').forEach(c => {
+    const on = days.has(c.dataset.date);
+    c.classList.toggle('active', on);
+    if (on && !first) first = c;
+  });
+  return first;
+}
+
+// Panorering gör det synliga fönstret till vald period: dagkort, datumfält,
+// graf-rubriker och (när de visas) översikt och tabell följer med.
+// Graferna ritas inte om, så panoreringen förblir mjuk.
+function syncPeriodToChartWindow() {
+  if (!chartView || !weatherData) return;
+  const T = weatherData.times;
+  const [a, b] = chartView.range;
+  let start = T.findIndex(t => t.getTime() >= a - 60e3);
+  let end = T.findIndex(t => t.getTime() >= b - 60e3);
+  if (start === -1) return;
+  if (end === -1) end = T.length;
+  if (end <= start) end = start + 1;
+  const cur = window.customRangeWindow;
+  if (cur && cur.start === start && cur.end === end) return;
+  window.customRangeWindow = { start, end };
+  clearAllRangeTabs();
+  const s = sliceData(currentRange);
+  selectedDays = new Set(s.times.map(t => t.toLocaleDateString('sv-SE')));
+  const first = markDayStripActive();
+  // Håll första valda dagkortet synligt i stripen (bara sidled, sidan scrollas inte)
+  const strip = document.getElementById('dayStrip');
+  if (first && (first.offsetLeft < strip.scrollLeft || first.offsetLeft > strip.scrollLeft + strip.clientWidth - first.offsetWidth)) {
+    strip.scrollTo({ left: Math.max(0, first.offsetLeft - 8), behavior: 'smooth' });
+  }
+  syncDatePickers();
+  updateChartSummaries(s);
+  viewDirty.oversikt = viewDirty.tabell = true;
+}
+
 function drawCharts() {
   const s = sliceData(currentRange);          // vald period: rubrikvärden + startfönster
   if (!s.times.length) return;
@@ -2371,15 +2458,18 @@ function drawCharts() {
   });
   const H = isMobile ? { temp: 190, wind: 200, precip: 230 } : { temp: 220, wind: 230, precip: 260 };
 
+  const both = weatherData.mode === 'both';
+  const SRC = both ? weatherData.sourceIds : [];
+  updateChartSummaries(s);
+  const showThunder = validVals(D.thunder).some(v => v >= THUNDER_MED);
+  setChartLegends(both, showThunder);
+
   // ── TEMPERATUR ──
-  const hMeanT = meanOf(s.data.temp), hMinT = minOf(s.data.temp), hMaxT = maxOf(s.data.temp);
-  document.getElementById('chartTempLive').textContent = hMeanT !== null
-    ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
-    : '';
 
   // Skalan räknas på hela prognosen så att den inte hoppar vid panorering.
   // Minst ±10° kring mittpunkten, avrundat utåt till hela 5°-steg.
-  const tAll = [...validVals(D.temp), ...validVals(D.temp_p10), ...validVals(D.temp_p90), ...validVals(D.feels_like)];
+  const tAll = [...validVals(D.temp), ...validVals(D.temp_p10), ...validVals(D.temp_p90), ...validVals(D.feels_like),
+                ...SRC.flatMap(id => validVals(D[`temp_src_${id}`]))];
   let tempRange = null;
   if (tAll.length) {
     const tMin = Math.min(...validVals(D.temp)), tMax = Math.max(...validVals(D.temp));
@@ -2389,7 +2479,9 @@ function drawCharts() {
     tempRange = [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5];
   }
 
-  const pTemp = Plotly.newPlot('tempChart', [
+  const srcLines = key => SRC.map(id => ({ x: T, y: D[`${key}_src_${id}`], type: 'scatter', mode: 'lines',
+    line: { color: cc.src[id], width: 2.25 } }));
+  const pTemp = Plotly.newPlot('tempChart', both ? srcLines('temp') : [
     { x: T, y: D.temp_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
     { x: T, y: D.temp_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.tempBandFill, line: { width: 1, color: cc.tempBandLine } },
     { x: T, y: D.temp, type: 'scatter', mode: 'lines', line: { color: cc.temp, width: 2.5 } },
@@ -2402,13 +2494,10 @@ function drawCharts() {
   }), cfg);
 
   // ── VIND ──
-  const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
-  const hMeanD = circularMeanDeg(s.data.wind_direction);
-  document.getElementById('chartWindLive').textContent = hMeanW !== null
-    ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
-    : '';
 
-  const maxGustAll = Math.max(...validVals(D.gust), ...validVals(D.wind));
+  const maxGustAll = both
+    ? Math.max(...SRC.flatMap(id => validVals(D[`wind_src_${id}`])))
+    : Math.max(...validVals(D.gust), ...validVals(D.wind));
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
   const bf = buildBeaufortLines(yMax, isMobile);
 
@@ -2429,7 +2518,7 @@ function drawCharts() {
     nextArrow = tMs + arrowStepMs - 60e3;
   }
 
-  const pWind = Plotly.newPlot('windChart', [
+  const pWind = Plotly.newPlot('windChart', both ? srcLines('wind') : [
     { x: T, y: D.wind_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
     { x: T, y: D.wind_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.windBandFill, line: { width: 1, color: cc.windBandLine } },
     { x: T, y: D.wind, type: 'scatter', mode: 'lines', line: { color: cc.wind, width: 2.5 } },
@@ -2441,13 +2530,6 @@ function drawCharts() {
   }), cfg);
 
   // ── NEDERBÖRD + RISKBAND ──
-  const hTotalP = validVals(s.data.precip_step).reduce((a, b) => a + b, 0);
-  const hRisk = periodRisk(s, weatherData.persistenceL);
-  const hMaxTh = maxOf(s.data.thunder);
-  document.getElementById('chartPrecipLive').textContent =
-    `Σ ${hTotalP.toFixed(1)} mm` +
-    (hRisk !== null ? ` · risk ${hRisk}%` : '') +
-    (hMaxTh !== null ? ` · ⚡ max ${Math.round(hMaxTh)}%` : '');
 
   // Staplarna ritas mitt i sitt tidssteg (09–10 hamnar mellan 09 och 10)
   const stepMs = T.map((_, i) => stepHoursAt(i) * 3600e3);
@@ -2461,35 +2543,40 @@ function drawCharts() {
 
   // Riskband: 3h-risken där den finns (timsteg), annars stegets egen risk.
   // Åskraden visas bara om åskrisken någon gång når "värt att hålla koll".
-  const risk = T.map((_, i) => D.rolling3h[i] ?? D.precip_prob[i] ?? null);
-  const showThunder = validVals(D.thunder).some(v => v >= THUNDER_MED);
-  document.getElementById('legendThunder').style.display = showThunder ? '' : 'none';
-  const rows = showThunder ? 2 : 1;
   const alpha = (v, full) => !v ? 0 : 0.04 + 0.86 * Math.min(1, v / full);
-  const ribbonH = showThunder ? 0.2 : 0.11;
+  // Riskrader uppifrån: en per källa i Båda-läget, annars en; åska sist
+  const riskRows = both
+    ? SRC.map(id => ({ label: SOURCE_LABELS[id], rgb: cc.srcRGB[id], vals: D[`precip_prob_src_${id}`], full: 100 }))
+    : [{ label: 'Risk', rgb: cc.riskRGB, vals: T.map((_, i) => D.rolling3h[i] ?? D.precip_prob[i] ?? null), full: 100 }];
+  if (showThunder) riskRows.push({ label: '⚡', rgb: cc.thunderRGB, vals: D.thunder, full: THUNDER_HIGH });
+  const rows = riskRows.length;
+  const ribbonH = 0.03 + 0.085 * rows;
 
-  const precipTraces = [
-    { x: mid, y: band.map(b => b && b.h), base: band.map(b => b && b.base),
-      type: 'bar', width: stepMs.map(w => w * 0.26), marker: { color: cc.precipBand } },
-    { x: mid, y: D.precip, type: 'bar', width: stepMs.map(w => w * 0.6), marker: { color: cc.precipBar } },
-    { x: mid, y: T.map(() => 1), base: T.map(() => rows - 1), yaxis: 'y2',
-      type: 'bar', width: stepMs, marker: { color: risk.map(v => `rgba(${cc.riskRGB},${alpha(v, 100)})`) } },
-  ];
-  if (showThunder) {
-    precipTraces.push({ x: mid, y: T.map(() => 1), base: T.map(() => 0), yaxis: 'y2',
-      type: 'bar', width: stepMs,
-      marker: { color: D.thunder.map(v => `rgba(${cc.thunderRGB},${alpha(v, THUNDER_HIGH)})`) } });
-  }
+  const precipTraces = both
+    ? SRC.map((id, k) => ({
+        x: mid.map((m, i) => new Date(m.getTime() + (k === 0 ? -1 : 1) * stepMs[i] * 0.16)),
+        y: D[`precip_src_${id}`], type: 'bar', width: stepMs.map(w => w * 0.3),
+        marker: { color: `rgba(${cc.srcRGB[id]},0.8)` } }))
+    : [
+        { x: mid, y: band.map(b => b && b.h), base: band.map(b => b && b.base),
+          type: 'bar', width: stepMs.map(w => w * 0.26), marker: { color: cc.precipBand } },
+        { x: mid, y: D.precip, type: 'bar', width: stepMs.map(w => w * 0.6), marker: { color: cc.precipBar } },
+      ];
+  riskRows.forEach((r, k) => precipTraces.push({
+    x: mid, y: T.map(() => 1), base: T.map(() => rows - 1 - k), yaxis: 'y2', type: 'bar', width: stepMs,
+    marker: { color: T.map((_, i) => `rgba(${r.rgb},${alpha(r.vals[i], r.full)})`) } }));
 
-  const pMax = Math.max(Math.max(...validVals(D.precip_p90), ...validVals(D.precip), 0) * 1.05, 1);
+  const pVals = both ? SRC.flatMap(id => validVals(D[`precip_src_${id}`]))
+                     : [...validVals(D.precip_p90), ...validVals(D.precip)];
+  const pMax = Math.max(Math.max(...pVals, 0) * 1.05, 1);
   const pPrecip = Plotly.newPlot('precipChart', precipTraces, layout(H.precip, {
     barmode: 'overlay', bargap: 0,
     xaxis: { ...xaxis, anchor: 'y2' },
     yaxis: { ...yBase, title: { text: 'mm/h', font: { size: 11, color: cc.tick } },
       range: [0, pMax], domain: [ribbonH + 0.06, 1] },
     yaxis2: { ...yBase, domain: [0, ribbonH], range: [0, rows], showgrid: false, zeroline: false,
-      tickmode: 'array', tickvals: showThunder ? [1.5, 0.5] : [0.5],
-      ticktext: showThunder ? ['Risk', '⚡'] : ['Risk'] },
+      tickmode: 'array', tickvals: riskRows.map((_, k) => rows - 0.5 - k),
+      ticktext: riskRows.map(r => r.label) },
     shapes: bgShapes, annotations: nightAnn,
   }), cfg);
 
@@ -2588,6 +2675,7 @@ function panCharts(range0, dxPx, el) {
       }
       updateCrosshair();
       renderChartDetail();
+      syncPeriodToChartWindow();
     });
   });
 }
@@ -2672,6 +2760,28 @@ function renderChartDetail() {
   }
   const th = D.thunder[i];
   if (th !== null && th !== undefined) pTxt += ` · ⚡ ${Math.round(th)} %`;
+
+  if (weatherData.mode === 'both') {
+    const SRC = weatherData.sourceIds;
+    const tag = id => `<span class="src-dot" style="background:var(--src-${id})"></span>${SOURCE_LABELS[id]}`;
+    const num = v => v !== null && v !== undefined;
+    tempTxt = SRC.map(id => {
+      const tv = D[`temp_src_${id}`][i], fv = D[`feels_like_src_${id}`]?.[i];
+      if (!num(tv)) return `${tag(id)} —`;
+      return `${tag(id)} <b>${fmt1(tv)}°</b>${num(fv) && Math.abs(fv - tv) >= 0.5 ? ` (känns ${fmt1(fv)}°)` : ''}`;
+    }).join(' · ');
+    windTxt = (num(dir) ? `${getWindDirection(dir)} · ` : '') + SRC.map(id => {
+      const wv = D[`wind_src_${id}`][i], gv = D[`gust_src_${id}`][i];
+      return num(wv) ? `${tag(id)} <b>${Math.round(wv)} m/s</b>${num(gv) ? ` (byar ${Math.round(gv)})` : ''}` : `${tag(id)} —`;
+    }).join(' · ');
+    pTxt = SRC.map(id => {
+      const a = D[`precip_step_src_${id}`][i];
+      if (!num(a)) return `${tag(id)} —`;
+      const l = (D[`precip_p10_src_${id}`][i] ?? 0) * step, h = (D[`precip_p90_src_${id}`][i] ?? 0) * step;
+      const pr = D[`precip_prob_src_${id}`][i];
+      return `${tag(id)} <b>${fmt1(a)} mm</b>${h >= 0.1 && h - l >= 0.1 ? ` (${fmt1(l)}–${fmt1(h)})` : ''}${num(pr) ? ` risk ${Math.round(pr)} %` : ''}`;
+    }).join(' · ') + (num(th) ? ` · ⚡ ${Math.round(th)} %` : '');
+  }
 
   el.innerHTML = `
     <div class="chart-detail-head">
@@ -2854,11 +2964,7 @@ function buildDayStrip() {
   // Markera alla dagkort som ingår i det visade fönstret – en dag, ett
   // flerdagarsval, eller hela spannet vid "Samtliga". Kortmarkeringen
   // speglar alltid exakt vad graferna/tabellen visar.
-  const sNow = sliceData(currentRange);
-  const daysInView = new Set(sNow.times.map(t => t.toLocaleDateString('sv-SE')));
-  strip.querySelectorAll('.day-card').forEach(c => {
-    if (daysInView.has(c.dataset.date)) c.classList.add('active');
-  });
+  markDayStripActive();
 }
 
 // ── DAGVAL (multi-select i dag-strippen) ─────────────────────────────────────
@@ -2906,6 +3012,7 @@ function toggleDatePickers() {
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 setupChartInteraction();
+updateForecastSwitch();
 window.addEventListener('load', () => {
   // Starta på Plats-vyn utan automatisk hämtning – användaren väljer plats,
   // och vid lyckad hämtning hoppar appen själv vidare till Översikt.

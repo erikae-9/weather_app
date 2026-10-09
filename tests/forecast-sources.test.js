@@ -5,20 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const FS = require('../forecast-sources.js');
 
-// ── Hämta appens nuvarande processWeatherData ur index.html för paritetstest ──
-function loadAppProcessor() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const extract = name => {
-    const start = html.indexOf(`function ${name}(`);
-    assert.ok(start >= 0, `hittar inte ${name} i index.html`);
-    return html.slice(start, html.indexOf('\n}\n', start) + 3);
-  };
-  const src = ['let weatherData = null;',
-    ...['calculateFeelsLike', 'unionProb', 'fitL', 'estimatePersistence',
-        'compute3hRollingProb', 'processWeatherData'].map(extract),
-    'return d => { processWeatherData(d); return weatherData; };'].join('\n');
-  return new Function(src)();
-}
+// Facit: vad appens tidigare processWeatherData gav för MET nedan (sparat innan
+// den ersattes av buildForecast). feels_like/rolling3h räknas fortfarande i appen.
+const LEGACY = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'met-legacy-output.json'), 'utf8'));
 
 // ── Testdata ──
 const T0 = Date.parse('2026-10-09T12:00:00Z');
@@ -62,21 +51,30 @@ const SMHI = { timeSeries: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(h =>
 
 const NOW = T0;
 
-test('met.no-läget ger samma data som nuvarande processWeatherData', () => {
-  const app = loadAppProcessor()(MET);
+test('met.no-läget ger samma data som appens tidigare processWeatherData', () => {
   const fc = FS.buildForecast('met', { met: MET }, { nowMs: NOW });
-  assert.deepEqual(fc.times.map(t => t.getTime()), app.times.map(t => t.getTime()));
-  for (const k of ['temp', 'temp_p10', 'temp_p90', 'wind', 'wind_p10', 'wind_p90', 'gust',
-                   'wind_direction', 'precip', 'precip_step', 'precip_p10', 'precip_p90',
-                   'precip_prob', 'prob6h', 'prob12h', 'step_hours', 'cloud', 'humidity',
-                   'pressure', 'uv', 'symbols', 'thunder']) {
-    const a = app.data[k], b = fc.data[k];
+  assert.deepEqual(fc.times.map(t => t.toISOString()), LEGACY.times);
+  for (const [k, a] of Object.entries(LEGACY.data)) {
+    if (k === 'feels_like' || k === 'rolling3h') continue;
+    const b = fc.data[k];
     assert.equal(b.length, a.length, k);
     a.forEach((v, i) => {
       if (typeof v === 'number') assert.ok(Math.abs(v - b[i]) < 1e-9, `${k}[${i}]: ${v} ≠ ${b[i]}`);
       else assert.equal(b[i], v, `${k}[${i}]`);
     });
   }
+});
+
+test('varje källas egna serier finns för Båda-läget', () => {
+  const fc = FS.buildForecast('blend', { met: MET, smhi: SMHI }, { nowMs: NOW });
+  assert.deepEqual(fc.data.temp_src_met, [10, 11, 12, 12, 8]);
+  assert.equal(fc.data.wind_src_smhi[0], 6);
+  assert.equal(fc.data.gust_src_met[0], 8);
+  assert.equal(fc.data.humidity_src_smhi[0], 90);
+  // met.no steg 0: min 0, max 0.5 mm på 1 h
+  assert.equal(fc.data.precip_p10_src_met[0], 0);
+  assert.equal(fc.data.precip_p90_src_met[0], 0.5);
+  assert.equal(fc.data.precip_step_src_met[0], 0.2);
 });
 
 test('met.no-läget hämtar fortfarande åska från SMHI', () => {

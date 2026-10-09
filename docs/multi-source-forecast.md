@@ -4,9 +4,11 @@ Draft of how the app could combine met.no and SMHI (snow1g) into one weighted
 forecast, and let the user switch between **met.no**, **SMHI**, **Viktad** (weighted) and
 **Båda** (both sources side by side).
 
-The code is in [`forecast-sources.js`](../forecast-sources.js) and tests are in
-[`tests/forecast-sources.test.js`](../tests/forecast-sources.test.js)
-(`node --test tests/forecast-sources.test.js`). `index.html` doesn't load the module yet.
+The code is in [`forecast-sources.js`](../forecast-sources.js), loaded by `index.html`, and tests
+are in [`tests/forecast-sources.test.js`](../tests/forecast-sources.test.js)
+(`node --test tests/forecast-sources.test.js`).
+
+**Deployment:** `forecast-sources.js` must be published next to `index.html`.
 
 ## Structure
 
@@ -39,7 +41,7 @@ SMHI JSON   ──► normalizeSmhi ──┘
 | `met`    | met.no    | `{ met: 1, smhi: 0 }`   |
 | `smhi`   | SMHI      | `{ met: 0, smhi: 1 }`   |
 | `blend`  | met.no    | `{ met: 1, smhi: 1 }`   |
-| `both`   | met.no    | as `blend`, plus each source's own series for the charts (not built yet) |
+| `both`   | met.no    | as `blend`; the graphs use each source's own series (`*_src_met`, `*_src_smhi`) |
 
 If none of the selected sources has a parameter at all, it is borrowed from another source. That's
 how met.no mode keeps SMHI's thunder probability (as it does today), and how SMHI mode gets UV
@@ -111,9 +113,7 @@ This gives local weights that adapt over time, possibly by season.
 
 ## UI plan
 
-Decisions from reviewing the Grafer view. **Status:** the graph changes are built in `index.html`
-(step 1; the app still uses met.no only). The forecast switch and Båda mode are not built yet
-(step 2).
+Decisions from reviewing the Grafer view. **Status:** built in `index.html`.
 
 **Forecast switch.** Four options in the controls row at the top: met.no, SMHI, Viktad, Båda.
 - met.no, SMHI and Viktad look identical apart from the numbers. They never show source names
@@ -157,56 +157,24 @@ Decisions from reviewing the Grafer view. **Status:** the graph changes are buil
   series.
 - Panel: both values, labelled, e.g.
   `💧 met.no 0.8 mm (0.3–1.6) · SMHI 1.1 mm (0–1.8) · risk met.no 67 % · SMHI 74 % · ⚡ 12 %`.
-- The module already returns per-source temperature, precipitation and probability series
-  (`*_src_met`, `*_src_smhi`). Wind, gusts, the precipitation range and feels-like still need adding.
+- The module returns per-source temperature, wind, gust, humidity and precipitation (amount,
+  range, probability). The app derives each source's feels-like from these.
 
-## Wiring it into `index.html` (sketch)
+**Panning sets the period.** The visible window becomes the selected period: the day cards
+it covers are highlighted, the date fields and graph header summaries update, and Översikt
+and Tabell follow when you open them. The charts are not redrawn while panning.
 
-```js
-let forecastMode = localStorage.getItem('forecastMode') || 'met';
-let rawForecasts = {};   // { met, smhi }: kept so switching needs no new fetch
+## How `index.html` uses it
 
-// fetchWeather: fetch both raw responses (SMHI may still fail silently)
-const [metRes, smhiRes] = await Promise.allSettled([
-  fetch(metUrl, { headers }).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-  fetch(smhiUrl).then(r => r.ok ? r.json() : Promise.reject(new Error(`SMHI HTTP ${r.status}`))),
-]);
-rawForecasts = {
-  met:  metRes.status  === 'fulfilled' ? metRes.value  : null,
-  smhi: smhiRes.status === 'fulfilled' ? smhiRes.value : null,
-};
-applyForecastMode();
-
-function applyForecastMode() {
-  // Fall back to met.no if SMHI is missing (for example outside the Nordics)
-  const mode = rawForecasts.smhi ? forecastMode : 'met';
-  weatherData = ForecastSources.buildForecast(mode, rawForecasts);
-  const d = weatherData.data;
-  d.feels_like = d.temp.map((t, i) => calculateFeelsLike(t, d.wind[i], d.humidity[i]));
-  weatherData.persistenceL = estimatePersistence();   // falls back to 4 without met.no's 6 h blocks
-  d.rolling3h = compute3hRollingProb(d.precip_prob, d.step_hours, weatherData.persistenceL);
-}
-
-function setForecastMode(mode) {
-  forecastMode = mode;
-  try { localStorage.setItem('forecastMode', mode); } catch {}
-  applyForecastMode();
-  setDefaultDayRange();   // the SMHI axis can have different indices
-  _refreshAll();
-}
-```
-
-```html
-<!-- e.g. under globalControls, same style as the range tabs -->
-<div class="source-tabs" role="tablist" aria-label="Prognoskälla">
-  <button class="range-tab" data-source="met"   onclick="setForecastMode('met')">met.no</button>
-  <button class="range-tab" data-source="smhi"  onclick="setForecastMode('smhi')">SMHI</button>
-  <button class="range-tab" data-source="blend" onclick="setForecastMode('blend')">Viktad</button>
-</div>
-<script src="forecast-sources.js"></script>
-```
-
-`processWeatherData` and `mergeThunder` would then be replaced by `buildForecast`.
+- `fetchWeather` fetches both raw responses in parallel and keeps them in `rawForecasts`.
+  SMHI may fail silently (for example outside the Nordics); then only met.no is offered.
+- `applyForecastMode` builds `weatherData` with `ForecastSources.buildForecast` (Båda uses the
+  weighted build) and adds feels-like, persistence `L` and the 3 h risk, as before.
+- Switching mode rebuilds from the stored responses without a new fetch. The selected period is
+  kept as times, since SMHI's time axis differs from met.no's.
+- The choice is saved in `localStorage` (`weatherAppForecastMode`). The default is met.no.
+- The met.no parity test compares against `tests/fixtures/met-legacy-output.json`. That file is
+  the old `processWeatherData` output, saved before the function was removed.
 
 ## Open questions and things to check
 

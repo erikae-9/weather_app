@@ -487,9 +487,16 @@ function buildForecast(mode, raw, { nowMs = Date.now(), weights } = {}) {
   // den viktade), plus källans viktandel. Platta nycklar så att sliceData
   // i index.html skivar dem automatiskt.
   for (const id of Object.keys(sampled)) {
-    data[`temp_src_${id}`] = sampled[id].temp;
-    data[`precip_src_${id}`] = sampled[id].precip_amount.map((v, i) => v === null ? null : v / grid[i].stepH);
-    data[`precip_prob_src_${id}`] = sampled[id].precip_prob;
+    const src = sampled[id];
+    data[`temp_src_${id}`] = src.temp;
+    data[`wind_src_${id}`] = src.wind;
+    data[`gust_src_${id}`] = src.gust;
+    data[`humidity_src_${id}`] = src.humidity;
+    data[`precip_src_${id}`] = perHour(src.precip_amount);
+    data[`precip_step_src_${id}`] = src.precip_amount;
+    data[`precip_p10_src_${id}`] = perHour(src.precip_min);
+    data[`precip_p90_src_${id}`] = perHour(src.precip_max);
+    data[`precip_prob_src_${id}`] = src.precip_prob;
     data[`weight_src_${id}`] = b.weight_share[id];
   }
   return {
