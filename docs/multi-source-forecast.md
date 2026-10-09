@@ -169,9 +169,10 @@ function setForecastMode(mode) {
     that give precipitation. That's why `min` is often larger than `mean` (for example mean 0.1,
     min 1.2, max 1.8 at 8 %). `smhiBand` turns this into an approximate p10/p90 for the whole
     distribution, so it can be compared with met.no's min/max.
-  - The response also has a `precipitation_amount_mean_deterministic` field (one model run rather
-    than the ensemble) that isn't in `parameter.json`. The draft doesn't use it.
-- **Thunder probability** is a percent, despite the unit "fraction" (it shows as a percent in the app).
+  - `precipitation_amount_mean_deterministic` is a single model run rather than the ensemble.
+    The draft doesn't use it. It could later become its own source ("SMHI deterministic"), or a
+    tie-breaker for the symbol.
+- **Thunder probability** is a percent, per the newer `parameter.json`.
 - **SMHI probability on 12 h intervals in weighted mode.** When a 12 h SMHI interval is split
   across two of met.no's 6 h steps, each step gets the full 12 h probability, which overstates
   it. The true value lies between `1 − (1 − p)^½` and `p`, and the app's persistence `L` could

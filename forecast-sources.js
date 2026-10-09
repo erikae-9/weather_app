@@ -78,7 +78,9 @@ function normalizeMet(json) {
 //   - precipitation_amount_min/max är spannet *om det blir nederbörd* (bland
 //     de ensemblemedlemmar som ger nederbörd). min är ofta större än mean,
 //     t.ex. mean 0.1, min 1.2, max 1.8 vid 8 % risk – se smhiBand nedan.
-// thunderstorm_probability är i procent trots enheten "fraction".
+//   - precipitation_amount_mean_deterministic (en enskild modellkörning, inte
+//     ensemblen) används inte här.
+// thunderstorm_probability är i procent (enligt nyare parameter.json).
 const SMHI_PARAMS = {
   temp:           'air_temperature',
   wind:           'wind_speed',
