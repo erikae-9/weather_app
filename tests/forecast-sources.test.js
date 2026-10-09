@@ -1,0 +1,144 @@
+// Kör: node --test tests/
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const FS = require('../forecast-sources.js');
+
+// ── Hämta appens nuvarande processWeatherData ur index.html för paritetstest ──
+function loadAppProcessor() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const extract = name => {
+    const start = html.indexOf(`function ${name}(`);
+    assert.ok(start >= 0, `hittar inte ${name} i index.html`);
+    return html.slice(start, html.indexOf('\n}\n', start) + 3);
+  };
+  const src = ['let weatherData = null;',
+    ...['calculateFeelsLike', 'unionProb', 'fitL', 'estimatePersistence',
+        'compute3hRollingProb', 'processWeatherData'].map(extract),
+    'return d => { processWeatherData(d); return weatherData; };'].join('\n');
+  return new Function(src)();
+}
+
+// ── Testdata ──
+const T0 = Date.parse('2026-10-09T12:00:00Z');
+const iso = h => new Date(T0 + h * 3600e3).toISOString().replace('.000', '');
+
+function metEntry(h, { temp, p10, p90, wind = 4, dir = 200, step = 1, amount = 0, min, max, prob = 10, symbol = 'cloudy' }) {
+  const block = { summary: { symbol_code: symbol },
+    details: { precipitation_amount: amount, precipitation_amount_min: min ?? amount,
+               precipitation_amount_max: max ?? amount, probability_of_precipitation: prob } };
+  return { time: iso(h), data: {
+    instant: { details: {
+      air_temperature: temp, air_temperature_percentile_10: p10, air_temperature_percentile_90: p90,
+      wind_speed: wind, wind_speed_percentile_10: wind - 1, wind_speed_percentile_90: wind + 1,
+      wind_speed_of_gust: wind * 2, wind_from_direction: dir, relative_humidity: 80,
+      air_pressure_at_sea_level: 1010, cloud_area_fraction: 75, ultraviolet_index_clear_sky: 0.5 } },
+    ...(step === 1 ? { next_1_hours: block } : {}),
+    next_6_hours: { details: { probability_of_precipitation: step === 6 ? prob : 40 }, summary: { symbol_code: symbol },
+                    ...(step === 6 ? { details: block.details } : {}) },
+  } };
+}
+
+const MET = { properties: { timeseries: [
+  metEntry(0, { temp: 10, p10: 9, p90: 11, amount: 0.2, min: 0, max: 0.5, prob: 30, dir: 350 }),
+  metEntry(1, { temp: 11, p10: 10, p90: 12, amount: 0.0, prob: 20 }),
+  metEntry(2, { temp: 12, p10: 11, p90: 13, amount: 1.0, min: 0.4, max: 2.0, prob: 60, symbol: 'rain' }),
+  metEntry(3, { temp: 12, p10: 11, p90: 13, step: 6, amount: 3.0, min: 1, max: 6, prob: 70, symbol: 'rain' }),
+  metEntry(9, { temp: 8,  p10: 6,  p90: 10, step: 6, amount: 0.6, prob: 25 }),
+] } };
+
+// SMHI: timvärden, nederbörd (mm/h) avser timmen *före* tidpunkten
+function smhiEntry(h, { temp, wind = 6, dir = 10, rate = 0, prob = 20, thunder = 5, sym = 6 }) {
+  return { time: iso(h), data: {
+    air_temperature: temp, wind_speed: wind, wind_speed_of_gust: wind * 2, wind_from_direction: dir,
+    relative_humidity: 90, air_pressure_at_mean_sea_level: 1006, cloud_area_fraction: 8,
+    thunderstorm_probability: thunder, precipitation_amount_mean: rate,
+    precipitation_amount_min: rate / 2, precipitation_amount_max: rate * 2,
+    probability_of_precipitation: prob, symbol_code: sym } };
+}
+const SMHI = { timeSeries: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(h =>
+  smhiEntry(h, { temp: 10 + h * 0.5 + 2, rate: h === 3 ? 2 : 0.5, prob: 40, thunder: h })) };
+
+const NOW = T0;
+
+test('met.no-läget ger samma data som nuvarande processWeatherData', () => {
+  const app = loadAppProcessor()(MET);
+  const fc = FS.buildForecast('met', { met: MET }, { nowMs: NOW });
+  assert.deepEqual(fc.times.map(t => t.getTime()), app.times.map(t => t.getTime()));
+  for (const k of ['temp', 'temp_p10', 'temp_p90', 'wind', 'wind_p10', 'wind_p90', 'gust',
+                   'wind_direction', 'precip', 'precip_step', 'precip_p10', 'precip_p90',
+                   'precip_prob', 'prob6h', 'prob12h', 'step_hours', 'cloud', 'humidity',
+                   'pressure', 'uv', 'symbols', 'thunder']) {
+    const a = app.data[k], b = fc.data[k];
+    assert.equal(b.length, a.length, k);
+    a.forEach((v, i) => {
+      if (typeof v === 'number') assert.ok(Math.abs(v - b[i]) < 1e-9, `${k}[${i}]: ${v} ≠ ${b[i]}`);
+      else assert.equal(b[i], v, `${k}[${i}]`);
+    });
+  }
+});
+
+test('met.no-läget hämtar fortfarande åska från SMHI', () => {
+  const fc = FS.buildForecast('met', { met: MET, smhi: SMHI }, { nowMs: NOW });
+  assert.deepEqual(fc.data.temp, [10, 11, 12, 12, 8]);        // SMHI påverkar inte temp
+  assert.deepEqual(fc.data.thunder, [0, 1, 2, 3, 9]);          // men ger åska
+  assert.deepEqual(fc.data.weight_src_smhi, [0, 0, 0, 0, 0]);
+});
+
+test('SMHI-läget använder SMHI:s tidsaxel och nederbörd för perioden före', () => {
+  const fc = FS.buildForecast('smhi', { met: MET, smhi: SMHI }, { nowMs: NOW });
+  assert.equal(fc.times.length, 10);
+  assert.equal(fc.data.temp[0], 12);
+  // Steget 02→03 täcks av SMHI-värdet vid 03 (2 mm/h)
+  assert.equal(fc.data.precip_step[2], 2);
+  assert.equal(fc.data.cloud[0], 100);                         // 8 oktas → 100 %
+  assert.equal(fc.data.symbols[0], 'cloudy');                  // 00–01 täcks av värdet vid 01
+  assert.equal(fc.data.uv[0], 0.5);                            // UV saknas hos SMHI → met.no
+  assert.equal(fc.data.precip_step[9], null);                  // sista steget otäckt
+  assert.equal(fc.data.symbols[9], 'unknown');
+});
+
+test('viktat läge: medel, och bandet vidgas när källorna är oense', () => {
+  const fc = FS.buildForecast('blend', { met: MET, smhi: SMHI }, { nowMs: NOW });
+  // t=0: met 10 (9–11), SMHI 12 (inga percentiler) → medel 11
+  assert.equal(fc.data.temp[0], 11);
+  const lo = fc.data.temp_p10[0], hi = fc.data.temp_p90[0];
+  // Ensam källspridning: viktat medel av p10 = (9+12)/2 = 10.5 → 0.5 under medel.
+  // Oenighet: sd 1 → 1.28. I kvadratur: ~1.37
+  assert.ok(Math.abs((11 - lo) - Math.hypot(0.5, 1.2816)) < 1e-9);
+  assert.ok(Math.abs((hi - 11) - Math.hypot(0.5, 1.2816)) < 1e-9);
+  // Vindriktning 350° och 10° → 0° (inte 180°)
+  const d = fc.data.wind_direction[0];
+  assert.ok(Math.min(d, 360 - d) < 1e-6, `riktning ${d}`);
+  // Sannolikhet: linjär pool (30 + 40) / 2
+  assert.equal(fc.data.precip_prob[0], 35);
+  assert.deepEqual([fc.data.weight_src_met[0], fc.data.weight_src_smhi[0]], [0.5, 0.5]);
+  assert.equal(fc.data.temp_src_met[0], 10);
+  assert.equal(fc.data.temp_src_smhi[0], 12);
+});
+
+test('viktat läge: 6h-steg summerar SMHI:s timvärden', () => {
+  const fc = FS.buildForecast('blend', { met: MET, smhi: SMHI }, { nowMs: NOW });
+  // met.no-steget 03–09: SMHI-perioderna 03–04 … 08–09 à 0.5 mm → 3 mm; met.no 3 mm
+  assert.equal(fc.data.step_hours[3], 6);
+  assert.equal(fc.data.precip_step[3], 3);
+  // Sista met.no-steget (09–15) saknar SMHI-täckning → bara met.no
+  assert.equal(fc.data.precip_step[4], 0.6);
+  assert.equal(fc.data.temp[4], 8.0 * 0.5 + 16.5 * 0.5);     // punktvärdet vid 09 finns hos båda
+});
+
+test('vikter som beror på prognoslängd', () => {
+  const weights = { met: { default: [[0, 3], [2, 1]] }, smhi: { default: 1 } };
+  const fc = FS.buildForecast('blend', { met: MET, smhi: SMHI }, { nowMs: NOW, weights });
+  assert.equal(fc.data.weight_src_met[0], 0.75);                // 3:1
+  assert.equal(fc.data.weight_src_met[1], 2 / 3);               // 2:1
+  assert.equal(fc.data.weight_src_met[2], 0.5);                 // 1:1
+  assert.equal(FS.evalCurve([[0, 3], [2, 1]], 10), 1);
+});
+
+test('weightsFromErrors ger w ∝ 1/RMSE²', () => {
+  const w = FS.weightsFromErrors({ met: 1, smhi: 2 });
+  assert.ok(Math.abs(w.met - 0.8) < 1e-12);
+  assert.ok(Math.abs(w.smhi - 0.2) < 1e-12);
+});
