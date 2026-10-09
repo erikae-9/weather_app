@@ -72,12 +72,13 @@ function normalizeMet(json) {
 // som fetchSMHIThunder i index.html redan läser. Verifierat mot parameter.json
 // och ett punktsvar: namnen nedan, molnighet i oktas, saknat värde = 9999.
 // Intervallparametrar (nederbörd, symbol) gäller (intervalParametersStartTime, time].
-// TODO fortfarande öppet:
-//   - precipitation_amount_* har enheten kg/m² ("amount"), men kortnamnet
-//     tpratemean antyder intensitet. Lika för 1h-intervall; för längre
-//     intervall måste det jämföras mot SMHI:s egen visning.
-//   - thunderstorm_probability har enheten "fraction" men appen visar den
-//     som procent. Exempelsvaret har bara 0, så det går inte att avgöra.
+// Nederbörd (verifierat mot ett 10-dagarssvar med 1h-, 2h-, 6h- och 12h-intervall):
+//   - precipitation_amount_mean är total mängd för intervallet, inte mm/h.
+//     Som intensitet skulle 12h-intervallen ge 15–50 mm vid 10–30 % risk.
+//   - precipitation_amount_min/max är spannet *om det blir nederbörd* (bland
+//     de ensemblemedlemmar som ger nederbörd). min är ofta större än mean,
+//     t.ex. mean 0.1, min 1.2, max 1.8 vid 8 % risk – se smhiBand nedan.
+// thunderstorm_probability är i procent trots enheten "fraction".
 const SMHI_PARAMS = {
   temp:           'air_temperature',
   wind:           'wind_speed',
@@ -93,7 +94,6 @@ const SMHI_PARAMS = {
   precip_prob:    'probability_of_precipitation',
   symbol:         'symbol_code',
 };
-const SMHI_PRECIP_IS_RATE = false;       // true: mm/h → multipliceras med intervallets längd
 const SMHI_CLOUD_IN_OCTAS = true;        // enligt parameter.json
 
 // SMHI Wsymb2 (1–27) → met.no symbol_code, så att getWeatherEmoji/-Description funkar
@@ -104,6 +104,19 @@ const SMHI_SYMBOLS = [null,
   'lightsnowshowers_day', 'snowshowers_day', 'heavysnowshowers_day',
   'lightrain', 'rain', 'heavyrain', 'rainandthunder',
   'lightsleet', 'sleet', 'heavysleet', 'lightsnow', 'snow', 'heavysnow'];
+
+// SMHI:s min/max gäller bara de fall där det blir nederbörd. Gör om dem
+// till ungefärliga p10/p90 för hela fördelningen, som met.no:s min/max:
+//   p10: torrt i mer än 10 % av fallen → 0, annars det villkorade minimum
+//   p90: nederbörd i mer än 10 % av fallen → det villkorade maximum, annars 0
+function smhiBand(prob, min, max) {
+  if (prob === null) return { lo: null, hi: null };
+  const p = prob / 100;
+  return {
+    lo: p >= 0.9 ? min : 0,
+    hi: p > 0.1 ? max : 0,
+  };
+}
 
 function normalizeSmhi(json) {
   // 9999 = saknas (parameter.json). Negativa värden behandlas också som
@@ -148,16 +161,15 @@ function normalizeSmhi(json) {
     const start = ts[i].start ?? (i > 0 ? ts[i - 1].t : null);
     if (start === null || start >= end) continue;
     const d = ts[i].d;
-    const hours = (end - start) / H;
-    const scale = SMHI_PRECIP_IS_RATE ? hours : 1;
-    const amt = (key) => { const v = get(d, key); return v === null ? null : v * scale; };
+    const prob = get(d, 'precip_prob');
+    const band = smhiBand(prob, get(d, 'precip_min'), get(d, 'precip_max'));
     const code = get(d, 'symbol');
     periods.push({
       start, end,
-      amount: amt('precip_mean'),
-      min:    amt('precip_min'),
-      max:    amt('precip_max'),
-      prob:   get(d, 'precip_prob'),
+      amount: get(d, 'precip_mean'),
+      min:    band.lo,
+      max:    band.hi,
+      prob,
       symbol: code === null ? null : (SMHI_SYMBOLS[Math.round(code)] ?? null),
     });
   }
@@ -488,7 +500,7 @@ function buildForecast(mode, raw, { nowMs = Date.now(), weights } = {}) {
 const api = {
   MODES, buildForecast, weightsFromErrors,
   // exponerade för tester
-  normalizeMet, normalizeSmhi, gridFromSource, sampleSource, aggregatePeriods,
+  normalizeMet, normalizeSmhi, smhiBand, gridFromSource, sampleSource, aggregatePeriods,
   blend, evalCurve, weightFor,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;

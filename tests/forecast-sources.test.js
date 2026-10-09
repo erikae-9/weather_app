@@ -171,3 +171,32 @@ test('SMHI-intervall längre än tidssteget fördelas över met.no:s timmar', ()
   const s = FS.sampleSource(src, grid);
   assert.deepEqual(s.precip_amount, [1, 1, 1]);
 });
+
+test('SMHI: mängder är totaler per intervall, min/max görs om till p10/p90', () => {
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smhi-snow1g-intervals.json'), 'utf8'));
+  const src = FS.normalizeSmhi(raw);
+  const hours = src.periods.map(p => (p.end - p.start) / 3600e3);
+  assert.deepEqual(hours, [1, 1, 1, 2, 6, 6, 12, 12]);
+  const at = iso => src.periods.find(p => p.end === Date.parse(iso));
+  // 12h-intervall: 1.3 mm totalt (inte 1.3 mm/h × 12)
+  assert.equal(at('2026-10-16T00:00:00Z').amount, 1.3);
+  // 93 % risk: villkorat min (0.4) duger som p10
+  assert.deepEqual(pick(at('2026-10-09T11:00:00Z')), { amount: 0.3, min: 0.4, max: 0.4, prob: 93 });
+  // 27 % risk: p10 = 0 (oftast torrt), p90 = villkorat max
+  assert.deepEqual(pick(at('2026-10-11T21:00:00Z')), { amount: 0.1, min: 0, max: 0.5, prob: 27 });
+  // SMHI-läget: tidsaxeln följer intervallen och mm/h räknas ut per steg
+  const fc = FS.buildForecast('smhi', { smhi: raw }, { nowMs: Date.parse('2026-10-09T10:00:00Z') });
+  const i = fc.times.findIndex(t => t.getTime() === Date.parse('2026-10-15T12:00:00Z'));
+  assert.equal(fc.data.step_hours[i], 12);
+  assert.equal(fc.data.precip_step[i], 1.3);
+  assert.ok(Math.abs(fc.data.precip[i] - 1.3 / 12) < 1e-12);
+});
+
+test('smhiBand', () => {
+  assert.deepEqual(FS.smhiBand(5, 1.2, 1.8), { lo: 0, hi: 0 });
+  assert.deepEqual(FS.smhiBand(50, 1.2, 1.8), { lo: 0, hi: 1.8 });
+  assert.deepEqual(FS.smhiBand(95, 1.2, 1.8), { lo: 1.2, hi: 1.8 });
+  assert.deepEqual(FS.smhiBand(null, 1.2, 1.8), { lo: null, hi: null });
+});
+
+function pick(p) { return { amount: p.amount, min: p.min, max: p.max, prob: p.prob }; }

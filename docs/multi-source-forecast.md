@@ -160,13 +160,22 @@ function setForecastMode(mode) {
 - **SMHI, checked** against `parameter.json` and a point response (fixture in
   `tests/fixtures/smhi-snow1g-sample.json`): field names, cloud cover in oktas, missing value 9999,
   and the interval comes from `intervalParametersStartTime`.
-- **SMHI precipitation on intervals longer than 1 h.** The unit is kg/m² ("amount"), but the
-  short name `tpratemean` suggests a rate. The draft treats it as a total for the interval
-  (`SMHI_PRECIP_IS_RATE = false`). To check, find an entry near the end of the response where
-  the interval is longer than an hour and compare it with SMHI's own forecast page.
-- **`thunderstorm_probability`** has the unit "fraction", but the app shows it as a percent. If
-  it's really 0–1, today's thunder badge would always round to 0 %. The sample only has 0s,
-  so it can't settle this.
+- **SMHI precipitation, settled** with a 10-day response (fixture in
+  `tests/fixtures/smhi-snow1g-intervals.json`):
+  - The time step grows from 1 h to 2 h, then 6 h, then 12 h.
+  - `precipitation_amount_mean` is the **total for the interval**, not mm/h. As a rate, the
+    12 h intervals would mean 15–50 mm at 10–30 % probability.
+  - `precipitation_amount_min/max` is the range **if it does rain**, across the ensemble members
+    that give precipitation. That's why `min` is often larger than `mean` (for example mean 0.1,
+    min 1.2, max 1.8 at 8 %). `smhiBand` turns this into an approximate p10/p90 for the whole
+    distribution, so it can be compared with met.no's min/max.
+  - The response also has a `precipitation_amount_mean_deterministic` field (one model run rather
+    than the ensemble) that isn't in `parameter.json`. The draft doesn't use it.
+- **Thunder probability** is a percent, despite the unit "fraction" (it shows as a percent in the app).
+- **SMHI probability on 12 h intervals in weighted mode.** When a 12 h SMHI interval is split
+  across two of met.no's 6 h steps, each step gets the full 12 h probability, which overstates
+  it. The true value lies between `1 − (1 − p)^½` and `p`, and the app's persistence `L` could
+  pick a point in between. This only affects weighted mode from about day 4.
 - **`periodRisk` in weighted mode** uses met.no's 6 h/12 h blocks as floor and ceiling. In
   weighted mode they can pull the risk toward met.no. Possible fixes: use the blocks only to
   calibrate `L`, or skip the floor/ceiling in that mode.
