@@ -109,9 +109,11 @@ by past error. To get the RMSE values:
 
 This gives local weights that adapt over time, possibly by season.
 
-## UI plan (agreed, not built yet)
+## UI plan
 
-Decisions from reviewing the current Grafer view.
+Decisions from reviewing the Grafer view. **Status:** the graph changes are built in `index.html`
+(step 1; the app still uses met.no only). The forecast switch and Båda mode are not built yet
+(step 2).
 
 **Forecast switch.** Four options in the controls row at the top: met.no, SMHI, Viktad, Båda.
 - met.no, SMHI and Viktad look identical apart from the numbers. They never show source names

@@ -38,6 +38,8 @@
   --band-green:  rgba(52,211,153,0.35);
   --precip-bar:  rgba(103,232,249,0.6);
   --precip-band: rgba(103,232,249,0.22);
+  --risk-rgb:    103,232,249;
+  --thunder-rgb: 167,139,250;
   color-scheme: dark;
 }
 
@@ -66,6 +68,8 @@
   --band-green:  rgba(5,150,105,0.30);
   --precip-bar:  rgba(14,116,144,0.60);
   --precip-band: rgba(14,116,144,0.25);
+  --risk-rgb:    14,116,144;
+  --thunder-rgb: 124,58,237;
   color-scheme: light;
 }
 
@@ -540,7 +544,6 @@ body {
   white-space: nowrap;
 }
 
-/* chart-panel: allow touch-action so Plotly gets gestures */
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -605,39 +608,90 @@ body {
   height: 0;
 }
 
-.beaufort-legend {
-  display: flex;
-  gap: 0;
-  padding: 0;
-  border-top: 1px solid var(--border);
-  overflow: hidden;
-  border-radius: 0 0 10px 10px;
-}
-
-.bf-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  font-size: 0.58rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-  padding: 4px 2px;
-  gap: 3px;
-  overflow: hidden;
-}
-
-.bf-swatch {
-  width: 8px;
+.chart-legend-swatch {
+  display: inline-block;
+  width: 14px;
   height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-@media (max-width: 480px) {
-  .bf-item { font-size: 0; gap: 0; padding: 4px 0; }
-  .bf-swatch { width: 100%; height: 6px; border-radius: 0; border: none !important; }
-  .beaufort-legend { gap: 1px; }
+/* Plot-ytan: Plotly ritar statiskt, gester hanteras i JS. pan-y låter
+   webbläsaren scrolla sidan vid lodrät svepning; sidledes svep panorerar. */
+.chart-plot-wrap {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: crosshair;
+}
+.chart-plot-wrap, .chart-plot-wrap * { touch-action: pan-y; }
+.chart-plot-wrap.panning { cursor: grabbing; }
+.xhair {
+  position: absolute;
+  width: 0;
+  border-left: 1px solid var(--text-dim);
+  pointer-events: none;
+  display: none;
+  opacity: 0.7;
+}
+
+/* Detaljpanel: följer hårkorset, visar "nu" annars */
+.chart-detail {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 6px 14px -8px rgba(0,0,0,0.35);
+}
+.chart-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.chart-detail-time {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.chart-detail-now {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  padding: 1px 6px;
+}
+.chart-detail-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px 18px;
+}
+.chart-detail-row {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.chart-detail-row b { color: var(--text); font-weight: 600; }
+.chart-hint {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 8px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+@media (max-width: 760px) {
+  .chart-detail-rows { grid-template-columns: 1fr; }
 }
 
 .timeline-section {
@@ -860,7 +914,7 @@ body {
   .risk-badge { font-size: 0.67rem; padding: 5px 9px; gap: 5px; }
   .app { padding: 10px 10px 32px; gap: 8px; }
   .current-card { padding: 8px 10px 10px; }
-  .chart-legend { display: none; }
+  .chart-legend { margin-left: 0; flex-basis: 100%; gap: 8px; }
 }
 
 @media (max-width: 360px) {
@@ -1026,12 +1080,9 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
   body { padding-bottom: 0; }
 }
 
-/* Grafer: två kolumner på bred desktop, nederbörd i full bredd */
+/* Grafer: staplade i full bredd så att samma tidpunkt hamnar rakt under
+   varandra i alla tre */
 .charts-grid { display: flex; flex-direction: column; gap: 8px; }
-@media (min-width: 1000px) {
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
-  .charts-grid .chart-panel:nth-child(3) { grid-column: 1 / -1; }
-}
 
 </style>
 </head>
@@ -1141,8 +1192,9 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
 
     <!-- VY: GRAFER -->
     <section class="view" id="view-grafer">
-    <div>
-      <div class="section-title" style="margin-bottom:6px;">Grafer</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="section-title">Grafer<span class="chart-hint">Peka eller tryck för detaljer · dra i sidled för att bläddra</span></div>
+      <div class="chart-detail" id="chartDetail" aria-live="polite"></div>
       <div class="charts-grid">
         <div class="chart-panel">
           <div class="chart-panel-header">
@@ -1150,12 +1202,11 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
             <span class="chart-panel-live" id="chartTempLive"></span>
             <div class="chart-legend">
               <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--accent)"></span>Temp</span>
-              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:var(--purple)"></span>Känns</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--band-accent);height:8px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
+              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:var(--purple)"></span>Känns som</span>
+              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-accent)"></span>P10–90</span>
             </div>
           </div>
-          <div id="tempChart"></div>
+          <div class="chart-plot-wrap"><div id="tempChart"></div><div class="xhair"></div></div>
         </div>
 
         <div class="chart-panel">
@@ -1163,22 +1214,13 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
             <span class="chart-panel-title">Vind</span>
             <span class="chart-panel-live" id="chartWindLive"></span>
             <div class="chart-legend">
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--green)"></span>Medel</span>
+              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--green)"></span>Medelvind</span>
               <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:var(--amber)"></span>Byar</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--band-green);height:8px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:8px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
+              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-green)"></span>P10–90</span>
+              <span class="chart-legend-item">↓ Vindriktning</span>
             </div>
           </div>
-          <div id="windChart"></div>
-          <div class="beaufort-legend" id="beaufortLegend">
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(100,180,100,0.25);border:1px solid rgba(100,180,100,0.5)"></div>Lugnt (0–0.2)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(120,200,120,0.25);border:1px solid rgba(120,200,120,0.5)"></div>Svag (0.3–3.3)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(160,220,100,0.25);border:1px solid rgba(160,220,100,0.5)"></div>Måttlig (3.4–7.9)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(220,200,60,0.25);border:1px solid rgba(220,200,60,0.5)"></div>Frisk (8.0–13.8)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(240,140,40,0.25);border:1px solid rgba(240,140,40,0.5)"></div>Hård (13.9–24.4)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(220,60,60,0.25);border:1px solid rgba(220,60,60,0.5)"></div>Storm (24.5–32.6)</div>
-            <div class="bf-item"><div class="bf-swatch" style="background:rgba(160,40,160,0.30);border:1px solid rgba(160,40,160,0.6)"></div>Orkan (32.7+)</div>
-          </div>
+          <div class="chart-plot-wrap"><div id="windChart"></div><div class="xhair"></div></div>
         </div>
 
         <div class="chart-panel">
@@ -1186,15 +1228,13 @@ body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
             <span class="chart-panel-title">Nederbörd &amp; Åska</span>
             <span class="chart-panel-live" id="chartPrecipLive"></span>
             <div class="chart-legend">
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--precip-bar);height:9px;width:9px;border-radius:2px"></span>mm</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--precip-band);height:9px;width:5px;border-radius:2px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--night-swatch);height:9px;border-radius:2px;border:1px solid var(--border)"></span>☾ Natt</span>
-              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:var(--amber)"></span>1h%</span>
-              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:var(--orange)"></span>3h%</span>
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--purple)"></span>⚡%</span>
+              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-bar);width:9px"></span>mm/h</span>
+              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-band);width:5px"></span>P10–90</span>
+              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, rgba(var(--risk-rgb),0.08), rgba(var(--risk-rgb),0.9))"></span>Risk</span>
+              <span class="chart-legend-item" id="legendThunder"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, rgba(var(--thunder-rgb),0.08), rgba(var(--thunder-rgb),0.9))"></span>Åska</span>
             </div>
           </div>
-          <div id="precipChart"></div>
+          <div class="chart-plot-wrap"><div id="precipChart"></div><div class="xhair"></div></div>
         </div>
       </div>
     </div>
@@ -1299,7 +1339,9 @@ function chartColors() {
       bg: '#ffffff', grid: '#e2e9f2', axisLine: '#d0dcea',
       tick: '#5a6f8c', font: '#43597a',
       hoverBg: '#ffffff', hoverBorder: '#c6d4e4', hoverText: '#1a2740',
-      night: 'rgba(71,85,105,0.13)', moon: 'rgba(73,96,126,0.75)',
+      night: 'rgba(71,85,105,0.08)', moon: 'rgba(73,96,126,0.75)',
+      dayLine: 'rgba(90,111,140,0.45)',
+      riskRGB: '14,116,144', thunderRGB: '124,58,237',
       zoneLabelBg: 'rgba(255,255,255,0.65)',
       windArrow: 'rgba(30,41,59,0.85)',
       nowLine: 'rgba(2,132,199,0.45)',
@@ -1321,6 +1363,8 @@ function chartColors() {
     tick: '#4a6080', font: '#7a94b8',
     hoverBg: '#1a2438', hoverBorder: '#2d4060', hoverText: '#e2eaf7',
     night: 'rgba(3,6,14,0.40)', moon: 'rgba(122,148,184,0.6)',
+    dayLine: 'rgba(122,148,184,0.35)',
+    riskRGB: '103,232,249', thunderRGB: '167,139,250',
     zoneLabelBg: 'rgba(17,24,39,0.6)',
     windArrow: 'rgba(255,255,255,0.85)',
     nowLine: 'rgba(56,189,248,0.4)',
@@ -1362,14 +1406,19 @@ function toggleTheme() {
 // ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
 // labelLight: mörkare etikettfärg med tillräcklig kontrast mot vit graf-bakgrund
 const BEAUFORT_ZONES = [
-  { name: 'Lugnt',       min: 0,    max: 0.2,  color: 'rgba(100,180,100,0.12)', lineColor: 'rgba(100,180,100,0.4)',  labelLight: 'rgba(46,110,46,0.85)' },
-  { name: 'Svag vind',   min: 0.2,  max: 3.3,  color: 'rgba(120,200,120,0.10)', lineColor: 'rgba(120,200,120,0.35)', labelLight: 'rgba(46,110,46,0.85)' },
-  { name: 'Måttlig',     min: 3.3,  max: 7.9,  color: 'rgba(160,220,100,0.10)', lineColor: 'rgba(160,220,100,0.35)', labelLight: 'rgba(90,120,30,0.9)' },
-  { name: 'Frisk',       min: 7.9,  max: 13.8, color: 'rgba(220,200,60,0.12)',  lineColor: 'rgba(220,200,60,0.4)',   labelLight: 'rgba(140,110,10,0.9)' },
-  { name: 'Hård vind',   min: 13.8, max: 24.4, color: 'rgba(240,140,40,0.14)',  lineColor: 'rgba(240,140,40,0.5)',   labelLight: 'rgba(170,85,15,0.9)' },
-  { name: 'Storm',       min: 24.4, max: 32.6, color: 'rgba(220,60,60,0.15)',   lineColor: 'rgba(220,60,60,0.5)',    labelLight: 'rgba(165,35,35,0.9)' },
-  { name: 'Orkan',       min: 32.6, max: 60,   color: 'rgba(160,40,160,0.18)',  lineColor: 'rgba(160,40,160,0.6)',   labelLight: 'rgba(120,25,120,0.9)' },
+  { name: 'Lugnt',       short: 'Lugnt',  min: 0,    max: 0.2,  lineColor: 'rgba(100,180,100,0.4)',  labelLight: 'rgba(46,110,46,0.85)' },
+  { name: 'Svag vind',   short: 'Svag',   min: 0.2,  max: 3.3,  lineColor: 'rgba(120,200,120,0.45)', labelLight: 'rgba(46,110,46,0.85)' },
+  { name: 'Måttlig',     short: 'Måttl.', min: 3.3,  max: 7.9,  lineColor: 'rgba(160,220,100,0.45)', labelLight: 'rgba(90,120,30,0.9)' },
+  { name: 'Frisk',       short: 'Frisk',  min: 7.9,  max: 13.8, lineColor: 'rgba(220,200,60,0.5)',   labelLight: 'rgba(140,110,10,0.9)' },
+  { name: 'Hård vind',   short: 'Hård',   min: 13.8, max: 24.4, lineColor: 'rgba(240,140,40,0.55)',  labelLight: 'rgba(170,85,15,0.9)' },
+  { name: 'Storm',       short: 'Storm',  min: 24.4, max: 32.6, lineColor: 'rgba(220,60,60,0.55)',   labelLight: 'rgba(165,35,35,0.9)' },
+  { name: 'Orkan',       short: 'Orkan',  min: 32.6, max: 60,   lineColor: 'rgba(160,40,160,0.6)',   labelLight: 'rgba(120,25,120,0.9)' },
 ];
+
+function beaufortName(speed) {
+  if (speed === null || speed === undefined) return null;
+  return (BEAUFORT_ZONES.find(z => speed < z.max) || BEAUFORT_ZONES[BEAUFORT_ZONES.length - 1]).name;
+}
 
 // ── THUNDER THRESHOLDS (% probability, SMHI) ─────────────────────────────────
 const THUNDER_MED  = 15;  // "värt att hålla koll"
@@ -1379,20 +1428,23 @@ function thunderClass(p) {
   return p >= THUNDER_HIGH ? 'high' : p >= THUNDER_MED ? 'medium' : 'low';
 }
 
-function buildBeaufortShapes(yMax, isMobile) {
+// Tunna gränslinjer mellan Beaufort-zonerna och zonnamn i högermarginalen
+// (utanför plotytan, så att kurvorna aldrig döljer dem).
+function buildBeaufortLines(yMax, isMobile) {
   const shapes = [], annotations = [];
   const light = currentTheme() === 'light';
   for (const zone of BEAUFORT_ZONES) {
-    const y0 = zone.min, y1 = Math.min(zone.max, yMax);
-    if (y0 >= yMax) continue;
-    shapes.push({ type:'rect', xref:'paper', yref:'y', x0:0, x1:1, y0, y1,
-      fillcolor: zone.color, line:{ color:zone.lineColor, width:0.5 }, layer:'below' });
-    const midY = (y0 + Math.min(zone.max, yMax)) / 2;
-    if ((Math.min(zone.max, yMax) - y0) > 1.5 && !isMobile) {
-      annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'right', y:midY, yanchor:'middle',
-        text: zone.name, showarrow:false,
-        font:{ size:9, color: light ? zone.labelLight : zone.lineColor },
-        bgcolor: chartColors().zoneLabelBg, borderpad:2 });
+    if (zone.min >= yMax) continue;
+    const top = Math.min(zone.max, yMax);
+    if (zone.max < yMax && zone.max > 1) {
+      shapes.push({ type:'line', xref:'paper', yref:'y', x0:0, x1:1, y0:zone.max, y1:zone.max,
+        line:{ color: zone.lineColor, width: 1 }, layer:'below' });
+    }
+    if (top - zone.min > yMax * 0.07) {
+      annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'left', xshift:4,
+        y:(zone.min + top) / 2, yanchor:'middle', showarrow:false,
+        text: isMobile ? zone.short : zone.name,
+        font:{ size: isMobile ? 8 : 9, color: light ? zone.labelLight : zone.lineColor.replace(/[\d.]+\)$/, '0.9)') } });
     }
   }
   return { shapes, annotations };
@@ -1786,14 +1838,12 @@ function buildNightShapes() {
 }
 
 // ☾-markör överst i varje nattband så skuggningen förklarar sig själv.
-// Band vars synliga del är < 4% av x-spannet hoppas över (markören får inte plats).
-function buildNightAnnotations(xStart, xEnd) {
-  const span = xEnd - xStart;
+// Band smalare än 4 % av det synliga fönstret hoppas över (markören får inte plats).
+function buildNightAnnotations(windowMs) {
   return buildNightIntervals()
-    .filter(([a, b]) => b > xStart && a < xEnd &&
-      (Math.min(b, xEnd) - Math.max(a, xStart)) > span * 0.04)
+    .filter(([a, b]) => (b - a) > windowMs * 0.04)
     .map(([a, b]) => ({
-      x: new Date((Math.max(a, xStart) + Math.min(b, xEnd)) / 2),
+      x: new Date((a.getTime() + b.getTime()) / 2),
       xref:'x', y: 1, yref:'paper', yanchor:'top',
       text:'☾', showarrow:false,
       font:{ size:11, color: chartColors().moon }
@@ -2229,136 +2279,169 @@ function updateRiskBadges() {
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
 
+// ── GRAFER ────────────────────────────────────────────────────────────────────
+// Tre staplade grafer med samma tidsaxel och samma marginaler, så att en
+// tidpunkt hamnar på samma x-position i alla. Plotly ritar statiskt (ingen
+// egen hover/zoom); hårkors, detaljpanel och panorering sköts här. På så vis
+// scrollar en lodrät svepning sidan även när den börjar på en graf.
+
+const CHART_IDS = ['tempChart', 'windChart', 'precipChart'];
+// range: synligt fönster, extent: hela prognosen (ms). cursor: index som
+// detaljpanelen visar (null = "nu"). pinned: valt med tryck, ligger kvar.
+let chartView = null;
+
+// Tidsstegets längd i timmar (1h i början, 6h i svansen)
+function stepHoursAt(i) {
+  const d = weatherData.data.step_hours[i];
+  if (d) return d;
+  const t = weatherData.times;
+  if (i + 1 < t.length) return (t[i + 1] - t[i]) / 3600e3;
+  return i > 0 ? (t[i] - t[i - 1]) / 3600e3 : 1;
+}
+
+// Plotly tolkar Date som lokal väggklocka utan tidszon. Omräkningen behövs
+// för att pixel ↔ tid ska stämma även över sommartidsskiftet.
+const toNaive = ms => ms - new Date(ms).getTimezoneOffset() * 60000;
+const fromNaive = n => n + new Date(n).getTimezoneOffset() * 60000;
+
+// Tidsaxel i två nivåer utan lutande etiketter: timmar ("06", "12") och
+// veckodag vid midnatt ("lör 10"). Tätheten väljs efter fönstrets längd.
+const WEEKDAYS_SHORT = ['sön', 'mån', 'tis', 'ons', 'tors', 'fre', 'lör'];
+function buildTimeTicks(fromMs, toMs, windowH, isMobile) {
+  const steps = isMobile ? [[30, 6], [60, 12], [Infinity, 24]]
+                         : [[30, 3], [60, 6], [150, 12], [Infinity, 24]];
+  const step = steps.find(([lim]) => windowH <= lim)[1];
+  const vals = [], text = [], midnights = [];
+  const d0 = new Date(fromMs);
+  for (let day = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
+       day.getTime() <= toMs;
+       day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)) {
+    if (day.getTime() >= fromMs) midnights.push(day);
+    for (let h = 0; h < 24; h += step) {
+      const t = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h);
+      if (t.getTime() < fromMs || t.getTime() > toMs) continue;
+      vals.push(t);
+      text.push(h === 0 ? `<b>${WEEKDAYS_SHORT[t.getDay()]} ${t.getDate()}</b>` : String(h).padStart(2, '0'));
+    }
+  }
+  return { vals, text, midnights };
+}
+
 function drawCharts() {
-  const s = sliceData(currentRange);
-  const cfg = {
-    responsive: true,
-    displayModeBar: false,
-    scrollZoom: true,
-    doubleClick: 'reset',
-  };
-
+  const s = sliceData(currentRange);          // vald period: rubrikvärden + startfönster
+  if (!s.times.length) return;
+  const T = weatherData.times, D = weatherData.data, n = T.length;
   const isMobile = window.innerWidth < 640;
-  const chartH = isMobile ? 260 : 300;
-  const leftMargin = isMobile ? 34 : 48;
-  const bottomMargin = isMobile ? 36 : 44;
-
-  const xStart = s.times[0];
-  const xEnd   = s.times[s.times.length - 1];
-
-  const spanHours = (xEnd - xStart) / 3.6e6;
-  const tickFormat = spanHours <= 36 ? '%H:%M' : '%d/%m %H:%M';
-
   const cc = chartColors();
-  const base = {
-    margin: {t:6, r:38, b:bottomMargin, l:leftMargin},
-    height: chartH,
-    autosize: true,
-    hovermode: 'x unified',
-    showlegend: false,
-    plot_bgcolor: cc.bg,
-    paper_bgcolor: cc.bg,
-    font: { family: 'Inter, sans-serif', size: 10, color: cc.font },
-    xaxis: {
-      gridcolor: cc.grid, linecolor: cc.axisLine,
-      tickfont:{color: cc.tick, size:9},
-      fixedrange:false,
-      tickangle: -30,
-      range:[xStart, xEnd],
-      tickformat: tickFormat,
-    },
-    yaxis: { gridcolor: cc.grid, linecolor: cc.axisLine, tickfont:{color: cc.tick, size:9}, fixedrange:false },
-    hoverlabel: { bgcolor: cc.hoverBg, bordercolor: cc.hoverBorder, font:{family:'Inter, sans-serif', size:12, color: cc.hoverText} }
-  };
 
-  const nowIdx = findNowIndex();
-  const nowTime = weatherData && nowIdx !== null ? weatherData.times[nowIdx] : null;
-  const nowShape = nowTime ? [{
-    type: 'line', xref: 'x', yref: 'paper',
-    x0: nowTime, x1: nowTime, y0: 0, y1: 1,
-    line: { color: cc.nowLine, width: 1.5, dash: 'dot' }
-  }] : [];
+  const extent = [T[0].getTime(), T[n - 1].getTime() + stepHoursAt(n - 1) * 3600e3];
+  const lastIdx = T.indexOf(s.times[s.times.length - 1]);
+  const range = [s.times[0].getTime(), s.times[s.times.length - 1].getTime() + stepHoursAt(lastIdx) * 3600e3];
+  const windowMs = range[1] - range[0];
+  chartView = { range, extent, cursor: null, pinned: false };
 
-  // Nattskuggning (solnedgång → soluppgång) – tom array tills sol-data hämtats
+  // Samma marginaler i alla tre; höger ger plats åt Beaufort-namnen
+  const margin = { t: 8, b: 24, l: isMobile ? 34 : 46, r: isMobile ? 40 : 66 };
+  const ticks = buildTimeTicks(extent[0], extent[1], windowMs / 3600e3, isMobile);
+  const cfg = { staticPlot: true, responsive: true, displayModeBar: false };
+
+  const dayLines = ticks.midnights.map(m => ({
+    type: 'line', xref: 'x', yref: 'paper', x0: m, x1: m, y0: 0, y1: 1,
+    line: { color: cc.dayLine, width: 1 }, layer: 'below' }));
   const nightShapes = buildNightShapes();
-  const nightAnn = buildNightAnnotations(xStart, xEnd);
+  const nightAnn = buildNightAnnotations(windowMs);
+  const nowIdx = findNowIndex();
+  const nowShape = nowIdx !== null ? [{
+    type: 'line', xref: 'x', yref: 'paper', x0: T[nowIdx], x1: T[nowIdx], y0: 0, y1: 1,
+    line: { color: cc.nowLine, width: 1.5, dash: 'dot' } }] : [];
+  const bgShapes = [...nightShapes, ...dayLines, ...nowShape];
 
-  // ── TEMP ──
+  const xaxis = {
+    type: 'date', range: range.map(t => new Date(t)), fixedrange: true,
+    tickmode: 'array', tickvals: ticks.vals, ticktext: ticks.text, tickangle: 0,
+    tickfont: { color: cc.tick, size: isMobile ? 9 : 10 },
+    gridcolor: cc.grid, linecolor: cc.axisLine, showgrid: true, zeroline: false,
+  };
+  const yBase = { gridcolor: cc.grid, linecolor: cc.axisLine, tickfont: { color: cc.tick, size: 9 }, fixedrange: true };
+  const layout = (height, extra) => ({
+    height, margin, autosize: true, showlegend: false, hovermode: false, dragmode: false,
+    plot_bgcolor: cc.bg, paper_bgcolor: cc.bg,
+    font: { family: 'Inter, sans-serif', size: 10, color: cc.font },
+    xaxis, ...extra,
+  });
+  const H = isMobile ? { temp: 190, wind: 200, precip: 230 } : { temp: 220, wind: 230, precip: 260 };
+
+  // ── TEMPERATUR ──
   const hMeanT = meanOf(s.data.temp), hMinT = minOf(s.data.temp), hMaxT = maxOf(s.data.temp);
   document.getElementById('chartTempLive').textContent = hMeanT !== null
     ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
     : '';
 
-  // Fast fönster på minst ±10° kring temperaturens mittpunkt så att skalan
-  // inte zoomar in på små variationer; vidgas om data (P10/P90, känns som)
-  // sticker utanför. Gränserna avrundas utåt till hela 5°-steg och grafen
-  // får gradlinjer var 5:e grad.
-  const tAll = [...validVals(s.data.temp), ...validVals(s.data.temp_p10),
-                ...validVals(s.data.temp_p90), ...validVals(s.data.feels_like)];
+  // Skalan räknas på hela prognosen så att den inte hoppar vid panorering.
+  // Minst ±10° kring mittpunkten, avrundat utåt till hela 5°-steg.
+  const tAll = [...validVals(D.temp), ...validVals(D.temp_p10), ...validVals(D.temp_p90), ...validVals(D.feels_like)];
   let tempRange = null;
-  if (tAll.length && hMinT !== null) {
-    const tMid = (hMinT + hMaxT) / 2;
+  if (tAll.length) {
+    const tMin = Math.min(...validVals(D.temp)), tMax = Math.max(...validVals(D.temp));
+    const tMid = (tMin + tMax) / 2;
     const lo = Math.min(tMid - 10, Math.min(...tAll) - 1);
     const hi = Math.max(tMid + 10, Math.max(...tAll) + 1);
     tempRange = [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5];
   }
 
-  Plotly.newPlot('tempChart', [
-    { x:s.times, y:s.data.temp_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.temp_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.tempBandFill, line:{width:1,color: cc.tempBandLine}, name:'Min-Max', hovertemplate:'Max: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.temp,     type:'scatter', mode:'lines', line:{color: cc.temp,width:2.5}, name:'Temp', hovertemplate:'Förväntat: %{y:.1f}°C<extra></extra>' },
-    { x:s.times, y:s.data.feels_like, type:'scatter', mode:'lines', line:{color: cc.feels,width:1.5,dash:'dot'}, name:'Känns som', hovertemplate:'Känns: %{y:.1f}°C<extra></extra>' }
-  ], { ...base, yaxis:{...base.yaxis,
-        title:{text:'°C', font:{size:11, color: cc.tick}},
-        ...(tempRange ? { range: tempRange, dtick: 5, tick0: 0 } : {}),
-        zeroline: true, zerolinecolor: cc.zeroLine, zerolinewidth: 1.5  // 0°C (frysgräns) markeras extra
-      }, shapes: [...nightShapes, ...nowShape], annotations: nightAnn }, cfg);
+  const pTemp = Plotly.newPlot('tempChart', [
+    { x: T, y: D.temp_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
+    { x: T, y: D.temp_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.tempBandFill, line: { width: 1, color: cc.tempBandLine } },
+    { x: T, y: D.temp, type: 'scatter', mode: 'lines', line: { color: cc.temp, width: 2.5 } },
+    { x: T, y: D.feels_like, type: 'scatter', mode: 'lines', line: { color: cc.feels, width: 1.5, dash: 'dot' } },
+  ], layout(H.temp, {
+    yaxis: { ...yBase, title: { text: '°C', font: { size: 11, color: cc.tick } },
+      ...(tempRange ? { range: tempRange, dtick: 5, tick0: 0 } : {}),
+      zeroline: true, zerolinecolor: cc.zeroLine, zerolinewidth: 1.5 },  // 0°C (frysgräns)
+    shapes: bgShapes, annotations: nightAnn,
+  }), cfg);
 
-  // ── WIND with Beaufort shading ──
+  // ── VIND ──
   const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
   const hMeanD = circularMeanDeg(s.data.wind_direction);
   document.getElementById('chartWindLive').textContent = hMeanW !== null
     ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
     : '';
 
-  // Skala efter byar när de finns, annars efter medelvinden
-  const maxGustAll = Math.max(...validVals(s.data.gust), ...validVals(s.data.wind));
+  const maxGustAll = Math.max(...validVals(D.gust), ...validVals(D.wind));
   const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
-  const { shapes: bfShapes, annotations: bfAnnotations } = buildBeaufortShapes(yMax, isMobile);
+  const bf = buildBeaufortLines(yMax, isMobile);
 
-  const MAX_ARROWS = isMobile ? 7 : 12;
-  const spanMs = s.times[s.times.length - 1] - s.times[0];
-  const intervalMs = spanMs / MAX_ARROWS;
-  const windAnnotations = [];
-  let nextArrowTime = s.times[0].getTime();
-  for (let i = 0; i < s.times.length; i++) {
-    const tMs = s.times[i].getTime();
-    if (tMs >= nextArrowTime && s.data.wind_direction[i] !== null && s.data.wind[i] > 0.5) {
-      windAnnotations.push({
-        x: s.times[i], y: s.data.wind[i],
-        text: '↓', showarrow: false,
-        font: { size: isMobile ? 16 : 18, color: cc.windArrow },
-        textangle: s.data.wind_direction[i] % 360,
-        xanchor: 'center', yanchor: 'middle'
-      });
-      nextArrowTime = tMs + intervalMs;
-    }
+  // Riktningspilar i en egen rad överst, med jämnt avstånd anpassat till fönstret
+  const maxArrows = isMobile ? 8 : 14;
+  const arrowStepMs = [1, 2, 3, 4, 6, 12, 24].map(h => h * 3600e3)
+    .find(ms => windowMs / ms <= maxArrows) ?? 24 * 3600e3;
+  const windArrows = [];
+  let nextArrow = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const tMs = T[i].getTime();
+    if (tMs < nextArrow || D.wind_direction[i] === null || D.wind_direction[i] === undefined) continue;
+    windArrows.push({
+      x: T[i], xref: 'x', y: 0.95, yref: 'paper', text: '↓', showarrow: false,
+      font: { size: isMobile ? 13 : 15, color: cc.windArrow },
+      textangle: D.wind_direction[i] % 360, xanchor: 'center', yanchor: 'middle',
+    });
+    nextArrow = tMs + arrowStepMs - 60e3;
   }
 
-  Plotly.newPlot('windChart', [
-    { x:s.times, y:s.data.wind_p10, type:'scatter', mode:'lines', line:{width:0}, showlegend:false, fill:'none', hovertemplate:'Min: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.wind_p90, type:'scatter', mode:'lines', fill:'tonexty', fillcolor: cc.windBandFill, line:{width:1,color: cc.windBandLine}, name:'Min-Max', hovertemplate:'Max: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.wind,     type:'scatter', mode:'lines', line:{color: cc.wind,width:2.5}, name:'Medelvind', hovertemplate:'Medelvind: %{y:.1f} m/s<extra></extra>' },
-    { x:s.times, y:s.data.gust,     type:'scatter', mode:'lines', line:{color: cc.gust,width:1.5,dash:'dash'}, name:'Byvind', hovertemplate:'Byar: %{y:.1f} m/s<extra></extra>' }
-  ], {
-    ...base,
-    yaxis: { ...base.yaxis, title:{ text:'m/s', font:{size:11, color: cc.tick} }, range:[0, yMax], fixedrange:false },
-    shapes: [...bfShapes, ...nightShapes, ...nowShape],
-    annotations: [...windAnnotations, ...bfAnnotations, ...nightAnn]
-  }, cfg);
+  const pWind = Plotly.newPlot('windChart', [
+    { x: T, y: D.wind_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
+    { x: T, y: D.wind_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.windBandFill, line: { width: 1, color: cc.windBandLine } },
+    { x: T, y: D.wind, type: 'scatter', mode: 'lines', line: { color: cc.wind, width: 2.5 } },
+    { x: T, y: D.gust, type: 'scatter', mode: 'lines', line: { color: cc.gust, width: 1.5, dash: 'dash' } },
+  ], layout(H.wind, {
+    yaxis: { ...yBase, title: { text: 'm/s', font: { size: 11, color: cc.tick } }, range: [0, yMax], domain: [0, 0.86] },
+    shapes: [...bgShapes, ...bf.shapes],
+    annotations: [...windArrows, ...bf.annotations],
+  }), cfg);
 
-  // ── PRECIP + ÅSKA ──
-  const hTotalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
+  // ── NEDERBÖRD + RISKBAND ──
+  const hTotalP = validVals(s.data.precip_step).reduce((a, b) => a + b, 0);
   const hRisk = periodRisk(s, weatherData.persistenceL);
   const hMaxTh = maxOf(s.data.thunder);
   document.getElementById('chartPrecipLive').textContent =
@@ -2366,87 +2449,241 @@ function drawCharts() {
     (hRisk !== null ? ` · risk ${hRisk}%` : '') +
     (hMaxTh !== null ? ` · ⚡ max ${Math.round(hMaxTh)}%` : '');
 
-  const pd = s.times.map((_,i) => ({
-    t: s.times[i],
-    p: s.data.precip[i]||0,
-    p10: s.data.precip_p10[i]||0,
-    p90: s.data.precip_p90[i]||0,
-    prob: s.data.precip_prob[i],
-    roll: s.data.rolling3h[i],
-    th: s.data.thunder[i]
-  }));
-
-  const hasThunder = pd.some(d => d.th !== null && d.th !== undefined);
-
-  // Markera tydliga åsktoppar (≥ THUNDER_MED) med ⚡ ovanför kurvan
-  const thunderAnnotations = [];
-  if (hasThunder) {
-    let lastMarkMs = -Infinity;
-    const minGapMs = 2 * 3600e3;
-    for (const d of pd) {
-      if (d.th !== null && d.th >= THUNDER_MED && d.t.getTime() - lastMarkMs >= minGapMs) {
-        thunderAnnotations.push({
-          x: d.t, y: Math.min(d.th + 6, 98), xref:'x', yref:'y2',
-          text: '⚡', showarrow: false,
-          font: { size: isMobile ? 12 : 14 }
-        });
-        lastMarkMs = d.t.getTime();
-      }
-    }
-  }
-
-  // Stapelbredder per tidssteg (1h i början, 6h i svansen) så att
-  // staplarna fyller lagom oavsett upplösning och vald period.
-  const stepMs = s.times.map((t, i) => {
-    if (i < s.times.length - 1) return s.times[i+1] - t;
-    return i > 0 ? t - s.times[i-1] : 3600e3;
+  // Staplarna ritas mitt i sitt tidssteg (09–10 hamnar mellan 09 och 10)
+  const stepMs = T.map((_, i) => stepHoursAt(i) * 3600e3);
+  const mid = T.map((t, i) => new Date(t.getTime() + stepMs[i] / 2));
+  // P10–P90 som smal, blek bakgrundsstapel – dold när övre gränsen för
+  // steget är under 0,1 mm, så att torra timmar inte får små stubbar.
+  const band = T.map((_, i) => {
+    const p10 = D.precip_p10[i] ?? 0, p90 = D.precip_p90[i] ?? 0;
+    return p90 * stepHoursAt(i) < 0.1 ? null : { base: p10, h: Math.max(0, p90 - p10) };
   });
 
-  const precipTraces = [
-    // P10–P90 som smal, blek bakgrundsstapel (base = P10, höjd = P90-P10).
-    // Syns tydligt även när väntevärdet är 0 men P90 > 0.
-    { x:pd.map(d=>d.t),
-      y:pd.map(d => Math.max(0, d.p90 - d.p10)),
-      base: pd.map(d => d.p10),
-      type:'bar', width: stepMs.map(w => w * 0.26),
-      marker:{ color: cc.precipBand },
-      customdata: pd.map(d => [d.p10, d.p90]),
-      name:'Min-Max',
-      hovertemplate:'Min-Max: %{customdata[0]:.1f}–%{customdata[1]:.1f} mm<extra></extra>' },
-    // Väntevärdet som huvudstapel ovanpå
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.p),
-      type:'bar', width: stepMs.map(w => w * 0.6),
-      marker:{ color: cc.precipBar },
-      name:'Nederb',
-      hovertemplate:'Förväntat: %{y:.1f} mm<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.prob), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob1h,width:1.5,dash:'dash'}, name:'1h risk', hovertemplate:'Risk inom 1h: %{y:.0f}%<extra></extra>' },
-    { x:pd.map(d=>d.t), y:pd.map(d=>d.roll), type:'scatter', mode:'lines', yaxis:'y2', line:{color: cc.prob3h,width:2,dash:'dot'}, name:'3h risk', hovertemplate:'Risk inom 3h: %{y:.0f}%<extra></extra>' },
-  ];
+  // Riskband: 3h-risken där den finns (timsteg), annars stegets egen risk.
+  // Åskraden visas bara om åskrisken någon gång når "värt att hålla koll".
+  const risk = T.map((_, i) => D.rolling3h[i] ?? D.precip_prob[i] ?? null);
+  const showThunder = validVals(D.thunder).some(v => v >= THUNDER_MED);
+  document.getElementById('legendThunder').style.display = showThunder ? '' : 'none';
+  const rows = showThunder ? 2 : 1;
+  const alpha = (v, full) => !v ? 0 : 0.04 + 0.86 * Math.min(1, v / full);
+  const ribbonH = showThunder ? 0.2 : 0.11;
 
-  if (hasThunder) {
-    precipTraces.push({
-      x: pd.map(d=>d.t), y: pd.map(d=>d.th),
-      type:'scatter', mode:'lines', yaxis:'y2',
-      line:{ color: cc.thunder, width:2 },
-      fill:'tozeroy', fillcolor: cc.thunderFill,
-      connectgaps: true,
-      name:'Åska', hovertemplate:'Åskrisk: %{y:.0f}%<extra></extra>'
-    });
+  const precipTraces = [
+    { x: mid, y: band.map(b => b && b.h), base: band.map(b => b && b.base),
+      type: 'bar', width: stepMs.map(w => w * 0.26), marker: { color: cc.precipBand } },
+    { x: mid, y: D.precip, type: 'bar', width: stepMs.map(w => w * 0.6), marker: { color: cc.precipBar } },
+    { x: mid, y: T.map(() => 1), base: T.map(() => rows - 1), yaxis: 'y2',
+      type: 'bar', width: stepMs, marker: { color: risk.map(v => `rgba(${cc.riskRGB},${alpha(v, 100)})`) } },
+  ];
+  if (showThunder) {
+    precipTraces.push({ x: mid, y: T.map(() => 1), base: T.map(() => 0), yaxis: 'y2',
+      type: 'bar', width: stepMs,
+      marker: { color: D.thunder.map(v => `rgba(${cc.thunderRGB},${alpha(v, THUNDER_HIGH)})`) } });
   }
 
-  // Båda y-axlarna börjar på exakt 0 så att mm-staplar och %-kurvor
-  // delar nollinje; toppen sätts manuellt med samma relativa marginal.
-  const pMaxData = Math.max(...validVals(s.data.precip_p90), ...validVals(s.data.precip), 0);
-  const pMax = Math.max(pMaxData * 1.05, 1);
+  const pMax = Math.max(Math.max(...validVals(D.precip_p90), ...validVals(D.precip), 0) * 1.05, 1);
+  const pPrecip = Plotly.newPlot('precipChart', precipTraces, layout(H.precip, {
+    barmode: 'overlay', bargap: 0,
+    xaxis: { ...xaxis, anchor: 'y2' },
+    yaxis: { ...yBase, title: { text: 'mm/h', font: { size: 11, color: cc.tick } },
+      range: [0, pMax], domain: [ribbonH + 0.06, 1] },
+    yaxis2: { ...yBase, domain: [0, ribbonH], range: [0, rows], showgrid: false, zeroline: false,
+      tickmode: 'array', tickvals: showThunder ? [1.5, 0.5] : [0.5],
+      ticktext: showThunder ? ['Risk', '⚡'] : ['Risk'] },
+    shapes: bgShapes, annotations: nightAnn,
+  }), cfg);
 
-  Plotly.newPlot('precipChart', precipTraces, {
-    ...base,
-    barmode: 'overlay',
-    yaxis: { ...base.yaxis, title:{text:'mm', font:{size:11, color: cc.tick}}, range:[0, pMax] },
-    yaxis2: { overlaying:'y', side:'right', range:[0,105], gridcolor:'rgba(0,0,0,0)', linecolor: cc.axisLine, tickfont:{color: cc.prob3h, size:10}, title:{text:'%', font:{size:11, color: cc.prob3h}}, fixedrange:true },
-    shapes: [...nightShapes, ...nowShape],
-    annotations: [...thunderAnnotations, ...nightAnn]
-  }, cfg);
+  Promise.all([pTemp, pWind, pPrecip]).then(() => { updateCrosshair(); renderChartDetail(); });
+}
+
+// ── HÅRKORS, DETALJPANEL OCH PANORERING ──────────────────────────────────────
+
+// Index i detaljpanelen: valt med pekare/tryck, annars "nu" (eller fönstrets
+// början om "nu" ligger utanför).
+function detailIndex() {
+  if (chartView?.cursor !== null && chartView?.cursor !== undefined) return chartView.cursor;
+  const nowIdx = findNowIndex();
+  if (nowIdx !== null && chartView) {
+    const t = weatherData.times[nowIdx].getTime();
+    if (t >= chartView.range[0] && t <= chartView.range[1]) return nowIdx;
+  }
+  return chartView ? nearestIndex(chartView.range[0]) : nowIdx;
+}
+
+function nearestIndex(ms) {
+  const T = weatherData.times;
+  let best = 0, bestDiff = Infinity;
+  for (let i = 0; i < T.length; i++) {
+    const d = Math.abs(T[i].getTime() - ms);
+    if (d < bestDiff) { bestDiff = d; best = i; }
+  }
+  return best;
+}
+
+// x-position (px, relativt grafens vänsterkant) för en tidpunkt, eller null
+function chartPx(el, ms) {
+  const ax = el._fullLayout?.xaxis;
+  if (!ax || !chartView) return null;
+  const [n0, n1] = chartView.range.map(toNaive);
+  const f = (toNaive(ms) - n0) / (n1 - n0);
+  return f < 0 || f > 1 ? null : ax._offset + f * ax._length;
+}
+
+function updateCrosshair() {
+  CHART_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    const line = el?.parentElement.querySelector('.xhair');
+    if (!line) return;
+    const idx = chartView?.cursor;
+    const px = idx === null || idx === undefined ? null : chartPx(el, weatherData.times[idx].getTime());
+    const fl = el._fullLayout;
+    if (px === null || !fl) { line.style.display = 'none'; return; }
+    line.style.display = 'block';
+    line.style.left = px + 'px';
+    line.style.top = fl.margin.t + 'px';
+    line.style.height = (fl.height - fl.margin.t - fl.margin.b) + 'px';
+  });
+}
+
+function setCursorFromPointer(el, clientX, pin) {
+  const ax = el._fullLayout?.xaxis;
+  if (!ax || !chartView) return;
+  const px = clientX - el.getBoundingClientRect().left - ax._offset;
+  if (px < 0 || px > ax._length) return;
+  const [n0, n1] = chartView.range.map(toNaive);
+  const idx = nearestIndex(fromNaive(n0 + px / ax._length * (n1 - n0)));
+  if (pin) chartView.pinned = true;
+  if (idx === chartView.cursor) return;
+  chartView.cursor = idx;
+  updateCrosshair();
+  renderChartDetail();
+}
+
+function resetCursor() {
+  if (!chartView || chartView.pinned || chartView.cursor === null) return;
+  chartView.cursor = null;
+  updateCrosshair();
+  renderChartDetail();
+}
+
+let panFrame = null;
+function panCharts(range0, dxPx, el) {
+  const ax = el._fullLayout?.xaxis;
+  if (!ax || !chartView) return;
+  const span = range0[1] - range0[0];
+  const [e0, e1] = chartView.extent;
+  if (e1 - e0 <= span) return;
+  const a = Math.max(e0, Math.min(e1 - span, range0[0] - dxPx / ax._length * span));
+  chartView.range = [a, a + span];
+  if (panFrame) return;
+  panFrame = requestAnimationFrame(() => {
+    panFrame = null;
+    const r = chartView.range.map(t => new Date(t));
+    Promise.all(CHART_IDS.map(id => Plotly.relayout(id, { 'xaxis.range': r }))).then(() => {
+      // Ett hårkors som panorerats ut ur bild släpps, panelen visar då "nu"
+      const c = chartView.cursor;
+      if (c !== null && chartPx(el, weatherData.times[c].getTime()) === null) {
+        chartView.cursor = null;
+        chartView.pinned = false;
+      }
+      updateCrosshair();
+      renderChartDetail();
+    });
+  });
+}
+
+// Mus: peka = hårkors, dra = panorera. Pek: tryck = hårkors (ligger kvar),
+// svep i sidled = panorera, svep upp/ned = scrolla sidan (touch-action: pan-y).
+function setupChartInteraction() {
+  CHART_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    const wrap = el.parentElement;
+    let drag = null;
+    wrap.addEventListener('pointerdown', e => {
+      if (!chartView || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      drag = { id: e.pointerId, x0: e.clientX, range0: chartView.range.slice(), moved: false };
+      if (e.pointerType === 'mouse') wrap.setPointerCapture(e.pointerId);
+    });
+    wrap.addEventListener('pointermove', e => {
+      if (!chartView) return;
+      if (drag && drag.id === e.pointerId) {
+        const dx = e.clientX - drag.x0;
+        if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; wrap.classList.add('panning'); }
+        if (drag.moved) { panCharts(drag.range0, dx, el); return; }
+      }
+      if (e.pointerType === 'mouse' && !drag) setCursorFromPointer(el, e.clientX, false);
+    });
+    const end = e => {
+      if (!drag || drag.id !== e.pointerId) return;
+      // Tryck/klick sätter hårkorset; efter ett musdrag följer det pekaren igen
+      if (e.type === 'pointerup' && (!drag.moved || e.pointerType === 'mouse')) {
+        setCursorFromPointer(el, e.clientX, e.pointerType !== 'mouse');
+      }
+      drag = null;
+      wrap.classList.remove('panning');
+    };
+    wrap.addEventListener('pointerup', end);
+    wrap.addEventListener('pointercancel', end);
+    wrap.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) resetCursor(); });
+  });
+}
+
+function renderChartDetail() {
+  const el = document.getElementById('chartDetail');
+  if (!el || !weatherData) return;
+  const i = detailIndex();
+  if (i === null || i === undefined) { el.innerHTML = ''; return; }
+  const D = weatherData.data, t = weatherData.times[i];
+  const step = stepHoursAt(i);
+  const fmt1 = v => v.toFixed(1).replace('.', ',');
+  const hh = d => String(d.getHours()).padStart(2, '0');
+  const end = new Date(t.getTime() + step * 3600e3);
+  const day = t.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+  const sym = D.symbols[i] && D.symbols[i] !== 'unknown' ? D.symbols[i] : null;
+  const isNow = i === findNowIndex();
+
+  // Temperatur: värde, känns som (om det skiljer), spann
+  const temp = D.temp[i];
+  let tempTxt = temp === null ? '—' : `<b>${fmt1(temp)}°</b>`;
+  const extraT = [];
+  const fl = D.feels_like[i];
+  if (fl !== null && fl !== undefined && temp !== null && Math.abs(fl - temp) >= 0.5) extraT.push(`känns ${fmt1(fl)}°`);
+  const t10 = D.temp_p10[i], t90 = D.temp_p90[i];
+  if (t10 !== null && t90 !== null && t90 - t10 >= 0.2) extraT.push(`${fmt1(t10)}–${fmt1(t90)}°`);
+  if (extraT.length) tempTxt += ` · ${extraT.join(' · ')}`;
+
+  // Vind: riktning + medel, byar, Beaufort
+  const w = D.wind[i], g = D.gust[i], dir = D.wind_direction[i];
+  let windTxt = w === null ? '—' : `<b>${dir !== null && dir !== undefined ? getWindDirection(dir) + ' ' : ''}${Math.round(w)} m/s</b>`;
+  if (g !== null && g !== undefined) windTxt += ` · byar ${Math.round(g)}`;
+  if (w !== null) windTxt += ` · ${beaufortName(w)}`;
+
+  // Nederbörd för steget, ett spann, risk och åska
+  const amt = D.precip_step[i];
+  let pTxt = amt === null || amt === undefined ? '—' : `<b>${fmt1(amt)} mm</b>`;
+  if (amt !== null && step !== 1) pTxt += ` på ${step} h`;
+  const lo = (D.precip_p10[i] ?? 0) * step, hi = (D.precip_p90[i] ?? 0) * step;
+  if (amt !== null && hi >= 0.1 && hi - lo >= 0.1) pTxt += ` (${fmt1(lo)}–${fmt1(hi)})`;
+  const prob = D.precip_prob[i], roll = D.rolling3h[i];
+  if (prob !== null && prob !== undefined) {
+    pTxt += step === 1
+      ? ` · risk ${Math.round(prob)} % (1 h)${roll !== null && roll !== undefined ? ` / ${Math.round(roll)} % (3 h)` : ''}`
+      : ` · risk ${Math.round(prob)} % (${step} h)`;
+  }
+  const th = D.thunder[i];
+  if (th !== null && th !== undefined) pTxt += ` · ⚡ ${Math.round(th)} %`;
+
+  el.innerHTML = `
+    <div class="chart-detail-head">
+      <span class="chart-detail-time">${day} · ${hh(t)}:00${step !== 1 ? `–${hh(end)}:00` : ''}</span>
+      ${sym ? `<span>${getWeatherEmoji(sym)} ${getWeatherDescription(sym)}</span>` : ''}
+      ${isNow ? '<span class="chart-detail-now">Nu</span>' : ''}
+    </div>
+    <div class="chart-detail-rows">
+      <div class="chart-detail-row">🌡️ ${tempTxt}</div>
+      <div class="chart-detail-row">💨 ${windTxt}</div>
+      <div class="chart-detail-row">💧 ${pTxt}</div>
+    </div>`;
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
@@ -2668,6 +2905,7 @@ function toggleDatePickers() {
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
+setupChartInteraction();
 window.addEventListener('load', () => {
   // Starta på Plats-vyn utan automatisk hämtning – användaren väljer plats,
   // och vid lyckad hämtning hoppar appen själv vidare till Översikt.
