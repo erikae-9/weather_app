@@ -1,7 +1,8 @@
 # Multi-source forecast (draft)
 
 Draft of how the app could combine met.no and SMHI (snow1g) into one weighted
-forecast, and let the user switch between **met.no**, **SMHI** and **Weighted**.
+forecast, and let the user switch between **met.no**, **SMHI**, **Viktad** (weighted) and
+**Båda** (both sources side by side).
 
 The code is in [`forecast-sources.js`](../forecast-sources.js) and tests are in
 [`tests/forecast-sources.test.js`](../tests/forecast-sources.test.js)
@@ -38,6 +39,7 @@ SMHI JSON   ──► normalizeSmhi ──┘
 | `met`    | met.no    | `{ met: 1, smhi: 0 }`   |
 | `smhi`   | SMHI      | `{ met: 0, smhi: 1 }`   |
 | `blend`  | met.no    | `{ met: 1, smhi: 1 }`   |
+| `both`   | met.no    | as `blend`, plus each source's own series for the charts (not built yet) |
 
 If none of the selected sources has a parameter at all, it is borrowed from another source. That's
 how met.no mode keeps SMHI's thunder probability (as it does today), and how SMHI mode gets UV
@@ -106,6 +108,55 @@ by past error. To get the RMSE values:
    last 2–4 weeks.
 
 This gives local weights that adapt over time, possibly by season.
+
+## UI plan (agreed, not built yet)
+
+Decisions from reviewing the current Grafer view.
+
+**Forecast switch.** Four options in the controls row at the top: met.no, SMHI, Viktad, Båda.
+- met.no, SMHI and Viktad look identical apart from the numbers. They never show source names
+  or weights.
+- **Båda** is the only mode that names the sources, and only in the graphs and the detail panel.
+  The day strip, Översikt and Tabell show the Viktad values in Båda mode.
+
+**Graphs.**
+- Temperature, wind and precipitation are stacked full width on a shared time axis with equal
+  margins, so a given time lines up in all three.
+- One crosshair across all three charts, plus a **detail panel** that stays in place under the
+  day strip. Hover (desktop) or tap (mobile) moves it; with no hover it shows "now". Plotly's own
+  hover boxes are turned off.
+- No zoom. Panning moves all three charts together:
+  - **Mobile:** a sideways swipe pans the charts, an up/down swipe scrolls the page, and a tap
+    sets the crosshair.
+  - **Desktop:** click-and-drag pans, and the mouse wheel scrolls the page.
+  - Narrowing the time window is done with the day strip and the Period controls.
+- Time axis: hour ticks plus weekday labels at midnight, no rotated labels.
+- Wind: thin Beaufort threshold lines with names in the margin instead of filled bands.
+  Direction arrows go in a fixed row at the top of the chart.
+- Precipitation:
+  - bars show the amount, with an explicit unit
+  - probability moves from the right-hand axis to a risk ribbon under the chart, with a thunder
+    row only when thunder reaches the "medium" level
+  - the pale P10–90 background bars stay, hidden when the upper end is below 0.1 mm (no whiskers)
+
+**Detail panel content.** One value per measure:
+
+> 💧 0.9 mm (0.4–1.9) · risk 67 % (1 h) / 98 % (3 h) · ⚡ 12 %
+
+- The range is the single "lowest–highest likely" range. For SMHI it is the conditional range
+  converted by `smhiBand`, so there is never a second "if it rains" range.
+- The range is hidden when it adds nothing, e.g. 0–0.
+
+**Båda mode.**
+- One colour per source, the same in all charts, with one shared met.no / SMHI legend.
+- Temperature: two lines without bands; "känns som" moves to the panel.
+- Wind: two mean-wind lines; gusts move to the panel.
+- Precipitation: two narrow bars side by side per step. Thunder is SMHI only, so it stays one
+  series.
+- Panel: both values, labelled, e.g.
+  `💧 met.no 0.8 mm (0.3–1.6) · SMHI 1.1 mm (0–1.8) · risk met.no 67 % · SMHI 74 % · ⚡ 12 %`.
+- The module already returns per-source temperature, precipitation and probability series
+  (`*_src_met`, `*_src_smhi`). Wind, gusts, the precipitation range and feels-like still need adding.
 
 ## Wiring it into `index.html` (sketch)
 
