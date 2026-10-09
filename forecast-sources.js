@@ -69,13 +69,15 @@ function normalizeMet(json) {
 
 // ── ADAPTER: SMHI snow1g v1 punktprognos ────────────────────────────────────
 // Strukturen (timeSeries[].time, timeSeries[].data.<parameter>) är densamma
-// som fetchSMHIThunder i index.html redan läser.
-// TODO verifiera mot ett riktigt svar (…/snow1g/version/1/parameter.json):
-//   - parameternamnen nedan
-//   - om precipitation_amount_* är mm/h (intensitet) eller mm per tidssteg
-//   - om nederbörden avser perioden *före* tidpunkten (som i pmp3g)
-//   - om cloud_area_fraction är i oktas (0–8) eller procent
-//   - vilket värde som betyder "saknas"
+// som fetchSMHIThunder i index.html redan läser. Verifierat mot parameter.json
+// och ett punktsvar: namnen nedan, molnighet i oktas, saknat värde = 9999.
+// Intervallparametrar (nederbörd, symbol) gäller (intervalParametersStartTime, time].
+// TODO fortfarande öppet:
+//   - precipitation_amount_* har enheten kg/m² ("amount"), men kortnamnet
+//     tpratemean antyder intensitet. Lika för 1h-intervall; för längre
+//     intervall måste det jämföras mot SMHI:s egen visning.
+//   - thunderstorm_probability har enheten "fraction" men appen visar den
+//     som procent. Exempelsvaret har bara 0, så det går inte att avgöra.
 const SMHI_PARAMS = {
   temp:           'air_temperature',
   wind:           'wind_speed',
@@ -91,9 +93,8 @@ const SMHI_PARAMS = {
   precip_prob:    'probability_of_precipitation',
   symbol:         'symbol_code',
 };
-const SMHI_PRECIP_IS_RATE = true;        // mm/h → multipliceras med periodens längd
-const SMHI_PRECIP_PRECEDING = true;      // värdet vid t gäller (t_föregående, t]
-const SMHI_CLOUD_IN_OCTAS = true;
+const SMHI_PRECIP_IS_RATE = false;       // true: mm/h → multipliceras med intervallets längd
+const SMHI_CLOUD_IN_OCTAS = true;        // enligt parameter.json
 
 // SMHI Wsymb2 (1–27) → met.no symbol_code, så att getWeatherEmoji/-Description funkar
 const SMHI_SYMBOLS = [null,
@@ -105,8 +106,9 @@ const SMHI_SYMBOLS = [null,
   'lightsleet', 'sleet', 'heavysleet', 'lightsnow', 'snow', 'heavysnow'];
 
 function normalizeSmhi(json) {
-  // Negativa värden (t.ex. -9) och ≥ 9999 behandlas som saknade – utom för
-  // temperatur, där bara 9999 är en giltig markör.
+  // 9999 = saknas (parameter.json). Negativa värden behandlas också som
+  // saknade (t.ex. precipitation_frozen_part: -9 utan nederbörd) – utom för
+  // temperatur.
   const get = (d, key, allowNegative = false) => {
     const v = d?.[SMHI_PARAMS[key]];
     if (v === undefined || v === null || v >= 9999) return null;
@@ -114,7 +116,11 @@ function normalizeSmhi(json) {
     return v;
   };
   const ts = (json.timeSeries || [])
-    .map(e => ({ t: new Date(e.time).getTime(), d: e.data }))
+    .map(e => ({
+      t: new Date(e.time).getTime(),
+      start: e.intervalParametersStartTime ? new Date(e.intervalParametersStartTime).getTime() : null,
+      d: e.data,
+    }))
     .sort((a, b) => a.t - b.t);
 
   const points = ts.map(({ t, d }) => {
@@ -136,15 +142,11 @@ function normalizeSmhi(json) {
 
   const periods = [];
   for (let i = 0; i < ts.length; i++) {
-    // Periodens gränser beror på om värdet avser tiden före eller efter t
-    let start, end;
-    if (SMHI_PRECIP_PRECEDING) {
-      if (i === 0) continue;
-      start = ts[i - 1].t; end = ts[i].t;
-    } else {
-      if (i === ts.length - 1) continue;
-      start = ts[i].t; end = ts[i + 1].t;
-    }
+    // Intervallet anges av intervalParametersStartTime; saknas fältet antas
+    // det gå från föregående tidpunkt.
+    const end = ts[i].t;
+    const start = ts[i].start ?? (i > 0 ? ts[i - 1].t : null);
+    if (start === null || start >= end) continue;
     const d = ts[i].d;
     const hours = (end - start) / H;
     const scale = SMHI_PRECIP_IS_RATE ? hours : 1;

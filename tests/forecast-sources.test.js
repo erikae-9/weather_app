@@ -48,17 +48,17 @@ const MET = { properties: { timeseries: [
   metEntry(9, { temp: 8,  p10: 6,  p90: 10, step: 6, amount: 0.6, prob: 25 }),
 ] } };
 
-// SMHI: timvärden, nederbörd (mm/h) avser timmen *före* tidpunkten
-function smhiEntry(h, { temp, wind = 6, dir = 10, rate = 0, prob = 20, thunder = 5, sym = 6 }) {
-  return { time: iso(h), data: {
+// SMHI: timvärden, nederbörd (mm) avser intervallet (intervalParametersStartTime, time]
+function smhiEntry(h, { temp, wind = 6, dir = 10, amount = 0, prob = 20, thunder = 5, sym = 6, intervalH = 1 }) {
+  return { time: iso(h), intervalParametersStartTime: iso(h - intervalH), data: {
     air_temperature: temp, wind_speed: wind, wind_speed_of_gust: wind * 2, wind_from_direction: dir,
     relative_humidity: 90, air_pressure_at_mean_sea_level: 1006, cloud_area_fraction: 8,
-    thunderstorm_probability: thunder, precipitation_amount_mean: rate,
-    precipitation_amount_min: rate / 2, precipitation_amount_max: rate * 2,
+    thunderstorm_probability: thunder, precipitation_amount_mean: amount,
+    precipitation_amount_min: amount / 2, precipitation_amount_max: amount * 2,
     probability_of_precipitation: prob, symbol_code: sym } };
 }
 const SMHI = { timeSeries: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(h =>
-  smhiEntry(h, { temp: 10 + h * 0.5 + 2, rate: h === 3 ? 2 : 0.5, prob: 40, thunder: h })) };
+  smhiEntry(h, { temp: 10 + h * 0.5 + 2, amount: h === 3 ? 2 : 0.5, prob: 40, thunder: h })) };
 
 const NOW = T0;
 
@@ -90,7 +90,7 @@ test('SMHI-läget använder SMHI:s tidsaxel och nederbörd för perioden före',
   const fc = FS.buildForecast('smhi', { met: MET, smhi: SMHI }, { nowMs: NOW });
   assert.equal(fc.times.length, 10);
   assert.equal(fc.data.temp[0], 12);
-  // Steget 02→03 täcks av SMHI-värdet vid 03 (2 mm/h)
+  // Steget 02→03 täcks av SMHI-värdet vid 03 (intervall 02–03, 2 mm)
   assert.equal(fc.data.precip_step[2], 2);
   assert.equal(fc.data.cloud[0], 100);                         // 8 oktas → 100 %
   assert.equal(fc.data.symbols[0], 'cloudy');                  // 00–01 täcks av värdet vid 01
@@ -141,4 +141,33 @@ test('weightsFromErrors ger w ∝ 1/RMSE²', () => {
   const w = FS.weightsFromErrors({ met: 1, smhi: 2 });
   assert.ok(Math.abs(w.met - 0.8) < 1e-12);
   assert.ok(Math.abs(w.smhi - 0.2) < 1e-12);
+});
+
+test('SMHI-adaptern läser ett riktigt snow1g-svar', () => {
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smhi-snow1g-sample.json'), 'utf8'));
+  const src = FS.normalizeSmhi(raw);
+  const p = src.points[0];
+  assert.equal(p.t, Date.parse('2025-09-04T13:00:00Z'));
+  assert.equal(p.temp, 24.6);
+  assert.equal(p.wind, 2.8);
+  assert.equal(p.gust, 8.4);
+  assert.equal(p.wind_direction, 204);
+  assert.equal(p.pressure, 1010.5);
+  assert.equal(p.cloud, 62.5);                                 // 5 oktas
+  assert.equal(p.thunder, 0);
+  // Första posten har sitt eget intervall (12–13) och tas med
+  assert.deepEqual(src.periods[0], {
+    start: Date.parse('2025-09-04T12:00:00Z'), end: Date.parse('2025-09-04T13:00:00Z'),
+    amount: 0, min: 0, max: 0, prob: 0, symbol: 'partlycloudy_day',
+  });
+  assert.equal(src.periods.length, 2);
+});
+
+test('SMHI-intervall längre än tidssteget fördelas över met.no:s timmar', () => {
+  // Ett 3h-intervall 03–06 med 3 mm → 1 mm per timme på en timaxel
+  const smhi = { timeSeries: [smhiEntry(6, { temp: 5, amount: 3, intervalH: 3 })] };
+  const src = FS.normalizeSmhi(smhi);
+  const grid = [3, 4, 5].map(h => ({ t: T0 + h * 3600e3, stepH: 1 }));
+  const s = FS.sampleSource(src, grid);
+  assert.deepEqual(s.precip_amount, [1, 1, 1]);
 });

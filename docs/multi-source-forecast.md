@@ -20,8 +20,8 @@ SMHI JSON   ──► normalizeSmhi ──┘
    - `periods`: values over a time span `[start, end)` (precipitation amount/min/max, probability, symbol)
 
    Keeping these separate matters because the two APIs disagree on what a precipitation value
-   covers. met.no's `next_1_hours` covers the hour *after* the timestamp. SMHI (at least in pmp3g)
-   reported the hour *before* it.
+   covers. met.no's `next_1_hours` covers the hour *after* the timestamp. SMHI gives the interval
+   explicitly: `intervalParametersStartTime` to `time`, which is the hour *before*.
 2. **Grid.** Choose one time axis. Weighted mode uses met.no's axis (hourly, then 6 h steps), so
    the persistence calibration against met.no's 6 h blocks still works.
 3. **Sampling.** Each source is mapped onto that grid:
@@ -157,11 +157,16 @@ function setForecastMode(mode) {
 
 ## Open questions and things to check
 
-- **SMHI field names and units are not checked against a live response.** This environment can't
-  reach the SMHI API. Before wiring it in, fetch
-  `…/api/category/snow1g/version/1/parameter.json` and one point response, then check the
-  constants at the top of the SMHI adapter (`SMHI_PARAMS`, `SMHI_PRECIP_IS_RATE`,
-  `SMHI_PRECIP_PRECEDING`, `SMHI_CLOUD_IN_OCTAS`, the missing-value marker).
+- **SMHI, checked** against `parameter.json` and a point response (fixture in
+  `tests/fixtures/smhi-snow1g-sample.json`): field names, cloud cover in oktas, missing value 9999,
+  and the interval comes from `intervalParametersStartTime`.
+- **SMHI precipitation on intervals longer than 1 h.** The unit is kg/m² ("amount"), but the
+  short name `tpratemean` suggests a rate. The draft treats it as a total for the interval
+  (`SMHI_PRECIP_IS_RATE = false`). To check, find an entry near the end of the response where
+  the interval is longer than an hour and compare it with SMHI's own forecast page.
+- **`thunderstorm_probability`** has the unit "fraction", but the app shows it as a percent. If
+  it's really 0–1, today's thunder badge would always round to 0 %. The sample only has 0s,
+  so it can't settle this.
 - **`periodRisk` in weighted mode** uses met.no's 6 h/12 h blocks as floor and ceiling. In
   weighted mode they can pull the risk toward met.no. Possible fixes: use the blocks only to
   calibrate `L`, or skip the floor/ceiling in that mode.

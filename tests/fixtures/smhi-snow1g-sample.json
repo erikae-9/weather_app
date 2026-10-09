@@ -1,0 +1,35 @@
+{
+  "createdTime": "2025-09-04T12:42:44Z",
+  "referenceTime": "2025-09-04T12:30:00Z",
+  "geometry": { "type": "Point", "coordinates": [16.011977, 57.996626] },
+  "timeSeries": [
+    {
+      "time": "2025-09-04T13:00:00Z",
+      "intervalParametersStartTime": "2025-09-04T12:00:00Z",
+      "data": {
+        "air_temperature": 24.6, "wind_from_direction": 204, "wind_speed": 2.8, "wind_speed_of_gust": 8.4,
+        "relative_humidity": 58, "air_pressure_at_mean_sea_level": 1010.5, "visibility_in_air": 31.4,
+        "thunderstorm_probability": 0, "probability_of_frozen_precipitation": 0, "cloud_area_fraction": 5,
+        "low_type_cloud_area_fraction": 4, "medium_type_cloud_area_fraction": 1, "high_type_cloud_area_fraction": 0,
+        "cloud_base_altitude": 9999, "cloud_top_altitude": 9999,
+        "precipitation_amount_mean": 0, "precipitation_amount_min": 0, "precipitation_amount_max": 0,
+        "precipitation_amount_median": 0, "probability_of_precipitation": 0, "precipitation_frozen_part": -9,
+        "predominant_precipitation_type_at_surface": 0, "symbol_code": 3
+      }
+    },
+    {
+      "time": "2025-09-04T14:00:00Z",
+      "intervalParametersStartTime": "2025-09-04T13:00:00Z",
+      "data": {
+        "air_temperature": 24, "wind_from_direction": 216, "wind_speed": 3.2, "wind_speed_of_gust": 8.1,
+        "relative_humidity": 60, "air_pressure_at_mean_sea_level": 1010.6, "visibility_in_air": 30.2,
+        "thunderstorm_probability": 0, "probability_of_frozen_precipitation": 0, "cloud_area_fraction": 5,
+        "low_type_cloud_area_fraction": 5, "medium_type_cloud_area_fraction": 1, "high_type_cloud_area_fraction": 0,
+        "cloud_base_altitude": 9999, "cloud_top_altitude": 9999,
+        "precipitation_amount_mean": 0, "precipitation_amount_min": 0, "precipitation_amount_max": 0,
+        "precipitation_amount_median": 0, "probability_of_precipitation": 0, "precipitation_frozen_part": -9,
+        "predominant_precipitation_type_at_surface": 0, "symbol_code": 3
+      }
+    }
+  ]
+}
