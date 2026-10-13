@@ -10,7 +10,7 @@ rain, season). That's also the input to step 4 in
 - Script: [`scripts/collect-forecasts.js`](../scripts/collect-forecasts.js)
 - Workflow: [`.github/workflows/collect-forecasts.yml`](../.github/workflows/collect-forecasts.yml)
 - Tests: `node --test tests/*.test.js`
-- Data: the **`forecast-data`** branch, `forecasts/YYYY-MM.csv`
+- Data: the **`forecast-data`** branch, `forecasts/YYYY/lead_NNNh.csv`
 
 ## Setup
 
@@ -26,63 +26,87 @@ to the CSV, and GitHub masks them in the logs. The forecasts themselves are publ
 
 ## What is saved
 
-On each run the script fetches both sources and takes the hour it ran in, rounded down (12:17 → 12:00).
-From there it saves the forecast for **1, 3, 6, 12, 24, 48, 72, 120 and 168 h** ahead.
-After a while every hour has been forecast 1 h, 3 h, … 1 week in advance.
+There's one file per time-frame and year: `forecasts/2026/lead_001h.csv`, `lead_003h.csv`, `lead_006h.csv`,
+`lead_012h.csv`, `lead_024h.csv`, `lead_048h.csv`, `lead_072h.csv`, `lead_120h.csv` and `lead_168h.csv`.
+Each file is a continuous hourly time series, sorted by `valid_time`, with **three rows per hour**:
+`met`, `smhi` and `blend`. For example, `lead_024h.csv` holds every hour as it was forecast
+24 hours earlier.
 
-- Beyond about 2–3 days both sources use 6 h steps. So long time-frames are only saved when the
-  target time falls on a step (00/06/12/18 UTC), about 4 per day instead of 24.
-- `met` and `smhi` are each source on its own: the met.no row doesn't borrow SMHI's thunder.
-  `blend` is what the app shows in **Viktad** mode, using the weights in `forecast-sources.js`
-  at the time of the run. It's only saved when both sources answered.
-- If one source fails, the other is still saved, and the run shows a warning.
+Each run fetches both sources and takes the hour it ran in, rounded down (12:17 → 12:00).
+From there it adds one hour to each file: 13:00 to `lead_001h`, 12:00 the next day to `lead_024h`,
+12:00 a week later to `lead_168h`, and so on. So "1 h ahead" is really 40–60 minutes, depending on
+when the run started. `fetched_at` has the exact time.
 
-One row per source, time ahead and run. All times are UTC.
+- **Interpolated hours.** Beyond about 2–3 days both sources use 6 h steps, and SMHI sometimes uses
+  2 h steps earlier. Hours between two steps are filled in so every file stays hourly, and
+  get `interpolated = 1`:
+  - temperature, wind, cloud and the other instant values are a straight line between the two steps;
+  - precipitation is the step's total spread evenly over its hours;
+  - the precipitation chance and the symbol are the step's own.
+  Interpolated hours miss peaks between the steps (for example the afternoon maximum), so they look
+  smoother than reality. For a strict evaluation, use only `interpolated = 0`.
+- **The sources.** `met` and `smhi` are each source on its own: the met.no row doesn't borrow
+  SMHI's thunder. `blend` is what the app shows in **Viktad** mode, using the weights in
+  `forecast-sources.js` at the time of the run. It's only saved when both sources answered, and it
+  counts as interpolated if either source was.
+- **Missing sources.** If one source fails, the other is still saved, and the run shows a warning.
+- **No duplicates.** If a run is started by hand in the same hour as a scheduled one, the later
+  run's rows for that hour are skipped, so the earliest fetch is kept.
+
+All times are UTC.
 
 | Column | Meaning |
 |---|---|
-| `valid_time` | the time the forecast is for |
-| `lead_h` | hours ahead (from the hour the run was in) |
+| `valid_time` | the hour the forecast is for |
 | `source` | `met`, `smhi` or `blend` |
+| `interpolated` | `1` if the hour lies between two of the source's time steps, otherwise `0` |
 | `fetched_at` | when it was fetched; the actual time ahead is `valid_time − fetched_at` |
 | `issued_at` | the model run time according to the source (met.no `updated_at`, SMHI `referenceTime`) |
-| `step_h` | length of the source's time step at `valid_time` (1, 2, 6 …); precipitation covers `[valid_time, valid_time + step_h)` |
-| `temp`, `temp_p10`, `temp_p90` | temperature °C, with the 10th/90th percentiles (met.no and blend; SMHI has none) |
-| `wind`, `wind_p10`, `wind_p90`, `gust` | m/s |
+| `temp`, `temp_p10`, `temp_p90` | temperature °C, with the 10th/90th percentiles (met.no and blend; empty for SMHI, which has none) |
+| `wind`, `wind_p10`, `wind_p90`, `gust` | m/s (same as above for the percentiles) |
 | `wind_dir` | degrees, direction the wind comes from |
 | `humidity` | % |
 | `pressure` | hPa at sea level |
 | `cloud` | % (SMHI's octas converted) |
-| `precip`, `precip_p10`, `precip_p90` | mm/h, mean rate over the step |
-| `precip_prob`, `thunder` | % (thunder only from SMHI) |
+| `precip`, `precip_p10`, `precip_p90` | mm in the hour from `valid_time` |
+| `precip_prob` | % chance of precipitation in the source's time step that contains the hour (1 h, or 6 h further ahead) |
+| `thunder` | % (only from SMHI) |
 | `symbol` | met.no `symbol_code` (SMHI's mapped to the same names) |
 
-An empty field means the source has no value. (Rows saved before 2026-10-13's fix have SMHI's
-`temp_p10/p90` and `wind_p10/p90` equal to the forecast value itself; treat those as empty.) If a run is started by hand in the same hour as a
-scheduled one, there can be two rows for the same `valid_time`, `lead_h` and `source`. Keep the one
-with the earliest `fetched_at`.
+An empty field means the source has no value for that hour. A missing hour means no run happened
+in the hour it should have been fetched (see Limitations).
+
+The first run on 2026-10-13 saved in an older format, with one monthly file for all time-frames.
+Its rows were converted into these files automatically.
 
 ## Size
 
-About 18 rows per run on average, ~430 rows and ~57 KB per day. That's roughly **1.7 MB per
-monthly file and 20 MB per year**, and less as stored by git, since CSV compresses well and each
-commit only appends lines. GitHub warns at 50 MB per file and recommends repos under 1 GB, so this
-can run for many years.
+27 rows per run, about 650 rows and 85 KB per day. That's roughly **3.5 MB per file and year, about
+30 MB per year in total**, and less as stored by git, since CSV compresses well and each commit only
+appends lines. A year's file is about 26,000 rows, which Excel opens easily. GitHub warns at
+50 MB per file and recommends repos under 1 GB, so this can run for many years.
 
 The data is plain CSV on its own branch rather than a SQLite file in the repo. A database file
 committed every hour would be saved as a full new copy each time, and couldn't be merged. When it's
-time to analyse, build a database from the CSVs:
+time to analyse, build a database from the CSVs, with the time-frame as a column:
 
 ```sh
 git fetch origin forecast-data
 git worktree add ../forecast-data forecast-data
 cd ../forecast-data
-rm -f forecasts.db
-for f in forecasts/*.csv; do
-  # the first file creates the table from its header; later files skip theirs
-  if [ -f forecasts.db ]; then skip='--skip 1'; else skip=''; fi
-  sqlite3 forecasts.db ".import --csv $skip $f forecasts"
-done
+python3 - <<'PY'
+import csv, glob, os, re, sqlite3
+os.remove('forecasts.db') if os.path.exists('forecasts.db') else None
+db = sqlite3.connect('forecasts.db')
+for f in sorted(glob.glob('forecasts/*/lead_*.csv')):
+    lead = int(re.search(r'lead_(\d+)h', f).group(1))
+    rows = list(csv.reader(open(f, newline='')))
+    cols = ['lead_h'] + rows[0]
+    db.execute(f"CREATE TABLE IF NOT EXISTS forecasts ({', '.join(cols)})")
+    db.executemany(f"INSERT INTO forecasts VALUES ({', '.join('?' * len(cols))})",
+                   [[lead] + [v if v != '' else None for v in r] for r in rows[1:]])
+db.commit()
+PY
 ```
 
 ## Next steps
@@ -90,7 +114,7 @@ done
 - **Measured values.** Export the thermometer CSV and save it, for example as
   `observations/thermometer.csv` on the same branch, or keep it locally. Readings should be in UTC,
   or the time zone should be known. Then match each reading with forecasts that have the same `valid_time`.
-- **Evaluation.** Per `source` × `lead_h`, compute the bias (mean error), MAE and RMSE, plus how often
+- **Evaluation.** Per `source` and time-frame, compute the bias (mean error), MAE and RMSE, plus how often
   the measured value falls inside `temp_p10`–`temp_p90` (it should be about 80 %). Then split by forecast
   cloud, wind, precipitation, day/night and season. The RMSE per source goes into `weightsFromErrors()`.
 - Expect the thermometer to have a bias of its own (placement, sun, a wall nearby). It affects every source
@@ -99,6 +123,8 @@ done
 ## Limitations
 
 - GitHub often starts scheduled runs 5–30 min late, and occasionally skips one. `fetched_at` records
-  the real time, so late runs are fine. A skipped run just leaves a gap.
+  the real time, so late runs are fine. A skipped run, or one so late that it slips into the next
+  hour, leaves that hour missing in every file. Gaps aren't filled afterwards: a later fetch is a
+  newer forecast than the one that was available at the time.
 - In public repos, GitHub disables scheduled workflows after 60 days without repository activity.
   It emails a warning first, and the workflow can be turned back on from the Actions tab.
