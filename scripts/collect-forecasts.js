@@ -7,8 +7,10 @@
 //
 //   FORECAST_LAT=59.33 FORECAST_LON=18.07 node scripts/collect-forecasts.js <utkatalog>
 //
-// Raderna läggs till i <utkatalog>/forecasts/ÅÅÅÅ-MM.csv (månad = hämtningstid).
-// Koordinaterna skrivs aldrig till fil eller logg.
+// En fil per prognoslängd och år, <utkatalog>/forecasts/ÅÅÅÅ/lead_024h.csv,
+// med tre rader per timme (met, smhi, blend). Varje körning lägger till en
+// timme i varje fil, så filerna blir löpande tidsserier sorterade på
+// valid_time. Koordinaterna skrivs aldrig till fil eller logg.
 'use strict';
 
 const fs = require('node:fs');
@@ -19,21 +21,23 @@ const H = 3600e3;
 const LEADS_H = [1, 3, 6, 12, 24, 48, 72, 120, 168];
 const USER_AGENT = 'weather_app-forecast-archive/1.0 github.com/erikae-9/weather_app';
 
-// [kolumn, nyckel i buildForecast().data, decimaler]
+// [kolumn, nyckel i blend().blended, decimaler]
 const VALUE_COLUMNS = [
   ['temp', 'temp', 1], ['temp_p10', 'temp_p10', 1], ['temp_p90', 'temp_p90', 1],
   ['wind', 'wind', 1], ['wind_p10', 'wind_p10', 1], ['wind_p90', 'wind_p90', 1],
   ['gust', 'gust', 1], ['wind_dir', 'wind_direction', 0],
   ['humidity', 'humidity', 0], ['pressure', 'pressure', 1], ['cloud', 'cloud', 0],
-  ['precip', 'precip', 2], ['precip_p10', 'precip_p10', 2], ['precip_p90', 'precip_p90', 2],
+  ['precip', 'precip_amount', 2], ['precip_p10', 'precip_min', 2], ['precip_p90', 'precip_max', 2],
   ['precip_prob', 'precip_prob', 0], ['thunder', 'thunder', 0],
 ];
-// SMHI har inga percentiler för temperatur och vind. buildForecast fyller då
+// SMHI har inga percentiler för temperatur och vind. blend() fyller då
 // bandet med själva prognosvärdet (bra för appen), men här ska det vara tomt
 // så att SMHI inte ser ut att ha ett band med noll spridning.
 const NO_BAND = { smhi: new Set(['temp_p10', 'temp_p90', 'wind_p10', 'wind_p90']) };
-const HEADER = ['valid_time', 'lead_h', 'source', 'fetched_at', 'issued_at', 'step_h',
+const HEADER = ['valid_time', 'source', 'interpolated', 'fetched_at', 'issued_at',
   ...VALUE_COLUMNS.map(c => c[0]), 'symbol'];
+const SOURCES = ['met', 'smhi', 'blend'];     // radordning inom en timme
+const col = name => HEADER.indexOf(name);
 
 const iso = ms => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
 const isoOrEmpty = s => (s ? iso(Date.parse(s)) : '');
@@ -53,42 +57,105 @@ function issuedAt(raw) {
 // Rena källor körs var för sig (met.no-raden ska inte låna SMHI:s åska).
 // Viktad görs bara när båda finns – med en källa vore den samma som den källan.
 // Prognoslängd räknas från hämtningstiden avrundad nedåt till hel timme:
-// hämtat 12:17 → 1h = 13:00, 168h = samma tid om en vecka. Långa längder
-// finns bara när giltighetstiden hamnar på källans tidsaxel (6h-steg m.m.).
+// hämtat 12:17 → 1h = 13:00, 168h = samma tid om en vecka.
+//
+// Varje giltighetstid samplas som ett 1h-steg, så att alla längder får ett
+// värde varje timme. Där källan har längre steg (6h efter 2–3 dygn) blir
+// momentanvärden linjärt interpolerade och nederbörden fördelas jämnt över
+// steget – raden får då interpolated = 1.
+//
+// Returnerar [{ lead, row }].
 function buildRows(raw, fetchedMs) {
   const base = Math.floor(fetchedMs / H) * H;
   const issued = issuedAt(raw);
+  const sources = {};
+  if (raw.met) sources.met = FS.normalizeMet(raw.met);
+  if (raw.smhi) sources.smhi = FS.normalizeSmhi(raw.smhi);
   const runs = [];
-  if (raw.met) runs.push(['met', { met: raw.met }]);
-  if (raw.smhi) runs.push(['smhi', { smhi: raw.smhi }]);
-  if (raw.met && raw.smhi) runs.push(['blend', raw]);
+  if (sources.met) runs.push(['met', { met: sources.met }]);
+  if (sources.smhi) runs.push(['smhi', { smhi: sources.smhi }]);
+  if (sources.met && sources.smhi) runs.push(['blend', sources]);
 
-  const rows = [];
+  const grid = LEADS_H.map(lead => ({ t: base + lead * H, stepH: 1 }));
+  const items = [];
   for (const [mode, subset] of runs) {
-    const fc = FS.buildForecast(mode, subset, { nowMs: fetchedMs });
-    const index = new Map(fc.times.map((t, i) => [t.getTime(), i]));
-    for (const lead of LEADS_H) {
-      const t = base + lead * H;
-      const i = index.get(t);
-      if (i === undefined || fc.data.temp[i] === null) continue;
-      rows.push([
-        iso(t), lead, mode, iso(fetchedMs), issued[mode], fc.data.step_hours[i],
+    const { blended: b } = FS.blend(subset, grid, FS.MODES[mode].weights, fetchedMs);
+    const native = Object.values(subset).map(src => new Set(src.points.map(p => p.t)));
+    grid.forEach(({ t }, i) => {
+      if (b.temp[i] === null) return;
+      items.push({ lead: LEADS_H[i], row: [
+        iso(t), mode, native.every(times => times.has(t)) ? 0 : 1, iso(fetchedMs), issued[mode],
         ...VALUE_COLUMNS.map(([column, key, dec]) =>
-          (NO_BAND[mode]?.has(column) ? '' : fmt(fc.data[key][i], dec))),
-        fc.data.symbols[i] === 'unknown' ? '' : fc.data.symbols[i],
-      ]);
-    }
+          (NO_BAND[mode]?.has(column) ? '' : fmt(b[key][i], dec))),
+        b.symbol[i] ?? '',
+      ] });
+    });
   }
-  return rows;
+  return items;
 }
 
-function appendRows(outDir, rows, fetchedMs) {
-  const file = path.join(outDir, 'forecasts', `${iso(fetchedMs).slice(0, 7)}.csv`);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const isNew = !fs.existsSync(file);
-  const lines = (isNew ? [HEADER] : []).concat(rows).map(r => r.join(','));
-  fs.appendFileSync(file, lines.join('\n') + '\n');
-  return file;
+const leadFile = (outDir, validIso, lead) =>
+  path.join(outDir, 'forecasts', validIso.slice(0, 4), `lead_${String(lead).padStart(3, '0')}h.csv`);
+
+// Lägger till rader sist i respektive fil. En timme som redan finns för en
+// källa (t.ex. manuell körning samma timme som en schemalagd) hoppas över,
+// så den tidigast hämtade prognosen behålls. Returnerar antal skrivna rader.
+function appendRows(outDir, items) {
+  const byFile = new Map();
+  for (const { lead, row } of items) {
+    const file = leadFile(outDir, row[col('valid_time')], lead);
+    if (!byFile.has(file)) byFile.set(file, []);
+    byFile.get(file).push(row);
+  }
+  const key = r => `${r[col('valid_time')]},${r[col('source')]}`;
+  let written = 0;
+  for (const [file, rows] of byFile) {
+    const exists = fs.existsSync(file);
+    const seen = new Set(exists
+      ? fs.readFileSync(file, 'utf8').split('\n').slice(1).filter(Boolean).map(l => key(l.split(',')))
+      : []);
+    const fresh = rows.filter(r => !seen.has(key(r)) && seen.add(key(r)));
+    if (!fresh.length) continue;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const lines = (exists ? [] : [HEADER]).concat(fresh).map(r => r.join(','));
+    fs.appendFileSync(file, lines.join('\n') + '\n');
+    written += fresh.length;
+  }
+  return written;
+}
+
+// Engångsflytt av rader i det första formatet (forecasts/ÅÅÅÅ-MM.csv, alla
+// längder i en fil) till filerna per längd. De raderna låg alltid på någon
+// källas tidsaxel; viktad räknas som interpolerad om met- eller SMHI-raden
+// från samma körning saknas. Kan tas bort när den har körts.
+function migrateOldFiles(outDir) {
+  const dir = path.join(outDir, 'forecasts');
+  if (!fs.existsSync(dir)) return 0;
+  const names = fs.readdirSync(dir).filter(n => /^\d{4}-\d{2}\.csv$/.test(n));
+  const old = [];
+  for (const name of names) {
+    const [head, ...lines] = fs.readFileSync(path.join(dir, name), 'utf8').trim().split('\n');
+    const cols = head.split(',');
+    for (const line of lines) {
+      old.push(Object.fromEntries(line.split(',').map((v, i) => [cols[i], v])));
+    }
+  }
+  const have = new Set(old.map(o => `${o.valid_time},${o.lead_h},${o.fetched_at},${o.source}`));
+  const items = old.map(o => {
+    const id = `${o.valid_time},${o.lead_h},${o.fetched_at}`;
+    const interpolated = o.source === 'blend' && !(have.has(`${id},met`) && have.has(`${id},smhi`)) ? 1 : 0;
+    return { lead: Number(o.lead_h), row: HEADER.map(c =>
+      c === 'interpolated' ? interpolated : (NO_BAND[o.source]?.has(c) ? '' : o[c] ?? '')) };
+  });
+  // Sorterat på giltighetstid och källa; vid dubbletter först den tidigast hämtade
+  const order = r => [r[col('valid_time')], SOURCES.indexOf(r[col('source')]), r[col('fetched_at')]];
+  items.sort((x, y) => {
+    const a = order(x.row), b = order(y.row);
+    return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1] || (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0);
+  });
+  const written = appendRows(outDir, items);
+  for (const name of names) fs.unlinkSync(path.join(dir, name));
+  return written;
 }
 
 // Felmeddelanden får inte innehålla URL:en, eftersom den innehåller koordinaterna
@@ -136,13 +203,14 @@ async function main() {
   };
   if (!raw.met && !raw.smhi) throw new Error('Ingen källa svarade');
 
-  const rows = buildRows(raw, fetchedMs);
-  const file = appendRows(outDir, rows, fetchedMs);
-  console.log(`${rows.length} rader → ${file}`);
+  const migrated = migrateOldFiles(outDir);
+  if (migrated) console.log(`${migrated} rader flyttade från det gamla formatet`);
+  const written = appendRows(outDir, buildRows(raw, fetchedMs));
+  console.log(`${written} rader → ${path.join(outDir, 'forecasts')}`);
 }
 
 if (require.main === module) {
   main().catch(e => { console.error(`::error::${e.message}`); process.exit(1); });
 }
 
-module.exports = { LEADS_H, HEADER, buildRows, appendRows, fmt };
+module.exports = { LEADS_H, HEADER, buildRows, appendRows, migrateOldFiles, fmt };
