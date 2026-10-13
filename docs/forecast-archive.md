@@ -57,7 +57,8 @@ One row per source, time ahead and run. All times are UTC.
 | `precip_prob`, `thunder` | % (thunder only from SMHI) |
 | `symbol` | met.no `symbol_code` (SMHI's mapped to the same names) |
 
-An empty field means the source has no value. If a run is started by hand in the same hour as a
+An empty field means the source has no value. (Rows saved before 2026-10-13's fix have SMHI's
+`temp_p10/p90` and `wind_p10/p90` equal to the forecast value itself; treat those as empty.) If a run is started by hand in the same hour as a
 scheduled one, there can be two rows for the same `valid_time`, `lead_h` and `source`. Keep the one
 with the earliest `fetched_at`.
 

@@ -86,6 +86,10 @@ test('ren källa lånar inget från den andra; viktad är medel av båda', () =>
   assert.equal(row('met', 1)[col('temp')], '10.1');
   assert.equal(row('smhi', 1)[col('temp')], '12.1');
   assert.equal(row('blend', 1)[col('temp')], '11.1');
+  // SMHI saknar percentiler: tomt, inte medelvärdet
+  for (const c of ['temp_p10', 'temp_p90', 'wind_p10', 'wind_p90']) assert.equal(row('smhi', 1)[col(c)], '', c);
+  assert.equal(row('met', 1)[col('temp_p10')], '9.1');
+  assert.notEqual(row('smhi', 1)[col('precip_p90')], '');   // nederbördsbandet finns hos SMHI
 });
 
 test('utan SMHI blir det bara met.no-rader', () => {
