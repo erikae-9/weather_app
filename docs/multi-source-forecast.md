@@ -104,6 +104,7 @@ by past error. To get the RMSE values:
 
 1. Save each fetched forecast, at least the first 48 h per source (for example in `localStorage`,
    keyed by location and fetch time). Neither API serves old forecasts, so the app has to keep them.
+   **Status:** done server-side by an hourly GitHub Action, see [forecast-archive.md](forecast-archive.md).
 2. Fetch observations from the nearest station in the
    [SMHI metobs API](https://opendata.smhi.se/apidocs/metobs/), for example air temperature (parameter 1).
 3. Compute the error per source, parameter and lead-time window (0–24 h, 24–72 h, 72 h+) over the
