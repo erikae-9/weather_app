@@ -1,0 +1,56 @@
+# Saves met.no and SMHI forecasts every hour so they can later be compared with
+# measured values. The data is committed to the `forecast-data` branch, not to
+# main. See docs/forecast-archive.md.
+name: Collect forecasts
+
+on:
+  schedule:
+    - cron: '17 * * * *'   # off the hour: runs at :00 are the most often delayed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-forecasts
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check out data branch
+        run: |
+          if git fetch --depth=1 origin forecast-data; then
+            git worktree add -B forecast-data archive FETCH_HEAD
+          else
+            git worktree add --detach archive
+            git -C archive switch --orphan forecast-data
+          fi
+
+      - name: Fetch forecasts
+        env:
+          FORECAST_LAT: ${{ secrets.FORECAST_LAT }}
+          FORECAST_LON: ${{ secrets.FORECAST_LON }}
+        run: node scripts/collect-forecasts.js archive
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git add forecasts
+          if git diff --cached --quiet; then echo "Nothing new"; exit 0; fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "Forecasts $(date -u +%Y-%m-%dT%H:%MZ)"
+          for delay in 2 4 8 16; do
+            git push origin forecast-data && exit 0
+            sleep "$delay"
+          done
+          exit 1
