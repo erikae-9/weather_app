@@ -28,6 +28,10 @@ const VALUE_COLUMNS = [
   ['precip', 'precip', 2], ['precip_p10', 'precip_p10', 2], ['precip_p90', 'precip_p90', 2],
   ['precip_prob', 'precip_prob', 0], ['thunder', 'thunder', 0],
 ];
+// SMHI har inga percentiler för temperatur och vind. buildForecast fyller då
+// bandet med själva prognosvärdet (bra för appen), men här ska det vara tomt
+// så att SMHI inte ser ut att ha ett band med noll spridning.
+const NO_BAND = { smhi: new Set(['temp_p10', 'temp_p90', 'wind_p10', 'wind_p90']) };
 const HEADER = ['valid_time', 'lead_h', 'source', 'fetched_at', 'issued_at', 'step_h',
   ...VALUE_COLUMNS.map(c => c[0]), 'symbol'];
 
@@ -69,7 +73,8 @@ function buildRows(raw, fetchedMs) {
       if (i === undefined || fc.data.temp[i] === null) continue;
       rows.push([
         iso(t), lead, mode, iso(fetchedMs), issued[mode], fc.data.step_hours[i],
-        ...VALUE_COLUMNS.map(([, key, dec]) => fmt(fc.data[key][i], dec)),
+        ...VALUE_COLUMNS.map(([column, key, dec]) =>
+          (NO_BAND[mode]?.has(column) ? '' : fmt(fc.data[key][i], dec))),
         fc.data.symbols[i] === 'unknown' ? '' : fc.data.symbols[i],
       ]);
     }
