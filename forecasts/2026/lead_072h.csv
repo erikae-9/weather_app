@@ -1,0 +1,4 @@
+valid_time,source,interpolated,fetched_at,issued_at,temp,temp_p10,temp_p90,wind,wind_p10,wind_p90,gust,wind_dir,humidity,pressure,cloud,precip,precip_p10,precip_p90,precip_prob,thunder,symbol
+2026-10-16T13:00:00Z,met,1,2026-10-13T13:47:35Z,2026-10-13T13:30:01Z,9.3,7.2,10.4,2.7,1.8,4.3,,248,68,1009.4,84,0,0,0,22,,partlycloudy_day
+2026-10-16T13:00:00Z,smhi,1,2026-10-13T13:47:35Z,2026-10-13T13:30:00Z,10.6,,,2.3,,,5.4,254,82,1008.4,100,0.15,0,0.65,32,0,cloudy
+2026-10-16T13:00:00Z,blend,1,2026-10-13T13:47:35Z,2026-10-13T13:30:01Z,9.9,8.6,10.9,2.5,2,3.4,5.4,251,75,1008.9,92,0.07,0,0.34,27,0,partlycloudy_day
