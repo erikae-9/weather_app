@@ -5,7 +5,10 @@ name: Collect forecasts
 
 on:
   schedule:
-    - cron: '17 * * * *'   # off the hour: runs at :00 are the most often delayed
+    # Every 10 minutes (:02, :12, … :52). GitHub drops many scheduled runs, so
+    # this gives each hour several chances; the script saves only the first
+    # successful run of each hour and later ones in the same hour change nothing.
+    - cron: '2-59/10 * * * *'
   workflow_dispatch:
 
 permissions:

@@ -18,7 +18,8 @@ rain, season). That's also the input to step 4 in
    secret): `FORECAST_LAT` and `FORECAST_LON`, in decimal degrees, for example `59.3293` and `18.0686`.
 2. Merge to `main`. GitHub only runs scheduled workflows from the default branch.
 3. In the Actions tab, open **Collect forecasts** and click **Run workflow** once. This creates the
-   `forecast-data` branch. After that the workflow runs at :17 every hour.
+   `forecast-data` branch. After that the workflow runs every 10 minutes (:02, :12, … :52), and
+   the first successful run of each hour saves that hour.
 
 **Privacy.** The repo is public. The coordinates are only stored as secrets: they aren't written
 to the CSV, and GitHub masks them in the logs. The forecasts themselves are public on the
@@ -32,10 +33,11 @@ Each file is a continuous hourly time series, sorted by `valid_time`, with **thr
 `met`, `smhi` and `blend`. For example, `lead_024h.csv` holds every hour as it was forecast
 24 hours earlier.
 
-Each run fetches both sources and takes the hour it ran in, rounded down (12:17 → 12:00).
+Each run fetches both sources and takes the hour it ran in, rounded down (12:02 → 12:00).
 From there it adds one hour to each file: 13:00 to `lead_001h`, 12:00 the next day to `lead_024h`,
-12:00 a week later to `lead_168h`, and so on. So "1 h ahead" is really 40–60 minutes, depending on
-when the run started. `fetched_at` has the exact time.
+12:00 a week later to `lead_168h`, and so on. Only the first successful run of each hour is saved;
+later runs in the same hour find nothing new and don't commit. So "1 h ahead" is usually 50–60
+minutes, and less if GitHub dropped the hour's first runs. `fetched_at` has the exact time.
 
 - **Interpolated hours.** Beyond about 2–3 days both sources use 6 h steps, and SMHI sometimes uses
   2 h steps earlier. Hours between two steps are filled in so every file stays hourly, and
@@ -122,9 +124,12 @@ PY
 
 ## Limitations
 
-- GitHub often starts scheduled runs 5–30 min late, and occasionally skips one. `fetched_at` records
-  the real time, so late runs are fine. A skipped run, or one so late that it slips into the next
-  hour, leaves that hour missing in every file. Gaps aren't filled afterwards: a later fetch is a
+- GitHub only runs scheduled workflows on a best-effort basis: runs start late, and under load
+  many are dropped. On 2026-10-13 only about one hourly slot in six actually ran, which is why
+  the workflow now runs every 10 minutes. `fetched_at` records the real time, so late runs are
+  fine. An hour where none of the six attempts ran leaves that hour missing in every file.
+  If that's still common, trigger the workflow from an outside cron service (for example
+  cron-job.org calling GitHub's workflow-dispatch API with a token limited to this repo). Gaps aren't filled afterwards: a later fetch is a
   newer forecast than the one that was available at the time.
 - In public repos, GitHub disables scheduled workflows after 60 days without repository activity.
   It emails a warning first, and the workflow can be turned back on from the Actions tab.
