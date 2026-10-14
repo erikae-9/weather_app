@@ -5,10 +5,11 @@ name: Collect forecasts
 
 on:
   schedule:
-    # Every 10 minutes (:02, :12, … :52). GitHub drops many scheduled runs, so
-    # this gives each hour several chances; the script saves only the first
-    # successful run of each hour and later ones in the same hour change nothing.
-    - cron: '2-59/10 * * * *'
+    # Backup only. The main trigger is an outside cron service calling the
+    # workflow_dispatch API at :05 every hour (see docs/forecast-archive.md),
+    # because GitHub drops most scheduled runs here. If the :05 run happened,
+    # this one finds nothing new and doesn't commit.
+    - cron: '35 * * * *'
   workflow_dispatch:
 
 permissions:
