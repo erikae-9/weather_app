@@ -57,7 +57,7 @@ function issuedAt(raw) {
 // Rena källor körs var för sig (met.no-raden ska inte låna SMHI:s åska).
 // Viktad görs bara när båda finns – med en källa vore den samma som den källan.
 // Prognoslängd räknas från hämtningstiden avrundad nedåt till hel timme:
-// hämtat 12:02 → 1h = 13:00, 168h = samma tid om en vecka.
+// hämtat 12:05 → 1h = 13:00, 168h = samma tid om en vecka.
 //
 // Varje giltighetstid samplas som ett 1h-steg, så att alla längder får ett
 // värde varje timme. Där källan har längre steg (6h efter 2–3 dygn) blir

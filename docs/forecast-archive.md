@@ -18,8 +18,30 @@ rain, season). That's also the input to step 4 in
    secret): `FORECAST_LAT` and `FORECAST_LON`, in decimal degrees, for example `59.3293` and `18.0686`.
 2. Merge to `main`. GitHub only runs scheduled workflows from the default branch.
 3. In the Actions tab, open **Collect forecasts** and click **Run workflow** once. This creates the
-   `forecast-data` branch. After that the workflow runs every 10 minutes (:02, :12, … :52), and
-   the first successful run of each hour saves that hour.
+   `forecast-data` branch.
+4. Set up the hourly trigger (below). GitHub's own schedule only runs a backup at :35, and the
+   first successful run of each hour saves that hour.
+
+### Hourly trigger from cron-job.org
+
+GitHub drops most scheduled runs for this workflow (see Limitations), so an outside service starts
+it instead, through the same "Run workflow" API as the button in the Actions tab.
+
+1. **Token.** GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained
+   tokens** → Generate new token. Repository access: *Only select repositories* → `weather_app`.
+   Permissions → Repository → **Actions: Read and write** (nothing else). Note the expiry date:
+   the trigger stops when the token expires.
+2. **Job.** At [cron-job.org](https://cron-job.org), create a cronjob:
+   - URL: `https://api.github.com/repos/erikae-9/weather_app/actions/workflows/collect-forecasts.yml/dispatches`
+   - Schedule: every hour at minute **5**
+   - Advanced → Request method **POST**, request body `{"ref":"main"}`, headers:
+     - `Authorization: Bearer <token>`
+     - `Accept: application/vnd.github+json`
+     - `X-GitHub-Api-Version: 2022-11-28`
+3. **Test.** "Test run" should answer **HTTP 204**, and a new *workflow_dispatch* run of
+   **Collect forecasts** should appear in the Actions tab.
+
+The token can only start and cancel Actions runs in this repo; it can't read or change code.
 
 **Privacy.** The repo is public. The coordinates are only stored as secrets: they aren't written
 to the CSV, and GitHub masks them in the logs. The forecasts themselves are public on the
@@ -33,11 +55,11 @@ Each file is a continuous hourly time series, sorted by `valid_time`, with **thr
 `met`, `smhi` and `blend`. For example, `lead_024h.csv` holds every hour as it was forecast
 24 hours earlier.
 
-Each run fetches both sources and takes the hour it ran in, rounded down (12:02 → 12:00).
+Each run fetches both sources and takes the hour it ran in, rounded down (12:05 → 12:00).
 From there it adds one hour to each file: 13:00 to `lead_001h`, 12:00 the next day to `lead_024h`,
 12:00 a week later to `lead_168h`, and so on. Only the first successful run of each hour is saved;
-later runs in the same hour find nothing new and don't commit. So "1 h ahead" is usually 50–60
-minutes, and less if GitHub dropped the hour's first runs. `fetched_at` has the exact time.
+later runs in the same hour find nothing new and don't commit. So "1 h ahead" is usually about
+55 minutes (25 if only the :35 backup ran). `fetched_at` has the exact time.
 
 - **Interpolated hours.** Beyond about 2–3 days both sources use 6 h steps, and SMHI sometimes uses
   2 h steps earlier. Hours between two steps are filled in so every file stays hourly, and
@@ -124,12 +146,12 @@ PY
 
 ## Limitations
 
-- GitHub only runs scheduled workflows on a best-effort basis: runs start late, and under load
-  many are dropped. On 2026-10-13 only about one hourly slot in six actually ran, which is why
-  the workflow now runs every 10 minutes. `fetched_at` records the real time, so late runs are
-  fine. An hour where none of the six attempts ran leaves that hour missing in every file.
-  If that's still common, trigger the workflow from an outside cron service (for example
-  cron-job.org calling GitHub's workflow-dispatch API with a token limited to this repo). Gaps aren't filled afterwards: a later fetch is a
-  newer forecast than the one that was available at the time.
+- GitHub only runs scheduled workflows on a best-effort basis. Here, on 2026-10-13 only about one
+  hourly slot in six ran, and after switching to every 10 minutes none of the next 12 did. That's
+  why the hourly trigger comes from cron-job.org, with GitHub's schedule only as a backup.
+  `fetched_at` records the real time, so late runs are fine. An hour with no successful run
+  leaves that hour missing in every file. Gaps aren't filled afterwards: a later fetch is a newer
+  forecast than the one that was available at the time.
+- The cron-job.org trigger stops when its GitHub token expires; renew the token before then.
 - In public repos, GitHub disables scheduled workflows after 60 days without repository activity.
   It emails a warning first, and the workflow can be turned back on from the Actions tab.
