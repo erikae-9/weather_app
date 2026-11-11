@@ -470,11 +470,16 @@ WX.days = (wd, lat, lon) => {
 // ── "PROGNOSEN I KORTHET": automatiska noteringar ────────────────────────────
 // Letar efter det som är värt att lyfta: nederbördsperioder, hård vind,
 // åska, temperatur kring noll och kraftiga temperaturomslag.
-WX.highlights = (wd, days) => {
+// Standard: från nu och tre dygn framåt. range = { start, end } ger en vald period.
+WX.highlights = (wd, days, range) => {
   const d = wd.data, out = [];
-  const nowI = WX.nowIndex(wd);
-  const horizon = wd.ms.findIndex(t => t > wd.ms[nowI] + 72 * H);
-  const end = horizon === -1 ? wd.n : horizon;
+  let nowI, end;
+  if (range) { nowI = range.start; end = range.end; }
+  else {
+    nowI = WX.nowIndex(wd);
+    const horizon = wd.ms.findIndex(t => t > wd.ms[nowI] + 72 * H);
+    end = horizon === -1 ? wd.n : horizon;
+  }
 
   // Sammanhängande nederbörd (≥0,3 mm/h eller ≥50 % risk)
   let run = null;
@@ -543,10 +548,81 @@ WX.highlights = (wd, days) => {
   return out.sort((a, b) => order[a.level] - order[b.level] || (a.from ?? 0) - (b.from ?? 0)).slice(0, 4);
 };
 
+// ── TEXTPROGNOS FÖR ETT DYGN ─────────────────────────────────────────────────
+// Några meningar i stil med en uppläst prognos: himmel och nederbörd per
+// del av dygnet, temperatur, vind, mängd och åska.
+const DAYPARTS = [['natten', 0, 6], ['förmiddagen', 6, 12], ['eftermiddagen', 12, 18], ['kvällen', 18, 24]];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const listJoin = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' och ' + a[a.length - 1];
+const skyWord = c => c === null ? 'växlande molnighet' : c < 20 ? 'klart' : c < 45 ? 'mestadels klart' : c < 75 ? 'växlande molnighet' : 'mulet';
+
+WX.dayText = (wd, day) => {
+  const D = wd.data, b = day.date;
+  const parts = DAYPARTS.map(([name, h0, h1]) => {
+    const a = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h0).getTime();
+    const e = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h1).getTime();
+    let p = 0, cl = 0, w = 0;
+    for (const i of day.idx) {
+      const ov = Math.min(e, wd.end(i)) - Math.max(a, wd.ms[i]);
+      if (ov <= 0) continue;
+      p += (D.precip_step[i] ?? 0) * ov / (wd.end(i) - wd.ms[i]);
+      if (D.cloud[i] != null) { cl += D.cloud[i] * ov; w += ov; }
+    }
+    return { name, p, cloud: w ? cl / w : null, has: w > 0 };
+  }).filter(r => r.has);
+
+  // Nederbördstyp och om det är skurar: majoritet bland dygnets symboler
+  const cnt = { rain: 0, sleet: 0, snow: 0 }; let showers = 0, wetSyms = 0;
+  for (const i of day.idx) {
+    const p = WX.parseSymbol(D.symbols[i]);
+    if (p.type) { cnt[p.type]++; wetSyms++; if (p.showers) showers++; }
+  }
+  let type = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0];
+  if (!cnt[type]) type = day.hi < 0 ? 'snow' : day.lo > 1.5 ? 'rain' : 'sleet';
+  const isShowers = wetSyms && showers / wetSyms > 0.5;
+  const total = day.precip ?? 0;
+  const light = total < 2;
+  const noun = isShowers
+    ? { rain: 'regnskurar', sleet: 'skurar av snöblandat regn', snow: 'snöbyar' }[type]
+    : { rain: light ? 'lätt regn' : 'regn', sleet: 'snöblandat regn', snow: light ? 'lätt snöfall' : 'snöfall' }[type];
+
+  const s = [];
+  const wet = parts.filter(r => r.p >= 0.3);
+  const dry = parts.filter(r => r.p < 0.3);
+  if (wet.length) {
+    const when = wet.length === parts.length && parts.length > 2 ? 'under större delen av dygnet' : `under ${listJoin(wet.map(r => r.name))}`;
+    const dc = dry.length ? WX.mean(dry.map(r => r.cloud)) : null;
+    s.push(cap(`${noun} ${when}`) + (dry.length ? `, annars ${skyWord(dc)}` : '') + '.');
+  } else if (parts.length >= 2) {
+    const f = parts[0], l = parts[parts.length - 1];
+    if (f.cloud > 70 && l.cloud < 40) s.push(`${cap(skyWord(f.cloud))}, men uppklarnande mot ${l.name}.`);
+    else if (f.cloud < 40 && l.cloud > 70) s.push(`${cap(skyWord(f.cloud))}, mulnar på mot ${l.name}.`);
+    else s.push(`${cap(skyWord(WX.mean(parts.map(r => r.cloud))))}.`);
+  } else s.push(`${cap(skyWord(parts[0]?.cloud ?? null))}.`);
+
+  const feels = WX.min(day.idx.map(i => D.feels_like[i]));
+  s.push(`${day.lo === day.hi ? `Omkring ${WX.fmtTemp(day.hi)}` : `Mellan ${WX.fmtTemp(day.lo)} och ${WX.fmtTemp(day.hi)}`}`
+    + (feels !== null && feels < day.lo - 3 ? `, känns som ner mot ${WX.fmtTemp(feels)}` : '') + '.');
+
+  const wMin = WX.min(day.idx.map(i => D.wind[i])), wMax = day.windMax;
+  if (wMax !== null) {
+    const adj = wMax < 3.3 ? 'svag ' : wMax >= 24.4 ? 'storm, ' : wMax >= 13.8 ? 'hård ' : wMax >= 7.9 ? 'frisk ' : '';
+    const dir = WX.windDirLong(day.windDir);
+    const span = Math.round(wMin) === Math.round(wMax) ? `${WX.fmt(wMax)} m/s` : `${WX.fmt(wMin)}–${WX.fmt(wMax)} m/s`;
+    s.push(cap(`${adj}${dir ? dir + ' ' : ''}vind ${span}`) + (day.gustMax != null && day.gustMax >= wMax + 3 ? `, i byarna upp till ${WX.fmt(day.gustMax)} m/s` : '') + '.');
+  }
+  if (total >= 0.1) s.push(`Totalt ${WX.fmt(total, total < 10 ? 1 : 0)} mm${type === 'snow' && total >= 1 ? `, ungefär ${Math.round(total)} cm snö` : ''}${day.risk != null ? ` (risk ${day.risk} %)` : ''}.`);
+  else if ((day.risk ?? 0) >= 20) s.push(`Mestadels uppehåll, ${day.risk} % risk för nederbörd.`);
+  else s.push('Uppehåll.');
+  if ((day.thunder ?? 0) >= WX.THUNDER_MED) s.push(`Risk för åska, upp till ${Math.round(day.thunder)} %.`);
+  return { lead: s[0], text: s.join(' ') };
+};
+
 WX.spanText = (a, b) => {
   const sameDay = WX.dateKey(a) === WX.dateKey(new Date(b.getTime() - 1));
   const d1 = WX.dayLabel(a).toLowerCase();
-  if (sameDay) return `${d1} ${WX.hh(a)}–${WX.hh(b)}`;
+  const endH = b.getHours() === 0 && b.getMinutes() === 0 ? '24' : WX.hh(b);
+  if (sameDay) return `${d1} ${WX.hh(a)}–${endH}`;
   return `${d1} ${WX.hh(a)} – ${WX.dayLabel(b).toLowerCase()} ${WX.hh(b)}`;
 };
 

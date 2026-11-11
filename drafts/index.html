@@ -22,13 +22,15 @@ code { font-size: .9em; }
 </head>
 <body>
 <main>
-  <h1>Eriks Väder: två nya utkast</h1>
+  <h1>Eriks Väder: nya utkast</h1>
   <p>Båda utkasten använder samma prognoskod som nuvarande app (<code>forecast-sources.js</code>): met.no, SMHI, viktad och båda källorna, persistensjusterad nederbördsrisk, åska från SMHI, sökning, position, favoriter och egen period. Går API:erna inte att nå visas exempeldata. Lägg till <code>?demo=1</code> för att alltid se exempeldata.</p>
   <div class="grid">
     <a class="card" href="portal.html"><b>A · Portal</b>Ljus, lugn väderportal som läses uppifrån och ned.
       <ul><li>Läget nu, närmaste dygnet och 10 dygn på startsidan</li><li>Automatiska noteringar ("Snöfall imorgon 10–fre 06")</li><li>Flikar: Timme för timme och Diagram</li></ul></a>
     <a class="card" href="dashboard.html"><b>B · Instrument</b>Mörk instrumentpanel för den som vill se allt.
       <ul><li>Sidopanel med platser, källa och vyer</li><li>Vindros, mätare och nyckeltal per period</li><li>Värmekarte-tabell och jämförelse met.no mot SMHI</li></ul></a>
+    <a class="card" href="combined.html"><b>C · Prognos</b>Utkast A:s utseende med prognosen i fokus.
+      <ul><li>Valbara dygnskort överst styr hela sidan</li><li>Textprognos per dygn och noteringar</li><li>Meteogram och värmekarte-tabell från B</li></ul></a>
   </div>
   <p style="margin-top:24px"><a href="../index.html" style="color:var(--accent)">Nuvarande app</a></p>
 </main>
