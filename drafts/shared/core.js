@@ -986,7 +986,7 @@ PANELS.wind = (ctx, opts) => {
   for (const z of WX.BEAUFORT) {
     const top = Math.min(z.max, hi);
     if (z.max < hi && z.max > 1) s += `<line class="mg-bft" x1="${m.l}" x2="${m.l + f.pw}" y1="${y(z.max).toFixed(1)}" y2="${y(z.max).toFixed(1)}"/>`;
-    if (prev < hi && y(prev) - y(top) > 13) s += `<text class="mg-bft-lab" x="${m.l + f.pw + 5}" y="${((y(prev) + y(top)) / 2 + 3).toFixed(1)}">${f.W < 560 ? z.short : z.name}</text>`;
+    if (opts.bft !== false && prev < hi && y(prev) - y(top) > 13) s += `<text class="mg-bft-lab" x="${m.l + f.pw + 5}" y="${((y(prev) + y(top)) / 2 + 3).toFixed(1)}">${f.W < 560 ? z.short : z.name}</text>`;
     prev = z.max;
   }
   s += `<g clip-path="url(#${cid})">`;
@@ -1023,6 +1023,8 @@ PANELS.wind = (ctx, opts) => {
 // Ritar en panel i el. Returnerar geometrin (för hårkorset).
 chart.draw = (el, kind, ctx, opts = {}) => {
   ctx = { ...ctx, width: el.clientWidth || el.getBoundingClientRect().width || 600 };
+  // Alternativ kan vara funktioner av bredden (t.ex. högre grafer på mobil)
+  opts = Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, typeof v === 'function' ? v(ctx.width) : v]));
   const out = PANELS[kind](ctx, opts);
   if (typeof out === 'string') { el.innerHTML = out; return null; }
   let plot = el.querySelector(':scope > .mg-plot');
