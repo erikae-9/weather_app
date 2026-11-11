@@ -179,8 +179,11 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .ml-area { fill: var(--c); opacity: .16; }
 .ml-band { fill: var(--c); opacity: .15; }
 .ml-strip { fill: var(--c); }
-.mini .k { display: flex; justify-content: space-between; gap: 6px; }
-.mlg { display: inline-flex; align-items: center; gap: 8px; font-size: .68rem; color: var(--ink-3); white-space: nowrap; }
+.mini { overflow: hidden; }
+.mlg { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin-top: 3px; font-size: .68rem; line-height: 1.5; color: var(--ink-3); }
+.mlg > span { white-space: nowrap; }
+.mnote { margin-left: 14px; white-space: nowrap; }
+.mnote i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; background: var(--ink-3); opacity: .25; margin-right: 5px; vertical-align: 0; }
 .mlg i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--c); margin-right: 3px; vertical-align: middle; }
 .mlg i.a { height: 8px; border: 0; background: var(--c); opacity: .3; }
 .mlg i.d { border-top-style: dashed; border-top-width: 1.5px; }
@@ -376,7 +379,7 @@ footer a { color: var(--ink-2); }
   <section class="view" id="view-oversikt">
     <div class="head" data-head></div>
     <div class="minis-box">
-      <div class="minis-h"><span id="minisPos">1–2 av 7</span>
+      <div class="minis-h"><span><span id="minisPos">1–2 av 7</span><span class="mnote"><i></i>skuggat: troligt spann (80 %)</span></span>
         <div class="minis-nav">
           <button type="button" id="mPrev" aria-label="Föregående graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
           <button type="button" id="mNext" aria-label="Nästa graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
@@ -541,7 +544,7 @@ function renderHead() {
 
 // ═══ ÖVERSIKT ═══
 // Minimal linjegraf: en linje, punkter vid högsta/lägsta, dygnsgränser
-function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero, floor0, h = 42 }) {
+function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero, floor0, scaleToLine, h = 42 }) {
   const wd = S.wd, { start, end } = S.period;
   const W = Math.max(120, el.clientWidth), Hh = h, padT = 11, padB = 12;
   const a = wd.ms[start], b = wd.end(end - 1);
@@ -549,11 +552,12 @@ function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero,
   for (let i = start; i < end; i++) { xs.push(wd.ms[i] + wd.step(i) * H / 2); vals.push(ys[i - start]); if (ys2) vals2.push(ys2[i - start]); }
   const bLo = [], bHi = [];
   if (band) for (let i = start; i < end; i++) { bLo.push(band[0][i - start]); bHi.push(band[1][i - start]); }
-  const all = WX.valid([...vals, ...vals2, ...bLo, ...bHi]);
+  const all = WX.valid(scaleToLine ? [...vals, ...vals2] : [...vals, ...vals2, ...bLo, ...bHi]);
   if (!all.length) { el.innerHTML = ''; return; }
   let lo = Math.min(...all), hi = Math.max(...all);
   if (floor0) lo = 0;
   if (hi - lo < 1) { hi += 0.5; lo -= floor0 ? 0 : 0.5; }
+  if (scaleToLine) hi = Math.max(hi * 1.3, 1);   // lite luft ovanför linjen; bandet klipps i toppen
   const X = t => 3 + (t - a) / (b - a) * (W - 6);
   const Y = v => padT + (hi - v) / (hi - lo) * (Hh - padT - padB);
   const path = arr => { let d = '', pen = false; arr.forEach((v, k) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(xs[k]).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; }); return d; };
@@ -588,7 +592,8 @@ function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero,
     };
     xs.forEach((_, k) => { if (bLo[k] == null || bHi[k] == null) flush(); else seg.push(k); });
     flush();
-    s += `<path class="ml-band" d="${d}" style="--c:${color}"/>`;
+    const cid = `mlc${Math.random().toString(36).slice(2, 8)}`;
+    s += `<clipPath id="${cid}"><rect x="0" y="${padT - 3}" width="${W}" height="${Hh - padB - padT + 3}"/></clipPath><path class="ml-band" clip-path="url(#${cid})" d="${d}" style="--c:${color}"/>`;
   }
   // Riskremsa längs botten: opacitet = sannolikhet
   if (strip) {
@@ -626,14 +631,14 @@ function renderOverview() {
     aLo += (D.precip_p10[i] ?? 0) * st; aHi += (D.precip_p90[i] ?? D.precip[i] ?? 0) * st;
     accLo.push(Math.min(aLo, accum[i - start])); accHi.push(Math.max(aHi, accum[i - start]));
   }
-  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k"><span>${k}</span>${lg}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div></div>`;
+  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
   const hasTh = st.thMax != null;
   const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
   // Samma grafer och ordning som i nuvarande app
   const items = [
-    ['Temperatur', WX.fmtTemp(st.tMean, 1), `i snitt · ${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, lg(['var(--cold)', 'temp'], ['var(--cold)', 'osäkerhet', 'b'])],
-    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `i snitt · max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'osäkerhet', 'b'], ['var(--wind)', 'byar', 'd'])],
-    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `${aHi > st.pSum + 0.05 ? `kan bli ${WX.fmt(aHi, aHi < 10 ? 1 : 0)} · ` : ''}risk ${st.pRisk ?? '—'} %`, 'miP', { ys: accum, band: [accLo, accHi], strip: sl('precip_prob'), color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }, lg(['var(--precip)', 'mängd'], ['var(--precip)', 'spann', 'b'], ['var(--precip)', 'risk', 's'])],
+    ['Temperatur', WX.fmtTemp(st.tMean, 1), `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, ''],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
+    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `risk ${st.pRisk ?? '—'} %`, 'miP', { ys: accum, band: [accLo, accHi], strip: sl('precip_prob'), scaleToLine: true, color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }, lg(['var(--precip)', 'mängd'], ['var(--precip)', 'risk', 's'])],
     ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
     ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
     ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
