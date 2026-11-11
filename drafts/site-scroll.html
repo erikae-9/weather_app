@@ -177,11 +177,15 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .ml-line2 { fill: none; stroke: var(--c); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
 .ml-base { stroke: var(--line); stroke-width: 1; }
 .ml-area { fill: var(--c); opacity: .16; }
+.ml-band { fill: var(--c); opacity: .15; }
+.ml-strip { fill: var(--c); }
 .mini .k { display: flex; justify-content: space-between; gap: 6px; }
 .mlg { display: inline-flex; align-items: center; gap: 8px; font-size: .68rem; color: var(--ink-3); white-space: nowrap; }
 .mlg i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--c); margin-right: 3px; vertical-align: middle; }
 .mlg i.a { height: 8px; border: 0; background: var(--c); opacity: .3; }
 .mlg i.d { border-top-style: dashed; border-top-width: 1.5px; }
+.mlg i.b { height: 8px; border: 0; background: var(--c); opacity: .2; }
+.mlg i.s { height: 4px; border: 0; background: var(--c); }
 .ml-zero { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
 .ml-day { stroke: var(--line); stroke-width: 1; }
 .ml-dot { fill: var(--page); stroke: var(--c); stroke-width: 1.6; }
@@ -240,6 +244,11 @@ table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-
 .hm td.cur { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .hm td.ic { height: 40px; }
 .hm td.dim { color: var(--ink-3); }
+.tog { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); margin-top: -10px; cursor: pointer; }
+.tog input { width: 16px; height: 16px; accent-color: var(--accent); }
+.hm tr.unc th.rl { font-weight: 400; color: var(--ink-3); padding-left: 12px; font-size: .74rem; }
+.hm tr.unc td { color: var(--ink-3); font-size: .74rem; height: 24px; }
+.hm tr.unc-first td, .hm tr.unc-first th { border-top: 0; }
 .hm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .78rem; color: var(--ink-3); align-items: center; }
 .hm-scale { display: inline-block; width: 140px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px; }
 
@@ -404,6 +413,7 @@ footer a { color: var(--ink-2); }
   <!-- TIMME FÖR TIMME -->
   <section class="view" id="view-timmar" hidden>
     <div class="head" data-head></div>
+    <label class="tog"><input type="checkbox" id="unc"> Visa osäkerhet: det spann som 80 % av utfallen hamnar inom</label>
     <div class="hm-wrap bleed"><table class="hm" id="hm"></table></div>
     <div class="hm-legend"><span>Temperatur <span class="hm-scale" id="hmScale"></span> −20° till +30°</span><span>Nederbörd, risk, vind och byar blir starkare ju högre värdet är.</span></div>
   </section>
@@ -531,13 +541,15 @@ function renderHead() {
 
 // ═══ ÖVERSIKT ═══
 // Minimal linjegraf: en linje, punkter vid högsta/lägsta, dygnsgränser
-function miniLine(el, { ys, ys2, area, color, areaColor, fmt, zero, floor0, h = 42 }) {
+function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero, floor0, h = 42 }) {
   const wd = S.wd, { start, end } = S.period;
   const W = Math.max(120, el.clientWidth), Hh = h, padT = 11, padB = 12;
   const a = wd.ms[start], b = wd.end(end - 1);
   const xs = [], vals = [], vals2 = [];
   for (let i = start; i < end; i++) { xs.push(wd.ms[i] + wd.step(i) * H / 2); vals.push(ys[i - start]); if (ys2) vals2.push(ys2[i - start]); }
-  const all = WX.valid([...vals, ...vals2]);
+  const bLo = [], bHi = [];
+  if (band) for (let i = start; i < end; i++) { bLo.push(band[0][i - start]); bHi.push(band[1][i - start]); }
+  const all = WX.valid([...vals, ...vals2, ...bLo, ...bHi]);
   if (!all.length) { el.innerHTML = ''; return; }
   let lo = Math.min(...all), hi = Math.max(...all);
   if (floor0) lo = 0;
@@ -566,6 +578,27 @@ function miniLine(el, { ys, ys2, area, color, areaColor, fmt, zero, floor0, h = 
     }
     s += `<path class="ml-area" d="${d}" style="--c:${areaColor || color}"/>`;
   }
+  // Osäkerhetsband (80 % av utfallen) som ljus yta runt linjen
+  if (band) {
+    let d = '', seg = [];
+    const flush = () => {
+      if (seg.length > 1) d += 'M' + seg.map(k => `${X(xs[k]).toFixed(1)} ${Y(bHi[k]).toFixed(1)}`).join('L')
+        + 'L' + seg.slice().reverse().map(k => `${X(xs[k]).toFixed(1)} ${Y(bLo[k]).toFixed(1)}`).join('L') + 'Z';
+      seg = [];
+    };
+    xs.forEach((_, k) => { if (bLo[k] == null || bHi[k] == null) flush(); else seg.push(k); });
+    flush();
+    s += `<path class="ml-band" d="${d}" style="--c:${color}"/>`;
+  }
+  // Riskremsa längs botten: opacitet = sannolikhet
+  if (strip) {
+    const base = Hh - padB;
+    for (let i = start; i < end; i++) {
+      const p = strip[i - start]; if (p == null || p < 2) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i));
+      s += `<rect class="ml-strip" x="${x0.toFixed(1)}" y="${base - 4}" width="${Math.max(0.6, x1 - x0 - 0.4).toFixed(1)}" height="4" style="--c:${areaColor || color}" opacity="${Math.min(1, 0.1 + p / 100 * 0.9).toFixed(2)}"/>`;
+    }
+  }
   if (ys2) s += `<path class="ml-line2" d="${path(vals2)}" style="--c:${color}"/>`;
   s += `<path class="ml-line" d="${path(vals)}" style="--c:${color}"/>`;
   const v = WX.valid(vals);
@@ -585,14 +618,22 @@ function renderOverview() {
   const sl = k => D[k].slice(start, end);
   // Ackumulerad nederbörd ger en lugn linje som visar när och hur mycket
   let acc = 0; const accum = sl('precip_step').map(v => (acc += v ?? 0));
+  // Ackumulerat spann: summan av stegens låga/höga mängd (ungefärligt)
+  let aLo = 0, aHi = 0;
+  const accLo = [], accHi = [];
+  for (let i = start; i < end; i++) {
+    const st = wd.step(i);
+    aLo += (D.precip_p10[i] ?? 0) * st; aHi += (D.precip_p90[i] ?? D.precip[i] ?? 0) * st;
+    accLo.push(Math.min(aLo, accum[i - start])); accHi.push(Math.max(aHi, accum[i - start]));
+  }
   const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k"><span>${k}</span>${lg}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div></div>`;
   const hasTh = st.thMax != null;
   const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
   // Samma grafer och ordning som i nuvarande app
   const items = [
-    ['Temperatur', WX.fmtTemp(st.tMean, 1), `i snitt · ${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }],
-    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `i snitt · max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
-    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, st.pRisk != null ? `risk ${st.pRisk} % under perioden` : '', 'miP', { ys: accum, area: sl('precip_prob'), color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }, lg(['var(--precip)', 'mängd'], ['var(--precip)', 'risk', 'a'])],
+    ['Temperatur', WX.fmtTemp(st.tMean, 1), `i snitt · ${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, lg(['var(--cold)', 'temp'], ['var(--cold)', 'osäkerhet', 'b'])],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `i snitt · max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'osäkerhet', 'b'], ['var(--wind)', 'byar', 'd'])],
+    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `${aHi > st.pSum + 0.05 ? `kan bli ${WX.fmt(aHi, aHi < 10 ? 1 : 0)} · ` : ''}risk ${st.pRisk ?? '—'} %`, 'miP', { ys: accum, band: [accLo, accHi], strip: sl('precip_prob'), color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }, lg(['var(--precip)', 'mängd'], ['var(--precip)', 'spann', 'b'], ['var(--precip)', 'risk', 's'])],
     ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
     ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
     ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
@@ -631,20 +672,23 @@ const mg = WX.chart.group({
     { el: $('mgT'), kind: 'temp', opts: {
       icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300,
       tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('temp', i, v => WX.fmtTemp(v, 1))
-        : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`); },
+        : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`
+          + (D.temp_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.temp_p10[i], 1)} till ${WX.fmtTemp(D.temp_p90[i], 1)}</b>` : '')); },
       dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`temp_src_${id}`][i], c: `var(--src-${id})` }))
         : [{ v: D_().temp[i], c: D_().temp[i] < 0 ? 'var(--cold)' : 'var(--warm)' }, { v: D_().feels_like[i], c: 'var(--feels)' }],
     } },
     { el: $('mgP'), kind: 'precip', opts: {
       axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200,
       tip: i => { const D = D_(), st = S.wd.step(i); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('precip_step', i, v => WX.fmt(v, 1) + ' mm')
-        : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`)
+        : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`
+          + ((D.precip_p90[i] ?? 0) * st >= 0.1 ? `<br>troligen <b>${WX.fmt((D.precip_p10[i] ?? 0) * st, 1)}–${WX.fmt(D.precip_p90[i] * st, 1)} mm</b>` : ''))
         + `<br>risk <b>${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</b>${D.rolling3h[i] != null ? ` · 3 h ${D.rolling3h[i]} %` : ''}${D.thunder[i] != null ? ` · åska ${Math.round(D.thunder[i])} %` : ''}`; },
     } },
     { el: $('mgW'), kind: 'wind', opts: {
       axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230,
       tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('wind', i, v => WX.fmt(v) + ' m/s')
-        : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`); },
+        : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`
+          + (D.wind_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.wind_p10[i])}–${WX.fmt(D.wind_p90[i])} m/s</b>` : '')); },
       dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`wind_src_${id}`][i], c: `var(--src-${id})` }))
         : [{ v: D_().wind[i], c: 'var(--wind)' }, { v: D_().gust[i], c: 'var(--gust)' }],
     } },
@@ -658,9 +702,9 @@ const mg = WX.chart.group({
 function renderDiagram() {
   const L = (c, t, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${t}</span>`;
   const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
-  $('lgT').innerHTML = both() ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet', 'box');
+  $('lgT').innerHTML = both() ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet (80 %)', 'box');
   $('lgP').innerHTML = (both() ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'Kan bli upp till', 'box')) + L('var(--precip)', 'Risk', 'box');
-  $('lgW').innerHTML = both() ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--gust)', 'Byar', 'dash');
+  $('lgW').innerHTML = both() ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--band-wind)', 'Osäkerhet (80 %)', 'box') + L('var(--gust)', 'Byar', 'dash');
   const st = app.stats();
   $('vT').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
   $('vP').textContent = `${WX.fmt(st.pSum, 1)} mm, risk ${st.pRisk ?? '—'} %`;
@@ -670,7 +714,11 @@ function renderDiagram() {
 }
 
 // ═══ TIMME FÖR TIMME ═══
+const UNC_KEY = 'wxE.unc';
+$('unc').checked = WX.store.get(UNC_KEY, true);
+$('unc').onchange = () => { WX.store.set(UNC_KEY, $('unc').checked); renderTable(); };
 function renderTable() {
+  const unc = $('unc').checked;
   const wd = S.wd, D = wd.data, { start, end } = S.period, nowI = WX.nowIndex(wd);
   const idx = []; for (let i = start; i < end; i++) idx.push(i);
   const newDay = i => i === start || WX.dateKey(wd.times[i]) !== WX.dateKey(wd.times[i - 1]);
@@ -688,12 +736,17 @@ function renderTable() {
     + row('Tid', '', (i, c) => `<td class="${c}">${WX.hh(wd.times[i])}${wd.step(i) > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</td>`, 'hourrow')
     + row('Väder', '', (i, c) => `<td class="ic${c}" title="${WX.describe(D.symbols[i])}">${WX.icon(D.symbols[i], 28)}</td>`)
     + row('Temperatur', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.temp[i], .28)}"><b>${WX.fmt(D.temp[i])}</b></td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p90[i])}</td>`, 'unc') : '')
     + row('Känns som', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.feels_like[i], .13)}">${WX.fmt(D.feels_like[i])}</td>`)
     + row('Nederbörd', 'mm', (i, c) => `<td class="${c}${(D.precip_step[i] ?? 0) < 0.05 ? ' dim' : ''}" style="${shade(D.precip[i], 2, '--precip')}">${(D.precip_step[i] ?? 0) < 0.05 ? '·' : WX.fmt(D.precip_step[i], 1)}</td>`)
+    + (unc ? row('kan bli upp till', '', (i, c) => { const v = (D.precip_p90[i] ?? 0) * wd.step(i); return `<td class="${c}">${v < 0.05 ? '·' : WX.fmt(v, 1)}</td>`; }, 'unc') : '')
     + row('Risk', '%', (i, c) => `<td class="${c}" style="${shade(D.precip_prob[i], 100, '--precip')}">${D.precip_prob[i] == null ? '—' : Math.round(D.precip_prob[i])}</td>`)
     + row('Risk 3 h', '%', (i, c) => `<td class="dim${c}">${D.rolling3h[i] ?? ''}</td>`)
     + row('Åska', '%', (i, c) => `<td class="${c}${(D.thunder[i] ?? 0) < 1 ? ' dim' : ''}" style="${shade(D.thunder[i], 50, '--thunder')}">${D.thunder[i] == null ? '—' : Math.round(D.thunder[i])}</td>`)
     + row('Vind', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.wind[i] - 3, 14, '--wind')}">${WX.fmt(D.wind[i])}</td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p90[i])}</td>`, 'unc') : '')
     + row('Byar', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.gust[i] - 8, 18, '--gust')}">${WX.fmt(D.gust[i])}</td>`)
     + row('Riktning', '', (i, c) => `<td class="${c}" title="${WX.windDir(D.wind_direction[i])}">${WX.windArrow(D.wind_direction[i], 15)}</td>`)
     + row('Moln', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.cloud[i])}</td>`)
