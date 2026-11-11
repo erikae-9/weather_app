@@ -1024,7 +1024,8 @@ PANELS.wind = (ctx, opts) => {
 chart.draw = (el, kind, ctx, opts = {}) => {
   ctx = { ...ctx, width: el.clientWidth || el.getBoundingClientRect().width || 600 };
   // Alternativ kan vara funktioner av bredden (t.ex. högre grafer på mobil)
-  opts = Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, typeof v === 'function' ? v(ctx.width) : v]));
+  const BY_WIDTH = ['height', 'bft', 'icons', 'axis', 'arrows', 'strips'];
+  opts = Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, typeof v === 'function' && BY_WIDTH.includes(k) ? v(ctx.width) : v]));
   const out = PANELS[kind](ctx, opts);
   if (typeof out === 'string') { el.innerHTML = out; return null; }
   let plot = el.querySelector(':scope > .mg-plot');
@@ -1064,15 +1065,34 @@ chart.group = ({ panels, getCtx, onCursor, onRange }) => {
     panels.forEach((p, k) => {
       const xh = p.el.querySelector('.mg-xhair'), f = g.frames[k];
       if (!xh || !f) return;
-      if (g.cursor === null || !wd) { xh.hidden = true; return; }
-      const ms = wd.ms[g.cursor] + (wd.step(g.cursor) === 1 ? 0 : 0);
-      const px = f.x(ms);
-      if (px < f.m.l || px > f.m.l + f.pw) { xh.hidden = true; return; }
+      const plot = xh.parentElement;
+      // Valfritt: värdeetikett (opts.tip) och punkter på kurvorna (opts.dots)
+      let tip = plot.querySelector(':scope > .mg-tip'), dots = plot.querySelector(':scope > .mg-dots');
+      if (p.opts?.tip && !tip) { tip = document.createElement('div'); tip.className = 'mg-tip'; tip.hidden = true; plot.appendChild(tip); }
+      if (p.opts?.dots && !dots) { dots = document.createElement('div'); dots.className = 'mg-dots'; plot.appendChild(dots); }
+      const hide = () => { xh.hidden = true; if (tip) tip.hidden = true; if (dots) dots.innerHTML = ''; };
+      if (g.cursor === null || !wd) return hide();
+      const px = f.x(wd.ms[g.cursor]);
+      if (px < f.m.l || px > f.m.l + f.pw) return hide();
       xh.hidden = false;
       xh.style.left = `${px}px`;
       xh.style.top = `${f.m.t}px`;
       xh.style.height = `${f.ph}px`;
       xh.classList.toggle('pinned', g.pinned);
+      if (dots) {
+        dots.innerHTML = p.opts.dots(g.cursor).filter(d => d.v !== null && d.v !== undefined && !Number.isNaN(d.v))
+          .map(d => `<span class="mg-dot" style="left:${px}px;top:${Math.max(f.m.t, Math.min(f.m.t + f.ph, f.y(d.v))).toFixed(1)}px;--c:${d.c}"></span>`).join('');
+      }
+      if (tip) {
+        tip.innerHTML = p.opts.tip(g.cursor);
+        tip.hidden = false;
+        tip.classList.toggle('pinned', g.pinned);
+        const w = tip.offsetWidth, room = f.m.l + f.pw;
+        // Till höger om linjen om det får plats, annars till vänster
+        const left = px + 10 + w <= room ? px + 10 : Math.max(f.m.l, px - 10 - w);
+        tip.style.left = `${left}px`;
+        tip.style.top = `${f.m.t + 4}px`;
+      }
     });
     onCursor?.(g.cursor, g.pinned);
   };

@@ -106,7 +106,13 @@ button { cursor: pointer; }
 /* ── Platsband med dygnsflikar ── */
 .band { background: var(--band); border-bottom: 1px solid var(--line); }
 .locrow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 28px; padding-block: 24px 18px; }
-.kicker { font-size: .8rem; color: var(--ink-3); }
+.meta label { display: inline-flex; align-items: center; gap: 4px; }
+.meta select { border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: .8rem; padding: 0 2px; cursor: pointer; }
+.band .wrap { position: relative; }
+.day.ct { flex: 0 0 auto; justify-content: center; padding-inline: 14px; font-weight: 500; }
+.day.ct[aria-expanded="true"] { background: var(--page); border-left-color: var(--line); border-right-color: var(--line); }
+.ctpop { position: absolute; right: var(--gut-r); top: 100%; z-index: 15; margin-top: 1px; background: var(--page); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 10px 10px; box-shadow: 0 14px 30px -16px rgba(0,0,0,.3); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); max-width: calc(100% - var(--gut-l) - var(--gut-r)); }
+.ctpop input { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; min-height: 34px; }
 h1 { margin: 2px 0 2px; font: 800 clamp(1.7rem, 4.4vw, 2.5rem)/1.08 var(--font-display); letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
 .fav { border: 0; background: transparent; color: var(--ink-3); padding: 4px; border-radius: 6px; display: grid; }
 .fav[aria-pressed="true"] { color: var(--ic-sun); }
@@ -121,7 +127,7 @@ h1 { margin: 2px 0 2px; font: 800 clamp(1.7rem, 4.4vw, 2.5rem)/1.08 var(--font-d
 
 .days { display: flex; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
 .days::-webkit-scrollbar { display: none; }
-.day { flex: 1 0 92px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 10px; border: 0; border-top: 3px solid transparent; border-left: 1px solid transparent; border-right: 1px solid transparent; background: transparent; color: var(--ink-2); position: relative; }
+.day { flex: 1 0 82px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 10px; border: 0; border-top: 3px solid transparent; border-left: 1px solid transparent; border-right: 1px solid transparent; background: transparent; color: var(--ink-2); position: relative; }
 .day + .day::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 1px; background: var(--line); }
 .day:hover { background: var(--band-2); }
 .day[aria-pressed="true"] { background: var(--page); color: var(--ink); border-top-color: var(--accent); border-left-color: var(--line); border-right-color: var(--line); }
@@ -137,7 +143,7 @@ h1 { margin: 2px 0 2px; font: 800 clamp(1.7rem, 4.4vw, 2.5rem)/1.08 var(--font-d
 /* ── Sidinnehåll ── */
 main { padding-block: 26px 56px; }
 .view { display: flex; flex-direction: column; gap: 26px; }
-.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 18px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
 .head h2 { margin: 0; font: 700 1.5rem/1.2 var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
 .head .sub { font-size: .85rem; color: var(--ink-3); }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: .85rem; color: var(--ink-2); }
@@ -170,6 +176,12 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .ml-line { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .ml-line2 { fill: none; stroke: var(--c); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
 .ml-base { stroke: var(--line); stroke-width: 1; }
+.ml-area { fill: var(--c); opacity: .16; }
+.mini .k { display: flex; justify-content: space-between; gap: 6px; }
+.mlg { display: inline-flex; align-items: center; gap: 8px; font-size: .68rem; color: var(--ink-3); white-space: nowrap; }
+.mlg i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--c); margin-right: 3px; vertical-align: middle; }
+.mlg i.a { height: 8px; border: 0; background: var(--c); opacity: .3; }
+.mlg i.d { border-top-style: dashed; border-top-width: 1.5px; }
 .ml-zero { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
 .ml-day { stroke: var(--line); stroke-width: 1; }
 .ml-dot { fill: var(--page); stroke: var(--c); stroke-width: 1.6; }
@@ -195,11 +207,6 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .more a:hover { text-decoration: underline; }
 
 /* ── Diagram ── */
-.readout { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--top-h)); z-index: 10; background: var(--page); border-bottom: 1px solid var(--line); padding: 10px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; font-size: .86rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.readout .when { display: flex; align-items: center; gap: 8px; font: 700 .95rem var(--font-display); color: var(--ink); }
-.readout b { color: var(--ink); font-weight: 600; }
-.readout .tag { font: 600 .64rem var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid currentColor; padding: 0 6px; border-radius: 999px; }
-.readout .hint { color: var(--ink-3); font-size: .78rem; margin-left: auto; }
 .chart-sec { display: flex; flex-direction: column; gap: 4px; }
 .chart-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .chart-h h3 { margin: 0; font: 700 1.05rem var(--font-display); }
@@ -209,6 +216,14 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .legend i.box { height: 9px; border: 0; border-radius: 2px; }
 .legend i.dot { border-top-style: dotted; } .legend i.dash { border-top-style: dashed; }
 .chart { min-width: 0; }
+.tiphint { margin: -16px 0 0; font-size: .82rem; color: var(--ink-3); }
+.mg-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--page); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.35); padding: 6px 9px; font-size: .78rem; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mg-tip b { color: var(--ink); font-weight: 600; }
+.mg-tip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--ink); }
+.mg-tip .big { font: 700 1.05rem var(--font-display); color: var(--ink); }
+.mg-tip.pinned { border-color: var(--accent); }
+.mg-dots { position: absolute; inset: 0; pointer-events: none; }
+.mg-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--page); border: 2.5px solid var(--c); }
 
 /* ── Tabell (transponerad) ── */
 .hm-wrap { overflow-x: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -294,9 +309,6 @@ footer a { color: var(--ink-2); }
   .head h2 { font-size: 1.25rem; }
   .bleed { margin-left: calc(-1 * var(--gut-l)); margin-right: calc(-1 * var(--gut-r)); }
   .chart-h { padding-inline: 0; }
-  .readout { margin-inline: calc(-1 * var(--gut-l)) calc(-1 * var(--gut-r)); padding-inline: var(--gut-l) var(--gut-r); gap: 2px 12px; font-size: .8rem; }
-  .readout .hint { display: none; }
-  .readout .ic { display: none; }
   .texts { grid-template-columns: 1fr; }
   .minis { grid-auto-columns: calc(50% - 18px); }
   .mini { padding-inline: 12px; }
@@ -334,13 +346,17 @@ footer a { color: var(--ink-2); }
   <div class="wrap">
     <div class="locrow">
       <div>
-        <div class="kicker" id="kicker">Väderprognos</div>
         <h1><span id="locName">—</span><button class="fav" id="favBtn" type="button" aria-pressed="false" aria-label="Spara som favorit"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg></button></h1>
         <div class="meta" id="meta"></div>
       </div>
       <div class="now" id="now" aria-label="Just nu"></div>
     </div>
     <div class="days" id="days" role="group" aria-label="Välj dygn"></div>
+    <div class="ctpop" id="ctpop" hidden>
+      <label for="pFrom">Från</label><input type="datetime-local" id="pFrom">
+      <label for="pTo">till</label><input type="datetime-local" id="pTo">
+      <button class="btn" type="button" id="pApply">Visa</button>
+    </div>
   </div>
 </section>
 
@@ -351,7 +367,7 @@ footer a { color: var(--ink-2); }
   <section class="view" id="view-oversikt">
     <div class="head" data-head></div>
     <div class="minis-box">
-      <div class="minis-h"><span id="minisPos">1–2 av 8</span>
+      <div class="minis-h"><span id="minisPos">1–2 av 7</span>
         <div class="minis-nav">
           <button type="button" id="mPrev" aria-label="Föregående graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
           <button type="button" id="mNext" aria-label="Nästa graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
@@ -370,7 +386,7 @@ footer a { color: var(--ink-2); }
   <!-- DIAGRAM -->
   <section class="view" id="view-diagram" hidden>
     <div class="head" data-head></div>
-    <div class="readout" id="readout" aria-live="polite"></div>
+    <p class="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
     <section class="chart-sec">
       <div class="chart-h"><h3>Temperatur</h3><div class="legend" id="lgT"></div><span class="val" id="vT"></span></div>
       <div class="chart bleed" id="mgT"></div>
@@ -457,16 +473,24 @@ paintTheme();
 app.bindSearch($('q'), $('searchPop'));
 $('geoBtn').onclick = () => app.geolocate();
 $('favBtn').onclick = () => { app.toggleFav(); renderBand(); };
+$('pApply').onclick = () => {
+  const A = WX.parseLocalInput($('pFrom').value), B = WX.parseLocalInput($('pTo').value);
+  if (!(A < B)) return;
+  $('ctpop').hidden = true;
+  app.setRange(A.getTime(), B.getTime());
+};
 
 // ── Platsband: namn, just nu, dygnsflikar ──
 function renderBand() {
   $('locName').textContent = S.loc.name;
-  $('kicker').textContent = S.loc.detail ? `Väderprognos · ${S.loc.detail}` : 'Väderprognos';
   document.title = `${S.loc.name} · Eriks Väder`;
   $('favBtn').setAttribute('aria-pressed', String(app.isFav()));
   $('favBtn').setAttribute('aria-label', app.isFav() ? 'Ta bort från favoriter' : 'Spara som favorit');
-  $('meta').innerHTML = `<span>Uppdaterad ${WX.hhmm(S.fetchedAt)}</span><span>${S.wd.sourceIds.map(id => WX.SOURCE_LABELS[id]).join(' och ')}</span>`
+  const eff = app.effectiveMode();
+  $('meta').innerHTML = `<span>Uppdaterad ${WX.hhmm(S.fetchedAt)}</span>`
+    + `<label>Källa <select id="src" title="Prognoskälla">${WX.MODES.map(m => `<option value="${m.id}" ${m.id === eff ? 'selected' : ''} ${app.modeAvailable(m.id) ? '' : 'disabled'}>${m.label}</option>`).join('')}</select></label>`
     + (S.live ? '' : '<span class="demo" title="met.no och SMHI gick inte att nå härifrån. Visar påhittad exempeldata.">Exempeldata</span>');
+  $('src').onchange = e => app.setMode(e.target.value);
   const wd = S.wd, D = wd.data, i = WX.nowIndex(wd), tv = D.temp[i];
   $('now').innerHTML = `${WX.icon(D.symbols[i], 50)}<span class="t ${tv < 0 ? 'cold' : tv >= 20 ? 'warm' : ''}">${WX.fmtTemp(tv)}</span>
     <span class="d"><span class="k">Just nu, ${WX.hh(wd.times[i])}:00</span><b>${WX.describe(D.symbols[i])}</b><span>Känns som ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</span></span>`;
@@ -479,42 +503,35 @@ function renderDays() {
       <b>${d.label}</b><small>${d.date.getDate()} ${WX.MONTHS[d.date.getMonth()]}</small>${WX.icon(d.symbol, 40)}
       <span class="tt"><strong>${WX.fmtTemp(d.hi)}</strong> ${WX.fmtTemp(d.lo)}</span>
       <span class="mm ${mm >= 0.1 ? 'wet' : ''}">${mm >= 0.1 ? WX.fmt(mm, mm < 10 ? 1 : 0) + ' mm' : '0 mm'}</span></button>`;
-  }).join('') + `<button class="day all" type="button" id="allDays" aria-pressed="${S.periodKind === 'all'}">Alla<br>dygn</button>`;
+  }).join('') + `<button class="day all" type="button" id="allDays" aria-pressed="${S.periodKind === 'all'}">Alla<br>dygn</button>`
+    + `<button class="day ct" type="button" id="ctBtn" aria-expanded="${!$('ctpop').hidden}" aria-pressed="${S.periodKind === 'custom'}" aria-controls="ctpop">Egna<br>tider</button>`;
   $('days').querySelectorAll('[data-day]').forEach(b => b.onclick = () => app.toggleDay(b.dataset.day));
   $('allDays').onclick = () => app.setAll();
+  $('ctBtn').onclick = () => {
+    const pop = $('ctpop'); pop.hidden = !pop.hidden;
+    $('ctBtn').setAttribute('aria-expanded', String(!pop.hidden));
+    if (!pop.hidden) {
+      const [a, b] = app.periodRange();
+      $('pFrom').value = WX.toLocalInput(new Date(a)); $('pTo').value = WX.toLocalInput(new Date(b));
+      $('pFrom').min = $('pTo').min = WX.toLocalInput(S.wd.times[0]);
+      $('pFrom').max = $('pTo').max = WX.toLocalInput(new Date(app.extent()[1]));
+    }
+  };
 }
 
-// Rubrik för varje sida: vald period, källa och egna tider
+// Rubrik för varje sida: bara vald period, på en rad
 function renderHead() {
   const sel = S.days.filter(d => d.last > S.period.start && d.first < S.period.end);
   const title = S.periodKind === 'all' ? 'Alla dygn' : sel.length === 1 ? `${sel[0].labelLong} ${WX.dateShort(sel[0].date)}`
     : sel.length ? `${sel[0].labelLong} – ${sel[sel.length - 1].labelLong.toLowerCase()}` : 'Vald period';
-  const eff = app.effectiveMode();
-  const [a, b] = app.periodRange();
-  document.querySelectorAll('[data-head]').forEach((el, n) => {
-    el.innerHTML = `<div><h2>${title}</h2><div class="sub num">${app.periodLabel()}</div></div>
-      <div class="tools">
-        <label>Källa <select id="src${n}">${WX.MODES.map(m => `<option value="${m.id}" ${m.id === eff ? 'selected' : ''} ${app.modeAvailable(m.id) ? '' : 'disabled'}>${m.label}</option>`).join('')}</select></label>
-        <button class="linkbtn" type="button" aria-expanded="false" data-ct>Välj tider</button>
-      </div>
-      <div class="custom" hidden style="flex-basis:100%">
-        <label for="f${n}">Från</label><input type="datetime-local" id="f${n}" value="${WX.toLocalInput(new Date(a))}">
-        <label for="t${n}">till</label><input type="datetime-local" id="t${n}" value="${WX.toLocalInput(new Date(b))}">
-        <button class="btn" type="button" data-apply>Visa</button>
-      </div>`;
-    el.querySelector('select').onchange = e => app.setMode(e.target.value);
-    const ct = el.querySelector('[data-ct]'), cu = el.querySelector('.custom');
-    ct.onclick = () => { cu.hidden = !cu.hidden; ct.setAttribute('aria-expanded', String(!cu.hidden)); };
-    el.querySelector('[data-apply]').onclick = () => {
-      const A = WX.parseLocalInput($(`f${n}`).value), B = WX.parseLocalInput($(`t${n}`).value);
-      if (A < B) app.setRange(A.getTime(), B.getTime());
-    };
+  document.querySelectorAll('[data-head]').forEach(el => {
+    el.innerHTML = `<h2>${title}</h2><span class="sub num">${app.periodLabel()}</span>`;
   });
 }
 
 // ═══ ÖVERSIKT ═══
 // Minimal linjegraf: en linje, punkter vid högsta/lägsta, dygnsgränser
-function miniLine(el, { ys, ys2, color, fmt, zero, floor0, h = 42 }) {
+function miniLine(el, { ys, ys2, area, color, areaColor, fmt, zero, floor0, h = 42 }) {
   const wd = S.wd, { start, end } = S.period;
   const W = Math.max(120, el.clientWidth), Hh = h, padT = 11, padB = 12;
   const a = wd.ms[start], b = wd.end(end - 1);
@@ -538,6 +555,17 @@ function miniLine(el, { ys, ys2, color, fmt, zero, floor0, h = 42 }) {
     if (x < W - 30) s += `<text class="ml-lab" x="${(x + 3).toFixed(1)}" y="${Hh - 1}">${WX.WEEKDAYS[d.getDay()]}</text>`;
   }
   s += `<text class="ml-lab" x="0" y="${Hh - 1}">${WX.hh(new Date(a))}</text>`;
+  // Yta 0–100 % bakom linjen (används för nederbördsrisk), trappsteg per tidssteg
+  if (area) {
+    const top = padT - 2, base = Hh - padB;
+    let d = '';
+    for (let i = start; i < end; i++) {
+      const p = area[i - start]; if (p == null) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i)), y = base - p / 100 * (base - top);
+      d += `M${x0.toFixed(1)} ${base}V${y.toFixed(1)}H${x1.toFixed(1)}V${base}Z`;
+    }
+    s += `<path class="ml-area" d="${d}" style="--c:${areaColor || color}"/>`;
+  }
   if (ys2) s += `<path class="ml-line2" d="${path(vals2)}" style="--c:${color}"/>`;
   s += `<path class="ml-line" d="${path(vals)}" style="--c:${color}"/>`;
   const v = WX.valid(vals);
@@ -557,22 +585,22 @@ function renderOverview() {
   const sl = k => D[k].slice(start, end);
   // Ackumulerad nederbörd ger en lugn linje som visar när och hur mycket
   let acc = 0; const accum = sl('precip_step').map(v => (acc += v ?? 0));
-  const m = (k, v, sub, id) => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div></div>`;
+  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k"><span>${k}</span>${lg}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div></div>`;
   const hasTh = st.thMax != null;
+  const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
+  // Samma grafer och ordning som i nuvarande app
   const items = [
-    ['Temperatur', `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, `känns ${WX.fmtTemp(st.fMin)}`, 'miT', { ys: sl('temp'), color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }],
-    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, 'ackumulerat', 'miP', { ys: accum, color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }],
-    ['Vind', `upp till ${WX.fmt(st.wMax)} m/s`, `byar ${WX.fmt(st.gMax)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), color: 'var(--wind)', fmt: v => WX.fmt(v) }],
-    ['Risk för nederbörd', `${st.pRisk ?? '—'} %`, 'under perioden', 'miR', { ys: sl('precip_prob'), color: 'var(--precip)', fmt: v => Math.round(v) + ' %', floor0: true }],
-    ['Molnighet', `${WX.fmt(st.cMean)} %`, 'i snitt', 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
-    hasTh && ['Åska', `${Math.round(st.thMax)} %`, 'högst', 'miTh', { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true }],
-    ['UV-index', WX.fmt(st.uvMax, 1), 'högst', 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
-    ['Luftfuktighet', `${WX.fmt(st.hMean)} %`, 'i snitt', 'miH', { ys: sl('humidity'), color: 'var(--feels)', fmt: v => WX.fmt(v) + ' %' }],
-    ['Lufttryck', `${WX.fmt(st.prMean)} hPa`, st.prFirst != null && st.prLast != null ? (st.prLast - st.prFirst > 2 ? 'stigande' : st.prLast - st.prFirst < -2 ? 'fallande' : 'stabilt') : '', 'miPr', { ys: sl('pressure'), color: 'var(--ink-3)', fmt: v => WX.fmt(v) }],
-  ].filter(Boolean);
+    ['Temperatur', WX.fmtTemp(st.tMean, 1), `i snitt · ${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `i snitt · max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
+    ['Nederbörd', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, st.pRisk != null ? `risk ${st.pRisk} % under perioden` : '', 'miP', { ys: accum, area: sl('precip_prob'), color: 'var(--precip)', fmt: v => WX.fmt(v, v < 10 ? 1 : 0) + ' mm', floor0: true }, lg(['var(--precip)', 'mängd'], ['var(--precip)', 'risk', 'a'])],
+    ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
+    ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
+    ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
+    ['Luftfuktighet', `${WX.fmt(st.hMean)} %`, `i snitt · ${WX.fmt(st.hMin)}–${WX.fmt(st.hMax)} %`, 'miH', { ys: sl('humidity'), color: 'var(--feels)', fmt: v => WX.fmt(v) + ' %' }],
+  ];
   const sc = $('minis'), keep = sc.scrollLeft;
-  sc.innerHTML = items.map(([k, v, sub, id]) => m(k, v, sub, id)).join('');
-  items.forEach(it => miniLine($(it[3]), it[4]));
+  sc.innerHTML = items.map(([k, v, sub, id, , l]) => m(k, v, sub, id, l)).join('');
+  items.forEach(it => { if (it[4]) miniLine($(it[3]), it[4]); else $(it[3]).innerHTML = '<svg height="42" width="10" aria-hidden="true"></svg>'; });
   sc.scrollLeft = keep;
   updateMiniNav();
 
@@ -590,44 +618,55 @@ function renderOverview() {
 // ═══ DIAGRAM: så stora som möjligt, särskilt på mobil ═══
 const isPhone = w => w < 600;
 const vh = () => window.innerHeight || 800;
-let cur = null;
+// Värdeetiketter i graferna: tid + värden vid hårkorset, punkter på kurvorna
+const D_ = () => S.wd.data;
+const both = () => S.wd.mode === 'both';
+const srcVals = (key, i, f) => S.wd.sourceIds.map(id => `<span style="color:var(--src-${id})">●</span> <b>${f(D_()[`${key}_src_${id}`][i])}</b>`).join('  ');
+const tipTime = i => {
+  const wd = S.wd, t = wd.times[i], st = wd.step(i);
+  return `${WX.dayLabel(t)} ${WX.hh(t)}:00${st > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}`;
+};
 const mg = WX.chart.group({
   panels: [
-    { el: $('mgT'), kind: 'temp', opts: { icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300 } },
-    { el: $('mgP'), kind: 'precip', opts: { height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200, axis: 'hours' } },
-    { el: $('mgW'), kind: 'wind', opts: { axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230 } },
+    { el: $('mgT'), kind: 'temp', opts: {
+      icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('temp', i, v => WX.fmtTemp(v, 1))
+        : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`temp_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().temp[i], c: D_().temp[i] < 0 ? 'var(--cold)' : 'var(--warm)' }, { v: D_().feels_like[i], c: 'var(--feels)' }],
+    } },
+    { el: $('mgP'), kind: 'precip', opts: {
+      axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200,
+      tip: i => { const D = D_(), st = S.wd.step(i); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('precip_step', i, v => WX.fmt(v, 1) + ' mm')
+        : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`)
+        + `<br>risk <b>${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</b>${D.rolling3h[i] != null ? ` · 3 h ${D.rolling3h[i]} %` : ''}${D.thunder[i] != null ? ` · åska ${Math.round(D.thunder[i])} %` : ''}`; },
+    } },
+    { el: $('mgW'), kind: 'wind', opts: {
+      axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('wind', i, v => WX.fmt(v) + ' m/s')
+        : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`wind_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().wind[i], c: 'var(--wind)' }, { v: D_().gust[i], c: 'var(--gust)' }],
+    } },
   ],
   getCtx: () => {
     const w = $('mgT').clientWidth || 600;
     return S.wd && { wd: S.wd, night: S.night, nowMs: Date.now(), ml: isPhone(w) ? 32 : 40, mr: isPhone(w) ? 10 : 64 };
   },
-  onCursor: (i, pinned) => { cur = i; renderReadout(pinned); },
   onRange: r => app.setRange(r[0], r[1], 'pan'),
 });
 function renderDiagram() {
-  const both = S.wd.mode === 'both';
   const L = (c, t, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${t}</span>`;
   const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
-  $('lgT').innerHTML = both ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet', 'box');
-  $('lgP').innerHTML = (both ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'Kan bli upp till', 'box')) + L('var(--precip)', 'Risk', 'box');
-  $('lgW').innerHTML = both ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--gust)', 'Byar', 'dash');
+  $('lgT').innerHTML = both() ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet', 'box');
+  $('lgP').innerHTML = (both() ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'Kan bli upp till', 'box')) + L('var(--precip)', 'Risk', 'box');
+  $('lgW').innerHTML = both() ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--gust)', 'Byar', 'dash');
   const st = app.stats();
   $('vT').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
   $('vP').textContent = `${WX.fmt(st.pSum, 1)} mm, risk ${st.pRisk ?? '—'} %`;
   $('vW').textContent = `max ${WX.fmt(st.wMax)} m/s, byar ${WX.fmt(st.gMax)}`;
-  mg.cursor = null; mg.pinned = false; cur = null;
+  mg.cursor = null; mg.pinned = false;
   mg.setRange(app.periodRange(), app.extent());
-}
-function renderReadout(pinned) {
-  const wd = S.wd; if (!wd) return;
-  const i = cur ?? WX.nowIndex(wd), D = wd.data, t = wd.times[i], step = wd.step(i);
-  const both = wd.mode === 'both';
-  const src = (key, f) => wd.sourceIds.map(id => `<b style="color:var(--src-${id})">${f(D[`${key}_src_${id}`][i])}</b>`).join(' / ');
-  $('readout').innerHTML = `<span class="when"><span class="ic">${WX.icon(D.symbols[i], 28)}</span>${WX.dayLabel(t)} ${WX.hh(t)}:00${step > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}${cur === null ? '<span class="tag">Nu</span>' : ''}${pinned ? '<span class="tag">Fäst</span>' : ''}</span>`
-    + `<span>${both ? src('temp', v => WX.fmtTemp(v, 1)) : `<b>${WX.fmtTemp(D.temp[i], 1)}</b> (känns ${WX.fmtTemp(D.feels_like[i])})`}</span>`
-    + `<span>${both ? src('wind', v => WX.fmt(v)) + ' m/s' : `${WX.windDir(D.wind_direction[i])} <b>${WX.fmt(D.wind[i])}</b> (${WX.fmt(D.gust[i])}) m/s`}</span>`
-    + `<span>${both ? src('precip_step', v => WX.fmt(v, 1)) + ' mm' : `<b>${WX.fmt(D.precip_step[i], 1)} mm</b>`} · risk ${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</span>`
-    + (cur === null ? '<span class="hint">Peka i graferna för detaljer, dra i sidled för att bläddra</span>' : '');
 }
 
 // ═══ TIMME FÖR TIMME ═══
