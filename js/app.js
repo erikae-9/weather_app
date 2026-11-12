@@ -22,6 +22,19 @@ WX.createApp = ({ prefix, onData, onPeriod, onLoading, onError }) => {
 
   const sameLoc = (a, b) => a && b && Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lon - b.lon) < 1e-4;
 
+  // Engångsflytt (nov 2026): Sjungande dalen var tidigare förvald plats och
+  // favorit. Sparad som senaste plats → nya förvalet (Skråmträsk); som
+  // favorit → Skellefteå.
+  const OLD_DEFAULT = { lat: 64.762528, lon: 20.923429 };
+  const SKELLEFTEA = WX.PRESETS.find(p => p.name === 'Skellefteå');
+  if (sameLoc(S.loc, OLD_DEFAULT)) { S.loc = WX.PRESETS[0]; WX.store.set(`${prefix}.loc`, S.loc); }
+  if (S.favs.some(f => sameLoc(f, OLD_DEFAULT))) {
+    S.favs = S.favs.map(f => sameLoc(f, OLD_DEFAULT) ? SKELLEFTEA : f)
+      .filter((f, i, a) => a.findIndex(g => sameLoc(g, f)) === i);
+    WX.store.set(`${prefix}.favs`, S.favs);
+  }
+  S.recent = S.recent.filter(r => !sameLoc(r, OLD_DEFAULT));
+
   function rebuild() {
     S.wd = WX.build(S.raw, S.mode);
     S.days = WX.days(S.wd, S.loc.lat, S.loc.lon);
