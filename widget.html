@@ -10,7 +10,7 @@
    widget). Platsen anges i adressen, eftersom widgetappen inte delar
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
-   Valfritt: &storlek=4x2|2x4|auto, &skala=1–5, &kalla=met|smhi|blend, &tema=ljus|mork,
+   Valfritt: &storlek=4x2|2x4|auto, &skala=1–5, &kalla=met|smhi|blend, &tema=ljus|neutral|mork,
    &bakgrund=genomskinlig, &demo=1.
 
    Widgetappar som tar en skärmbild av sidan (t.ex. AnyWidget) visar sidan i
@@ -52,6 +52,17 @@
   --w-yellow: #f2c83a; --w-orange: #ff9634; --w-red: #ff5a64;
   --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
   --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+  color-scheme: dark;
+}
+:root[data-theme="neutral"] {
+  /* Mellanton: skiffergrå med ljus text, mjukare mot ljusa bakgrundsbilder */
+  --page: #3f4955; --accent: #a9cdff; --accent-ink: #13202f;
+  --bg: #5a6676; --ink: #f4f6f9; --ink-2: #dde3ea; --ink-3: #bcc5d0; --line: rgba(255,255,255,.18);
+  --warm: #ffb4a3; --cold: #b6dcff; --precip: #a6d0ff; --band: rgba(255,255,255,.17);
+  --night: rgba(20,28,40,.16);
+  --w-yellow: #ffd24a; --w-orange: #ffa64d; --w-red: #ff7b80;
+  --ic-sun: #ffcf3f; --ic-moon: #e6ecf3; --ic-cloud: #e9eef4; --ic-cloud-dark: #b9c4d1;
+  --ic-rain: #a6d0ff; --ic-snow: #e3f0ff; --ic-bolt: #ffcf3f; --ic-fog: #c6cfd9;
   color-scheme: dark;
 }
 :root[data-bg="clear"] { --bg: transparent; --page: transparent; }
@@ -187,6 +198,7 @@ function fitStage() {
 fitStage();
 if (q.get('tema') === 'ljus') document.documentElement.dataset.theme = 'light';
 if (q.get('tema') === 'mork' || q.get('tema') === 'mörk') document.documentElement.dataset.theme = 'dark';
+if (q.get('tema') === 'neutral' || q.get('tema') === 'neutralt') document.documentElement.dataset.theme = 'neutral';
 if (/^(genomskinlig|transparent)$/.test(q.get('bakgrund') || '')) document.documentElement.dataset.bg = 'clear';
 
 // Plats: från adressen, annars senast visade i samma webbläsare, annars förvalet
