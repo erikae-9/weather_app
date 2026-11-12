@@ -10,6 +10,8 @@
    widget). Platsen anges i adressen, eftersom widgetappen inte delar
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
+   plats=position (experiment) följer telefonens position, med lat/lon och
+   &namn= som reserv när positionen inte går att få.
    Valfritt: &storlek=4x2|2x4|auto, &skala=1–5, &kalla=met|smhi|blend, &tema=ljus|neutral|mork,
    &bakgrund=genomskinlig, &demo=1.
 
@@ -90,6 +92,8 @@ a.w { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8p
 .num { font-variant-numeric: tabular-nums; }
 
 .top { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--ink-2); min-width: 0; flex: none; }
+.place .pin { margin-right: 3px; vertical-align: -1px; color: var(--accent); }
+.place .pin.off { color: var(--ink-3); }
 .place { font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .upd { margin-left: auto; flex: none; color: var(--ink-3); font-size: .72rem; }
 .warn { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 1px 7px 1px 5px; border-radius: 999px; background: color-mix(in srgb, var(--wc) 22%, transparent); color: var(--ink); font-size: .72rem; font-weight: 600; white-space: nowrap; overflow: hidden; }
@@ -200,11 +204,63 @@ if (q.get('tema') === 'mork' || q.get('tema') === 'mörk') document.documentElem
 if (q.get('tema') === 'neutral' || q.get('tema') === 'neutralt') document.documentElement.dataset.theme = 'neutral';
 if (/^(genomskinlig|transparent)$/.test(q.get('bakgrund') || '')) document.documentElement.dataset.bg = 'clear';
 
-// Plats: från adressen, annars senast visade i samma webbläsare, annars förvalet
+// Plats: från adressen, annars senast visade i samma webbläsare, annars förvalet.
+// plats=position (experiment): telefonens position vid varje uppdatering; går
+// den inte att få används lat/lon (namn i &namn=) som reserv.
+const FOLLOW = /^(position|min-position|gps)$/i.test(q.get('plats') || '');
 const lat = parseFloat(q.get('lat')), lon = parseFloat(q.get('lon'));
-const loc = Number.isFinite(lat) && Number.isFinite(lon)
-  ? { name: q.get('plats') || `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon }
+const fixedLoc = Number.isFinite(lat) && Number.isFinite(lon)
+  ? { name: (FOLLOW ? q.get('namn') : q.get('plats')) || `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon }
   : WX.store.get('wx.loc', WX.PRESETS[0]);
+let loc = fixedLoc;
+let posState = FOLLOW ? 'pending' : 'fixed';   // 'gps' | 'fallback' | 'fixed'
+let posWhy = '';
+
+// Positionen avrundas till tre decimaler (ungefär 100 m) innan den skickas till
+// met.no, SMHI eller OpenStreetMap
+const round3 = v => Math.round(v * 1000) / 1000;
+function getPosition() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve({ err: 'webbläsaren ger ingen position' }); return; }
+    // Om appen aldrig svarar på frågan om plats (varken ja eller nej) ger vi upp efter 12 s
+    setTimeout(() => resolve({ err: 'inget svar om position' }), 12000);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: round3(p.coords.latitude), lon: round3(p.coords.longitude) }),
+      e => resolve({ err: e.code === 1 ? 'åtkomst nekad' : e.code === 3 ? 'tog för lång tid' : 'positionen saknas' }),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 15 * 60e3 });
+  });
+}
+// Närmaste ortnamn via OpenStreetMap, sparat per avrundad position
+async function placeName(la, lo) {
+  const key = `wx.revgeo.${la.toFixed(2)},${lo.toFixed(2)}`;
+  const cached = WX.store.get(key, null);
+  if (cached) return cached;
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=jsonv2&zoom=14&accept-language=sv`, { signal: ctrl.signal });
+    clearTimeout(t);
+    const j = await r.json(), a = j.address || {};
+    const name = a.village || a.hamlet || a.suburb || a.town || a.city || a.municipality || null;
+    if (name) WX.store.set(key, name);
+    return name;
+  } catch { return null; }
+}
+async function resolveLoc() {
+  if (!FOLLOW) return;
+  const p = await getPosition();
+  if (p.err) { loc = fixedLoc; posState = 'fallback'; posWhy = p.err; return; }
+  loc = { name: 'Min position', lat: p.lat, lon: p.lon };
+  posState = 'gps'; posWhy = '';
+  const n = await placeName(p.lat, p.lon);
+  if (n) loc.name = n;
+}
+const PIN = '<svg class="pin" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 11s4-3.6 4-6.5A4 4 0 0 0 2 4.5C2 7.4 6 11 6 11z" fill="currentColor"/><circle cx="6" cy="4.6" r="1.5" fill="var(--bg)"/></svg>';
+const PIN_OFF = '<svg class="pin off" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 11s4-3.6 4-6.5A4 4 0 0 0 2 4.5C2 7.4 6 11 6 11z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 1.5l9 9" stroke="currentColor" stroke-width="1.3"/></svg>';
+function placeLabel() {
+  if (posState === 'gps') return `<span class="place" title="Följer din position">${PIN}${WX.esc(loc.name)}</span>`;
+  if (posState === 'fallback') return `<span class="place" title="Ingen position (${WX.esc(posWhy)}), visar ${WX.esc(loc.name)}">${PIN_OFF}${WX.esc(loc.name)}</span>`;
+  return `<span class="place">${WX.esc(loc.name)}</span>`;
+}
 const mode = ['met', 'smhi', 'blend'].includes(q.get('kalla')) ? q.get('kalla') : 'met';
 $w.href = './#oversikt';
 
@@ -304,7 +360,7 @@ function render() {
   const big = Math.max(36, Math.min(56, Math.round((FW < 250 ? FW * 0.28 : FH * 0.26))));
   const p10 = D.temp_p10[i], p90 = D.temp_p90[i];
   $w.innerHTML = `
-    <div class="top"><span class="place">${WX.esc(loc.name)}</span>
+    <div class="top">${placeLabel()}
       ${top ? `<span class="warn" data-code="${top.code}" title="${WX.esc(top.level + ': ' + top.title + ', ' + WX.warningSpan(top))}"><i class="wd"></i><span>${WX.esc(top.title)}</span></span>` : ''}
       <span class="upd num">${WX.hhmm(fetchedAt)}</span></div>
     <div class="main">${WX.icon(D.symbols[i], big)}
@@ -320,6 +376,7 @@ function render() {
 
 async function load() {
   const demo = WX.wantsDemo();
+  await resolveLoc();
   try {
     const [r, w] = await Promise.all([
       WX.fetchForecast(loc.lat, loc.lon, { demo }),
