@@ -63,3 +63,36 @@ test('varning per dygn tar högsta nivån som berör dygnet', () => {
   assert.equal(WX.warningForDay(yellowOnly, new Date(2026, 10, 12)), null);
   assert.equal(WX.warningForDay(yellowOnly, new Date(2026, 10, 13)).code, 'YELLOW');
 });
+
+// Riktigt svar från SMHI (november 2026, två av meddelandena, oförändrade)
+const LIVE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smhi-ibww-live-2026-11.json'), 'utf8'));
+const LIVE_NOW = Date.parse('2026-11-12T13:00:00Z');
+
+test('riktigt SMHI-svar: rätt län för platser i och utanför områdena', () => {
+  const at = (lat, lon) => WX.parseWarnings(LIVE, lat, lon, { nowMs: LIVE_NOW }).map(w => w.area);
+  assert.deepEqual(at(56.8777, 14.8091), ['Kronobergs län']);   // Växjö
+  assert.deepEqual(at(56.2094, 15.2760), ['Blekinge län']);     // Ronneby
+  assert.deepEqual(at(64.7507, 20.9528), []);                   // Skellefteå
+  assert.deepEqual(at(55.6050, 13.0038), []);                   // Malmö (Skåne ingår inte i testfilen)
+});
+
+test('riktigt SMHI-svar: fält, saknat slut och radbrytningar i texten', () => {
+  const [w] = WX.parseWarnings(LIVE, 56.8777, 14.8091, { nowMs: LIVE_NOW });
+  assert.equal(w.code, 'MESSAGE');
+  assert.equal(w.level, 'Meddelande');
+  assert.equal(w.event, 'Risk för vattenbrist');
+  assert.equal(w.title, 'Risk för vattenbrist - Vattendrag');
+  assert.deepEqual(w.affected, ['Kronobergs län']);
+  assert.equal(w.start.toISOString(), '2026-05-04T22:00:00.000Z');
+  assert.equal(w.end, null);
+  assert.equal(w.published.toISOString(), '2026-11-10T13:36:27.919Z');
+  assert.deepEqual(w.texts.map(t => t.title), ['Händelsebeskrivning', 'Vad ska jag tänka på?']);
+  assert.ok(w.texts[1].text.includes('\n'));
+  assert.match(WX.warningSpan(w), /^från /);
+});
+
+test('meddelanden markerar inga dygn', () => {
+  const list = WX.parseWarnings(LIVE, 56.8777, 14.8091, { nowMs: LIVE_NOW });
+  assert.equal(list.length, 1);
+  assert.equal(WX.warningForDay(list, new Date(2026, 10, 13)), null);
+});
