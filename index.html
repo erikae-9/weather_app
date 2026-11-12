@@ -771,11 +771,11 @@ function renderOverview() {
   const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
   const hasTh = st.thMax != null;
   const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
-  // Samma grafer och ordning som i nuvarande app
+  // Samma grafer som i den tidigare appen; nederbörd före vind
   const items = [
     ['Temperatur', WX.fmtTemp(st.tMean, 1), `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, ''],
-    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
     ['Nederbörd, totalt', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `risk ${st.pRisk ?? '—'} %`, 'miP', { ys: sl('precip'), band: [sl('precip_p10'), sl('precip_p90')], strip: sl('precip_prob'), scaleToLine: true, color: 'var(--precip)', fmt: v => WX.fmt(v, 1) + ' mm/h', floor0: true }, lg(['var(--precip)', 'mm/h'], ['var(--precip)', 'risk', 's'])],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
     ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
     ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
     ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
