@@ -345,6 +345,7 @@ footer p { margin: 0 0 4px; max-width: 75ch; }
 footer a { color: var(--ink-2); }
 .wlink { margin-top: 12px !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .wlink code { font-size: .74rem; background: var(--page); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; max-width: 100%; overflow-wrap: anywhere; user-select: all; }
+.wlink select { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 2px 4px; font-size: .78rem; }
 .wlink button { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 3px 10px; font-size: .78rem; }
 .wlink button:hover { color: var(--ink); border-color: var(--line-strong); }
 
@@ -473,7 +474,7 @@ footer a { color: var(--ink-2); }
 <footer>
   <div class="wrap">
     <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
-    <p class="wlink"><span>Hemskärmswidget för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
+    <p class="wlink"><span>Hemskärmswidget för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <label>Tema <select id="wlinkTheme"><option value="mork">mörkt</option><option value="ljus">ljust</option><option value="">följ telefonen</option></select></label> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
   </div>
 </footer>
 
@@ -559,9 +560,13 @@ function renderWidgetLink() {
   u.searchParams.set('lon', S.loc.lon.toFixed(4));
   const m = app.effectiveMode();
   if (m !== 'met') u.searchParams.set('kalla', m === 'both' ? 'blend' : m);
+  // Widgetappar visar ofta sidan i ljust läge oavsett telefonen: välj tema i länken
+  if ($('wlinkTheme').value) u.searchParams.set('tema', $('wlinkTheme').value);
   $('wlink').textContent = u.href;
   $('wlinkPlace').textContent = S.loc.name;
 }
+$('wlinkTheme').value = WX.theme.current() === 'dark' ? 'mork' : 'ljus';
+$('wlinkTheme').onchange = () => renderWidgetLink();
 $('wlinkCopy').onclick = () => {
   const txt = $('wlink').textContent;
   const done = () => { $('wlinkCopy').textContent = 'Kopierad'; setTimeout(() => { $('wlinkCopy').textContent = 'Kopiera länk'; }, 2000); };
