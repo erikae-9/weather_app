@@ -11,10 +11,14 @@
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
    Valfritt: &kalla=met|smhi|blend, &tema=ljus|mork, &bakgrund=genomskinlig,
-   &demo=1. Kortet anpassar sig efter widgetens storlek. */
+   &demo=1. Kortet anpassar sig efter widgetens storlek:
+     låg (< 150 px):  plats, nu-värden
+     mellan:          + meteogram för närmaste dygnet
+     hög (≥ 270 px):  + kommande timmar */
 :root {
   --bg: #ffffff; --ink: #142235; --ink-2: #46566b; --ink-3: #68788b; --line: #dde3ea;
-  --accent: #1a5cbd; --warm: #c9402e; --cold: #2a6fc4; --precip: #2c84d4;
+  --accent: #1a5cbd; --warm: #d0412e; --cold: #2a6fc4; --precip: #2c84d4; --band: rgba(42,111,196,.16);
+  --night: rgba(28,48,78,.06);
   --w-yellow: #e9b800; --w-orange: #ec7a00; --w-red: #d2232f;
   --ic-sun: #f0a500; --ic-moon: #95a7bf; --ic-cloud: #c4cedb; --ic-cloud-dark: #8293a8;
   --ic-rain: #2c84d4; --ic-snow: #5d98d6; --ic-bolt: #f0b000; --ic-fog: #98a5b4;
@@ -23,7 +27,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e141b; --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9; --line: #233040;
-    --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff;
+    --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff; --band: rgba(108,176,255,.18);
+    --night: rgba(0,0,0,.25);
     --w-yellow: #f2c83a; --w-orange: #ff9634; --w-red: #ff5a64;
     --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
     --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
@@ -32,7 +37,8 @@
 }
 :root[data-theme="dark"] {
   --bg: #0e141b; --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9; --line: #233040;
-  --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff;
+  --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff; --band: rgba(108,176,255,.18);
+  --night: rgba(0,0,0,.25);
   --w-yellow: #f2c83a; --w-orange: #ff9634; --w-red: #ff5a64;
   --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
   --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
@@ -42,37 +48,57 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--ink); font: 400 14px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
-a.w { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 8px 12px; color: inherit; text-decoration: none; }
+body { background: var(--bg); color: var(--ink); font: 400 14px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+a.w { --wc: transparent; display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8px 12px 6px; color: inherit; text-decoration: none; box-shadow: inset 0 3px 0 var(--wc); }
+a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --wc: var(--w-orange); } a.w[data-warn="RED"] { --wc: var(--w-red); }
 .num { font-variant-numeric: tabular-nums; }
 
-.top { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--ink-2); min-width: 0; }
-.place { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.upd { margin-left: auto; flex: none; color: var(--ink-3); font-size: .74rem; }
-.warn { display: inline-flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .76rem; }
-.wd { flex: none; width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); background: var(--wc); }
+.top { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--ink-2); min-width: 0; flex: none; }
+.place { font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upd { margin-left: auto; flex: none; color: var(--ink-3); font-size: .72rem; }
+.warn { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 1px 7px 1px 5px; border-radius: 999px; background: color-mix(in srgb, var(--wc) 22%, transparent); color: var(--ink); font-size: .72rem; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.warn span { overflow: hidden; text-overflow: ellipsis; }
+.wd { flex: none; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--wc); }
 .warn[data-code="YELLOW"] { --wc: var(--w-yellow); } .warn[data-code="ORANGE"] { --wc: var(--w-orange); } .warn[data-code="RED"] { --wc: var(--w-red); }
 
-.main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.main { display: flex; align-items: center; gap: 8px; min-width: 0; flex: none; }
 .main .wxi { flex: none; }
-.t { font-size: 2.6rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
+.t { font-size: 2.5rem; font-weight: 700; letter-spacing: -.045em; line-height: 1; }
 .t.cold { color: var(--cold); } .t.warm { color: var(--warm); }
-.d { display: flex; flex-direction: column; min-width: 0; font-size: .82rem; color: var(--ink-2); }
-.d b { color: var(--ink); font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Troligt spann (P90 över, P10 under) bredvid temperaturen */
+.rng { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; padding: 4px 0 3px; font-size: .7rem; line-height: 1; color: var(--ink-3); border-left: 1.5px solid var(--band); padding-left: 4px; margin-left: -2px; }
+.d { display: flex; flex-direction: column; min-width: 0; margin-left: 6px; font-size: .78rem; color: var(--ink-2); }
+.d b { color: var(--ink); font-weight: 600; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .d span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.hours { display: flex; justify-content: space-between; gap: 2px; border-top: 1px solid var(--line); padding-top: 4px; margin-top: auto; }
-.h { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; font-size: .74rem; color: var(--ink-3); }
-.h .tt { color: var(--ink); font-weight: 600; font-size: .84rem; }
-.h .p { color: var(--precip); font-weight: 600; min-height: 1.2em; }
+.plot { flex: 1 1 auto; min-height: 0; position: relative; }
+.plot svg { position: absolute; inset: 0; display: block; overflow: visible; }
+.p-night { fill: var(--night); }
+.p-band { fill: var(--band); }
+.p-zero { stroke: var(--line); stroke-dasharray: 2 3; }
+.p-base { stroke: var(--line); }
+.p-day { stroke: var(--line); }
+.p-temp { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.p-bar { fill: var(--precip); }
+.p-bar-hi { fill: var(--precip); opacity: .22; }
+.p-risk { fill: var(--precip); }
+.p-lab { fill: var(--ink-2); font: 600 9.5px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.p-tick { fill: var(--ink-3); font: 500 9px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.p-mm, .p-lab { paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.p-mm { fill: var(--precip); font: 600 9px system-ui, sans-serif; }
+
+.hours { display: flex; justify-content: space-between; gap: 2px; border-top: 1px solid var(--line); padding-top: 4px; flex: none; }
+.h { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; font-size: .72rem; color: var(--ink-3); }
+.h .tt { color: var(--ink); font-weight: 600; font-size: .82rem; }
 .msg { margin: auto; text-align: center; color: var(--ink-2); font-size: .85rem; }
 
-/* Små widgetar: dölj det som inte får plats */
-@media (max-height: 150px) { .hours { display: none; } a.w { justify-content: center; } }
+/* Storlekar */
+@media (max-height: 149px) { .plot { display: none; } a.w { justify-content: center; gap: 6px; } }
+@media (max-height: 269px) { .hours { display: none; } }
 @media (max-height: 90px) { .top { display: none; } }
-@media (max-width: 230px) { .d { display: none; } .upd { display: none; } .warn span { display: none; } }
+@media (max-width: 250px) { .d { display: none; } .upd { display: none; } .warn span { display: none; } .warn { padding: 3px; } }
 /* Hög sida (appen visar hela webbsidan): kortet stannar kompakt överst */
-@media (min-height: 320px) { a.w { height: auto; } .hours { margin-top: 2px; } }
+@media (min-height: 420px) { a.w { height: auto; } .plot { flex: none; height: 120px; } }
 
 .wxi-sun { fill: var(--ic-sun); }
 .wxi-ray { stroke: var(--ic-sun); stroke-width: 2.8; stroke-linecap: round; fill: none; }
@@ -94,6 +120,7 @@ a.w { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 8p
 <script>
 (() => {
 'use strict';
+const H = WX.H;
 const q = new URLSearchParams(location.search);
 const $w = document.getElementById('w');
 WX.demoFallback = false;
@@ -111,29 +138,115 @@ const mode = ['met', 'smhi', 'blend'].includes(q.get('kalla')) ? q.get('kalla') 
 $w.href = './#oversikt';
 
 let raw = null, warnings = [], fetchedAt = null;
+const WCOL = { YELLOW: 'var(--w-yellow)', ORANGE: 'var(--w-orange)', RED: 'var(--w-red)' };
+
+// ── Meteogram: temperatur med troligt spann, nederbörd med risk, varningar ──
+function drawPlot(el, wd, i0, hours) {
+  const W = el.clientWidth, Hh = el.clientHeight;
+  if (W < 60 || Hh < 40) { el.innerHTML = ''; return; }
+  const D = wd.data, a = wd.ms[i0], b = a + hours * H;
+  const idx = []; for (let i = i0; i < wd.n && wd.ms[i] < b; i++) idx.push(i);
+  const X = t => (t - a) / (b - a) * W;
+  const axisH = 11, top = 5;
+  const tTop = top + 10, tH = Math.max(14, (Hh - axisH - top) * 0.56 - 10);
+  const pTop = tTop + tH + 6, pH = Math.max(8, Hh - axisH - pTop - 5);
+  let s = '';
+
+  // Natt och varningar (bakgrund), varningsremsa överst
+  for (const [n0, n1] of WX.nightIntervals(a, b, loc.lat, loc.lon)) {
+    const x0 = Math.max(0, X(n0)), x1 = Math.min(W, X(n1));
+    if (x1 > x0) s += `<rect class="p-night" x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${Hh - axisH}"/>`;
+  }
+  for (const w of warnings) {
+    if (w.code === 'MESSAGE') continue;
+    const x0 = Math.max(0, X(w.start ? w.start.getTime() : a)), x1 = Math.min(W, X(w.end ? w.end.getTime() : b));
+    if (x1 <= x0) continue;
+    s += `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${Hh - axisH}" fill="${WCOL[w.code]}" opacity=".1"/>`
+      + `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="3" rx="1.5" fill="${WCOL[w.code]}"/>`;
+  }
+
+  // Temperatur: spann (P10–P90) som band, linjen byter färg vid noll
+  const xs = idx.map(i => X(wd.ms[i]));
+  const vals = idx.map(i => D.temp[i]), lo = idx.map(i => D.temp_p10[i] ?? D.temp[i]), hi = idx.map(i => D.temp_p90[i] ?? D.temp[i]);
+  const all = WX.valid([...vals, ...lo, ...hi]);
+  if (all.length) {
+    let tmin = Math.min(...all), tmax = Math.max(...all);
+    if (tmax - tmin < 3) { const m = (tmax + tmin) / 2; tmin = m - 1.5; tmax = m + 1.5; }
+    const Y = v => tTop + (tmax - v) / (tmax - tmin) * tH;
+    let band = 'M' + xs.map((x, k) => `${x.toFixed(1)} ${Y(hi[k]).toFixed(1)}`).join('L')
+      + 'L' + xs.map((x, k) => `${x.toFixed(1)} ${Y(lo[k]).toFixed(1)}`).reverse().join('L') + 'Z';
+    s += `<path class="p-band" d="${band}"/>`;
+    if (tmin < 0 && tmax > 0) s += `<line class="p-zero" x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+    const z = Math.min(1, Math.max(0, (Y(0) - tTop) / tH));
+    s += `<defs><linearGradient id="tg" gradientUnits="userSpaceOnUse" x1="0" y1="${tTop}" x2="0" y2="${tTop + tH}">
+      <stop offset="${z.toFixed(3)}" stop-color="var(--warm)"/><stop offset="${z.toFixed(3)}" stop-color="var(--cold)"/></linearGradient></defs>`;
+    s += `<path class="p-temp" stroke="url(#tg)" d="${'M' + xs.map((x, k) => `${x.toFixed(1)} ${Y(vals[k]).toFixed(1)}`).join('L')}"/>`;
+    // Högsta och lägsta temperatur
+    const kMax = vals.indexOf(Math.max(...vals)), kMin = vals.indexOf(Math.min(...vals));
+    const lab = (k, above) => {
+      const x = Math.min(W - 12, Math.max(12, xs[k]));
+      return `<circle cx="${xs[k].toFixed(1)}" cy="${Y(vals[k]).toFixed(1)}" r="2.2" fill="var(--bg)" stroke="${vals[k] < 0 ? 'var(--cold)' : 'var(--warm)'}" stroke-width="1.5"/>`
+        + `<text class="p-lab" x="${x.toFixed(1)}" y="${(above ? Y(vals[k]) - 5 : Y(vals[k]) + 12).toFixed(1)}" text-anchor="middle">${WX.fmtTemp(vals[k])}</text>`;
+    };
+    s += lab(kMax, true);
+    if (kMin !== kMax && Math.abs(vals[kMax] - vals[kMin]) >= 1) s += lab(kMin, false);
+  }
+
+  // Nederbörd: staplar (mm/h) med ljus "kan bli upp till", riskremsa under
+  const rates = idx.map(i => D.precip[i] ?? 0);
+  const pScale = Math.max(1, Math.max(...rates) * 1.25);
+  const bw = Math.max(1, W / hours - 1.2);
+  s += `<line class="p-base" x1="0" x2="${W}" y1="${pTop + pH}" y2="${pTop + pH}"/>`;
+  idx.forEach((i, k) => {
+    const x = xs[k] + 0.6, hiR = Math.min(pScale, D.precip_p90[i] ?? 0), r = rates[k];
+    if (hiR > 0.02) s += `<rect class="p-bar-hi" x="${x.toFixed(1)}" y="${(pTop + pH - hiR / pScale * pH).toFixed(1)}" width="${bw.toFixed(1)}" height="${(hiR / pScale * pH).toFixed(1)}"/>`;
+    if (r > 0.02) s += `<rect class="p-bar" x="${x.toFixed(1)}" y="${(pTop + pH - Math.min(r, pScale) / pScale * pH).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Math.min(r, pScale) / pScale * pH).toFixed(1)}"/>`;
+    const p = D.precip_prob[i];
+    if (p != null && p >= 5) s += `<rect class="p-risk" x="${x.toFixed(1)}" y="${pTop + pH + 1.5}" width="${bw.toFixed(1)}" height="2.5" opacity="${Math.min(1, .12 + p / 100 * .88).toFixed(2)}"/>`;
+  });
+  const sum = idx.reduce((acc, i) => acc + (D.precip_step[i] ?? 0), 0);
+  if (sum >= 0.1) s += `<text class="p-mm" x="${W - 2}" y="${pTop + 8}" text-anchor="end">${WX.fmt(sum, sum < 10 ? 1 : 0)} mm/${hours} h</text>`;
+
+  // Tidsaxel: var sjätte timme, veckodag vid midnatt
+  for (let t = Math.ceil(a / (3 * H)) * 3 * H; t < b; t += 3 * H) {
+    const d = new Date(t), h = d.getHours();
+    if (h % 6) continue;
+    const x = X(t);
+    if (x < 8 || x > W - 8) continue;
+    if (h === 0) s += `<line class="p-day" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="0" y2="${Hh - axisH}"/>`;
+    s += `<text class="p-tick" x="${x.toFixed(1)}" y="${Hh - 1}" text-anchor="middle">${h === 0 ? WX.WEEKDAYS[d.getDay()] : String(h).padStart(2, '0')}</text>`;
+  }
+  el.innerHTML = `<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" aria-hidden="true">${s}</svg>`;
+}
 
 function render() {
   if (!raw) return;
   const wd = WX.build(raw, mode), D = wd.data, i = WX.nowIndex(wd), tv = D.temp[i];
   const today = WX.days(wd, loc.lat, loc.lon)[0];
   const top = warnings.find(w => w.code !== 'MESSAGE');
-  // Kommande timmar: så många kolumner som får plats, var annan timme
+  // Varningar som gäller nu eller inom ett dygn färgar widgetens överkant
+  const soon = warnings.filter(w => w.code !== 'MESSAGE' && (!w.start || w.start.getTime() < Date.now() + 24 * H));
+  $w.dataset.warn = soon[0]?.code || '';
   const cols = Math.max(3, Math.min(8, Math.floor(window.innerWidth / 52)));
   const hours = [];
   for (let k = i + 2; k < wd.n && hours.length < cols; k += 2) {
-    const amt = (D.precip_step[k - 1] ?? 0) + (D.precip_step[k] ?? 0);
-    hours.push(`<div class="h"><span>${WX.hh(wd.times[k])}</span>${WX.icon(D.symbols[k], 24)}<span class="tt">${WX.fmtTemp(D.temp[k])}</span><span class="p">${amt >= 0.1 ? WX.fmt(amt, 1) : ''}</span></div>`);
+    hours.push(`<div class="h"><span>${WX.hh(wd.times[k])}</span>${WX.icon(D.symbols[k], 22)}<span class="tt">${WX.fmtTemp(D.temp[k])}</span></div>`);
   }
-  const big = Math.max(40, Math.min(64, Math.round(window.innerHeight * 0.32)));
+  const big = Math.max(36, Math.min(56, Math.round(window.innerHeight * 0.26)));
+  const p10 = D.temp_p10[i], p90 = D.temp_p90[i];
   $w.innerHTML = `
     <div class="top"><span class="place">${WX.esc(loc.name)}</span>
-      ${top ? `<span class="warn" data-code="${top.code}" title="${WX.esc(top.level + ': ' + top.title)}"><i class="wd"></i><span>${WX.esc(top.title)}</span></span>` : ''}
+      ${top ? `<span class="warn" data-code="${top.code}" title="${WX.esc(top.level + ': ' + top.title + ', ' + WX.warningSpan(top))}"><i class="wd"></i><span>${WX.esc(top.title)}</span></span>` : ''}
       <span class="upd num">${WX.hhmm(fetchedAt)}</span></div>
     <div class="main">${WX.icon(D.symbols[i], big)}
       <span class="t num ${tv < 0 ? 'cold' : tv >= 20 ? 'warm' : ''}">${WX.fmtTemp(tv)}</span>
-      <span class="d"><b>${WX.describe(D.symbols[i])}</b><span>Känns ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</span>
-        ${today ? `<span class="num">Idag ${WX.fmtTemp(today.hi)} / ${WX.fmtTemp(today.lo)}${(today.precip ?? 0) >= 0.1 ? ` · ${WX.fmt(today.precip, today.precip < 10 ? 1 : 0)} mm` : ''}</span>` : ''}</span></div>
+      ${p10 != null && p90 != null && p90 - p10 >= 0.5 ? `<span class="rng num" title="80 % troligt spann">${WX.fmt(p90)}<span>${WX.fmt(p10)}</span></span>` : ''}
+      <span class="d"><b>${WX.describe(D.symbols[i])}</b><span>Känns ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} (${WX.fmt(D.gust[i])}) m/s</span>
+        ${today ? `<span class="num">Idag ${WX.fmtTemp(today.hi)} / ${WX.fmtTemp(today.lo)}${(today.precip ?? 0) >= 0.1 ? ` · ${WX.fmt(today.precip, today.precip < 10 ? 1 : 0)} mm` : ''}${today.risk != null ? ` · ${today.risk} %` : ''}</span>` : ''}</span></div>
+    <div class="plot" id="plot"></div>
     <div class="hours num">${hours.join('')}</div>`;
+  const plot = document.getElementById('plot');
+  if (plot.offsetParent !== null) drawPlot(plot, wd, i, window.innerWidth >= 480 ? 36 : 24);
 }
 
 async function load() {
