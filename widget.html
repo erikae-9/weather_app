@@ -10,7 +10,7 @@
    widget). Platsen anges i adressen, eftersom widgetappen inte delar
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
-   Valfritt: &storlek=4x2|2x4|auto, &kalla=met|smhi|blend, &tema=ljus|mork,
+   Valfritt: &storlek=4x2|2x4|auto, &skala=1–5, &kalla=met|smhi|blend, &tema=ljus|mork,
    &bakgrund=genomskinlig, &demo=1.
 
    Widgetappar som tar en skärmbild av sidan (t.ex. AnyWidget) visar sidan i
@@ -63,7 +63,11 @@ body { background: var(--page); color: var(--ink); font: 400 14px/1.3 system-ui,
 .frame { container-type: size; width: var(--fw); height: var(--fh); background: var(--bg); overflow: hidden; }
 :root[data-size="2x4"] { --fw: 200px; --fh: 440px; }
 :root[data-size="4x2"] { --fw: 400px; --fh: 200px; }
-:root[data-size="2x4"] body, :root[data-size="4x2"] body { padding: 12px; }
+/* Scenen (ram + knapp) skalas upp när sidan är bred, så att en skärmbild
+   av sidan får fler pixlar och texten blir skarp i widgeten */
+.stage { transform-origin: 0 0; }
+:root[data-size="2x4"] .stage, :root[data-size="4x2"] .stage { padding: 12px; width: calc(var(--fw) + 24px); }
+:root[data-size="2x4"] body, :root[data-size="4x2"] body { overflow-x: hidden; }
 :root[data-size="auto"] .frame { width: 100vw; height: 100vh; }
 :root[data-size="auto"] body { overflow: hidden; background: var(--bg); }
 :root[data-size="auto"] .open { display: none; }
@@ -144,9 +148,11 @@ a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --w
 </style>
 </head>
 <body>
+<div class="stage" id="stage">
 <div class="frame" id="frame"><a class="w" id="w" href="./" target="_blank" rel="noopener"><span class="msg">Hämtar prognos …</span></a></div>
 <a class="open" href="./#oversikt">Öppna Eriks Väder <span aria-hidden="true">→</span></a>
-<p class="hint">Rutan ovanför är widgeten. Rama in den i widgetappen.</p>
+<p class="hint">Rutan ovanför är widgeten. Rama in den i widgetappen. Välj skrivbordsvy i appen för skarpare text.</p>
+</div>
 
 <script src="forecast-sources.js"></script>
 <script src="js/core.js"></script>
@@ -165,6 +171,20 @@ document.documentElement.dataset.size = SIZE;
 const $frame = document.getElementById('frame');
 // I läge auto med en hög sida (appen visar hela sidan) hålls kortet kompakt överst
 if (SIZE === 'auto' && window.innerHeight >= 420) $frame.classList.add('tallpage');
+
+// Förstoring: &skala=1–5, annars så stor som sidans bredd tillåter
+const $stage = document.getElementById('stage');
+function fitStage() {
+  if (SIZE === 'auto') return;
+  const asked = parseFloat(q.get('skala'));
+  const natural = $stage.offsetWidth;
+  const z = Number.isFinite(asked) ? Math.min(5, Math.max(1, asked))
+    : Math.min(4, Math.max(0.85, Math.floor(window.innerWidth / natural * 100) / 100));   // något mindre om sidan är smal
+  $stage.style.transform = z === 1 ? '' : `scale(${z})`;
+  document.body.style.width = z < 1 ? `${Math.floor(natural * z)}px` : '';
+  document.body.style.height = `${Math.ceil($stage.offsetHeight * z)}px`;
+}
+fitStage();
 if (q.get('tema') === 'ljus') document.documentElement.dataset.theme = 'light';
 if (q.get('tema') === 'mork' || q.get('tema') === 'mörk') document.documentElement.dataset.theme = 'dark';
 if (/^(genomskinlig|transparent)$/.test(q.get('bakgrund') || '')) document.documentElement.dataset.bg = 'clear';
@@ -310,7 +330,7 @@ setInterval(render, 10 * 60e3);                       // flytta "nu" mellan häm
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && (!fetchedAt || Date.now() - fetchedAt > 15 * 60e3)) load();
 });
-let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { fitStage(); render(); }, 150); });
 })();
 </script>
 </body>
