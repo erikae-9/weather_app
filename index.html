@@ -184,6 +184,11 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .ml-strip { fill: var(--c); }
 .mini { overflow: hidden; }
 .mini .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Små grafer är klickbara: öppnar den stora grafen på Diagram */
+.mini { cursor: pointer; border-radius: 6px; transition: background .15s; }
+.mini:hover { background: var(--band); }
+.mini:focus-visible { outline-offset: -2px; }
+.mini .k::after { content: " ›"; color: var(--accent); font-weight: 600; }
 .mlg { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin-top: 3px; font-size: .68rem; line-height: 1.5; color: var(--ink-3); }
 .mlg > span { white-space: nowrap; }
 .mnote { margin-left: 14px; white-space: nowrap; }
@@ -218,7 +223,18 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .more a:hover { text-decoration: underline; }
 
 /* ── Diagram ── */
-.chart-sec { display: flex; flex-direction: column; gap: 4px; }
+.chart-sec { display: flex; flex-direction: column; gap: 4px; scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--top-h) + 12px); border-radius: 8px; }
+.chart-sec.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0%, 30% { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* Fler grafer: en extra graf åt gången */
+.more-charts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: .86rem; color: var(--ink-3); }
+.more-charts button { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 999px; padding: 5px 12px; font-size: .84rem; font-weight: 500; }
+.more-charts button:hover { color: var(--ink); border-color: var(--line-strong); }
+.more-charts button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chart-h .x { border: 0; background: none; color: var(--ink-3); font-size: 1rem; padding: 2px 6px; border-radius: 6px; }
+.chart-h .x:hover { color: var(--ink); background: var(--band); }
+.mg-area { opacity: .14; stroke: none; }
+.mg-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 .chart-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .chart-h h3 { margin: 0; font: 700 1.05rem var(--font-display); }
 .chart-h .val { margin-left: auto; font-size: .82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -377,7 +393,19 @@ footer a { color: var(--ink-2); }
   .minis { grid-auto-columns: calc(50% - 18px); }
   .mini { padding-inline: 12px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Mobil: sidorna i ett fast fält längst ned, som i en app */
+.tabbar { display: none; }
+@media (max-width: 640px) {
+  .menu { display: none !important; }
+  .topbar-in { padding-block: 10px; }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--page); border-top: 1px solid var(--line);
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); box-shadow: 0 -6px 18px -12px rgba(0,0,0,.35); }
+  .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 9px; color: var(--ink-3); text-decoration: none; font-size: .72rem; font-weight: 500; }
+  .tabbar a[aria-current="page"] { color: var(--accent); }
+  .tabbar svg { width: 22px; height: 22px; }
+  body { padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
@@ -452,18 +480,23 @@ footer a { color: var(--ink-2); }
   <section class="view" id="view-diagram" hidden>
     <div class="head" data-head></div>
     <p class="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
-    <section class="chart-sec">
+    <section class="chart-sec" id="secT">
       <div class="chart-h"><h3>Temperatur</h3><div class="legend" id="lgT"></div><span class="val" id="vT"></span></div>
       <div class="chart bleed" id="mgT"></div>
     </section>
-    <section class="chart-sec">
+    <section class="chart-sec" id="secP">
       <div class="chart-h"><h3>Nederbörd</h3><div class="legend" id="lgP"></div><span class="val" id="vP"></span></div>
       <div class="chart bleed" id="mgP"></div>
     </section>
-    <section class="chart-sec">
+    <section class="chart-sec" id="secW">
       <div class="chart-h"><h3>Vind</h3><div class="legend" id="lgW"></div><span class="val" id="vW"></span></div>
       <div class="chart bleed" id="mgW"></div>
     </section>
+    <section class="chart-sec" id="secX" hidden>
+      <div class="chart-h"><h3 id="ttlX"></h3><div class="legend" id="lgX"></div><span class="val" id="vX"></span><button class="x" type="button" id="closeX" aria-label="Dölj grafen">✕</button></div>
+      <div class="chart bleed" id="mgX"></div>
+    </section>
+    <div class="more-charts" id="moreCharts" role="group" aria-label="Fler grafer"></div>
   </section>
 
   <!-- TIMME FÖR TIMME -->
@@ -474,6 +507,12 @@ footer a { color: var(--ink-2); }
     <div class="hm-legend"><span>Temperatur <span class="hm-scale" id="hmScale"></span> −20° till +30°</span><span>Nederbörd, risk, vind och byar blir starkare ju högre värdet är.</span></div>
   </section>
 </main>
+
+<nav class="tabbar" aria-label="Sidor">
+  <a href="#oversikt" data-view="oversikt"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 19h9a3.5 3.5 0 0 0 0-7 4.6 4.6 0 0 0-8.6 1.4A2.8 2.8 0 0 0 8 19z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Översikt</a>
+  <a href="#diagram" data-view="diagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 7-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Diagram</a>
+  <a href="#timmar" data-view="timmar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M9 4v16" stroke="currentColor" stroke-width="1.6"/></svg>Timmar</a>
+</nav>
 
 <footer>
   <div class="wrap">
@@ -524,9 +563,12 @@ const markDirty = () => VIEWS.forEach(v => dirty[v] = true);
 
 const router = WX.router(VIEWS, v => {
   VIEWS.forEach(x => $('view-' + x).hidden = x !== v);
-  document.querySelectorAll('.menu a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  document.querySelectorAll('.menu a, .tabbar a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   renderView();
+  if (v === 'diagram' && pendingFocus) { const id = pendingFocus; pendingFocus = null; requestAnimationFrame(() => focusSection(id)); }
+  else if (!pendingFocus) window.scrollTo({ top: 0 });
 });
+let pendingFocus = null;
 function renderView() {
   if (!S.wd) return;
   const v = router.current();
@@ -768,7 +810,7 @@ function renderOverview() {
   const wd = S.wd, D = wd.data, st = app.stats(), { start, end } = S.period;
   const sl = k => D[k].slice(start, end);
   // Ackumulerad nederbörd ger en lugn linje som visar när och hur mycket
-  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
+  const m = (k, v, sub, id, lg = '') => `<div class="mini" role="link" tabindex="0" data-open="${id}" aria-label="${k}: visa stor graf"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
   const hasTh = st.thMax != null;
   const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
   // Samma grafer som i den tidigare appen; nederbörd före vind
@@ -786,6 +828,10 @@ function renderOverview() {
   items.forEach(it => { if (it[4]) miniLine($(it[3]), it[4]); else $(it[3]).innerHTML = '<svg height="42" width="10" aria-hidden="true"></svg>'; });
   sc.scrollLeft = keep;
   updateMiniNav();
+  sc.querySelectorAll('[data-open]').forEach(el => {
+    el.onclick = () => openChart(el.dataset.open);
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChart(el.dataset.open); } };
+  });
 
   const sel = S.days.filter(d => d.last > start && d.first < end);
   const notes = WX.highlights(wd, sel, S.period);
@@ -809,6 +855,66 @@ const tipTime = i => {
   const wd = S.wd, t = wd.times[i], st = wd.step(i);
   return `${WX.dayLabel(t)} ${WX.hh(t)}:00${st > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}`;
 };
+// Extra graf (en åt gången) för parametrar som bara har en liten graf på Översikt
+const EXTRAS = {
+  thunder:  { title: 'Åskrisk', key: 'thunder', color: 'var(--thunder)', unit: '%', min: 0, minSpan: 20, fmt: v => Math.round(v) + '', tipFmt: v => `${Math.round(v)} %`,
+              marks: [{ v: WX.THUNDER_MED, label: 'håll koll' }, { v: WX.THUNDER_HIGH, label: 'trolig' }], empty: 'Ingen åskdata utanför SMHI:s område' },
+  uv:       { title: 'UV-index', key: 'uv', color: 'var(--ic-sun)', min: 0, minSpan: 3, fmt: v => WX.fmt(v), tipFmt: v => WX.fmt(v, 1),
+              marks: [{ v: 3, label: 'måttlig' }, { v: 6, label: 'hög' }, { v: 8, label: 'mycket hög' }] },
+  cloud:    { title: 'Molnighet', key: 'cloud', color: 'var(--cloud)', unit: '%', min: 0, max: 100, fmt: v => WX.fmt(v), tipFmt: v => `${WX.fmt(v)} %` },
+  humidity: { title: 'Luftfuktighet', key: 'humidity', color: 'var(--feels)', unit: '%', max: 100, minSpan: 20, fmt: v => WX.fmt(v), tipFmt: v => `${WX.fmt(v)} %` },
+};
+const EXTRA_KEY = 'wx.extraChart';
+let extra = WX.store.get(EXTRA_KEY, null);
+if (!EXTRAS[extra]) extra = null;
+const extraPanel = { el: $('mgX'), kind: 'line', opts: {
+  axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(200, Math.round(vh() * 0.3)) : 180,
+  tip: i => { const c = EXTRAS[extra], v = D_()[c.key][i]; return `<span class="tm">${tipTime(i)}</span><span class="big">${v == null ? '—' : c.tipFmt(v)}</span>`; },
+  dots: i => [{ v: D_()[EXTRAS[extra].key][i], c: EXTRAS[extra].color }],
+} };
+function applyExtraOpts() {
+  const c = EXTRAS[extra];
+  if (!c) return;
+  Object.assign(extraPanel.opts, { key: c.key, color: c.color, unit: c.unit, min: c.min, max: c.max, minSpan: c.minSpan, fmt: c.fmt, marks: c.marks, empty: c.empty });
+}
+function setExtra(key, { scroll = false } = {}) {
+  extra = EXTRAS[key] ? key : null;
+  WX.store.set(EXTRA_KEY, extra);
+  renderExtra();
+  if (S.wd) mg.render();
+  if (scroll && extra) focusSection('secX');
+}
+function renderExtra() {
+  $('secX').hidden = !extra;
+  $('moreCharts').innerHTML = '<span>Visa även:</span>' + Object.entries(EXTRAS)
+    .map(([k, c]) => `<button type="button" data-extra="${k}" aria-pressed="${k === extra}">${c.title}</button>`).join('');
+  $('moreCharts').querySelectorAll('[data-extra]').forEach(b => b.onclick = () => setExtra(b.dataset.extra === extra ? null : b.dataset.extra, { scroll: b.dataset.extra !== extra }));
+  if (!extra) return;
+  applyExtraOpts();
+  const c = EXTRAS[extra];
+  $('ttlX').textContent = c.title;
+  if (S.wd) {
+    const { start, end } = S.period, v = WX.valid(D_()[c.key].slice(start, end));
+    $('vX').textContent = v.length ? `${c.tipFmt(Math.min(...v))} till ${c.tipFmt(Math.max(...v))}` : '';
+  }
+}
+$('closeX').onclick = () => setExtra(null);
+function focusSection(id) {
+  const el = $(id);
+  if (!el || el.hidden) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+// Från en liten graf på Översikt: öppna Diagram vid rätt graf
+const MINI_TARGET = { miT: 'secT', miP: 'secP', miW: 'secW', miTh: 'thunder', miU: 'uv', miC: 'cloud', miH: 'humidity' };
+function openChart(miniId) {
+  const t = MINI_TARGET[miniId];
+  if (EXTRAS[t]) { extra = t; WX.store.set(EXTRA_KEY, t); dirty.diagram = true; pendingFocus = 'secX'; }
+  else pendingFocus = t;
+  if (router.current() === 'diagram') { renderView(); focusSection(pendingFocus); pendingFocus = null; }
+  else router.go('diagram');
+}
+
 const mg = WX.chart.group({
   panels: [
     { el: $('mgT'), kind: 'temp', opts: {
@@ -834,6 +940,7 @@ const mg = WX.chart.group({
       dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`wind_src_${id}`][i], c: `var(--src-${id})` }))
         : [{ v: D_().wind[i], c: 'var(--wind)' }, { v: D_().gust[i], c: 'var(--gust)' }],
     } },
+    extraPanel,
   ],
   getCtx: () => {
     const w = $('mgT').clientWidth || 600;
@@ -851,6 +958,7 @@ function renderDiagram() {
   $('vT').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
   $('vP').textContent = `${WX.fmt(st.pSum, 1)} mm, risk ${st.pRisk ?? '—'} %`;
   $('vW').textContent = `max ${WX.fmt(st.wMax)} m/s, byar ${WX.fmt(st.gMax)}`;
+  renderExtra();
   mg.cursor = null; mg.pinned = false;
   mg.setRange(app.periodRange(), app.extent());
 }

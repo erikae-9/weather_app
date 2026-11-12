@@ -1023,6 +1023,54 @@ PANELS.wind = (ctx, opts) => {
   return { svg: s, f };
 };
 
+// Enkel linjegraf för en valfri parameter (åska, UV, moln, fukt …).
+// opts: key, color, fmt, unit, min/max (fasta gränser, annars efter data),
+// minSpan, marks: [{ v, label }] för tröskellinjer.
+PANELS.line = (ctx, opts) => {
+  const height = opts.height ?? 160;
+  const f = frame(ctx, height, { top: 8, bottom: opts.axis?.includes('hours') ? 20 : 6 });
+  const { vis, x, m } = f, wd = ctx.wd, D = wd.data;
+  const ys = D[opts.key] || [];
+  const vals = valid(vis.map(i => ys[i]));
+  let lo = opts.min ?? (vals.length ? Math.min(...vals) : 0);
+  let hi = opts.max ?? (vals.length ? Math.max(...vals) : 1);
+  if (opts.max == null) hi += Math.max(0.5, (hi - lo) * 0.12);
+  if (opts.min == null) lo -= Math.max(0.5, (hi - lo) * 0.08);
+  if (hi - lo < (opts.minSpan || 1)) hi = lo + (opts.minSpan || 1);
+  const y = v => m.t + (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo) * f.ph;
+  const xs = vis.map(i => x(wd.ms[i]));
+  const fmt = opts.fmt || (v => WX.fmt(v));
+  const cid = `mgc${++clipSeq}`;
+  let s = `<defs><clipPath id="${cid}"><rect x="${m.l}" y="${m.t}" width="${f.pw}" height="${f.ph}"/></clipPath></defs>`;
+  s += decorations(ctx, f);
+  s += yGrid(f, lo, hi, y, fmt, 'left');
+  if (opts.unit) s += `<text class="mg-unit" x="${m.l + 4}" y="${m.t + 10}" text-anchor="start">${opts.unit}</text>`;
+  for (const mk of opts.marks || []) {
+    if (mk.v <= lo || mk.v >= hi) continue;
+    s += `<line class="mg-bft" x1="${m.l}" x2="${m.l + f.pw}" y1="${y(mk.v).toFixed(1)}" y2="${y(mk.v).toFixed(1)}"/>`;
+    if (mk.label) s += `<text class="mg-bft-lab" x="${m.l + f.pw + 5}" y="${(y(mk.v) + 3).toFixed(1)}">${mk.label}</text>`;
+  }
+  s += `<g clip-path="url(#${cid})">`;
+  const line = linePath(xs, vis.map(i => ys[i] == null ? null : y(ys[i])));
+  if (line) {
+    // yta ned till nedre kanten under varje sammanhängande bit
+    let area = '', seg = [];
+    const flush = () => {
+      if (seg.length > 1) area += `M${xs[seg[0]].toFixed(1)} ${(m.t + f.ph).toFixed(1)}` + seg.map(k => `L${xs[k].toFixed(1)} ${y(ys[vis[k]]).toFixed(1)}`).join('') + `L${xs[seg[seg.length - 1]].toFixed(1)} ${(m.t + f.ph).toFixed(1)}Z`;
+      seg = [];
+    };
+    vis.forEach((i, k) => { if (ys[i] == null) flush(); else seg.push(k); });
+    flush();
+    s += `<path class="mg-area" d="${area}" style="fill:${opts.color}"/>`;
+    s += `<path class="mg-line" d="${line}" style="stroke:${opts.color}"/>`;
+  }
+  s += '</g>';
+  if (!vals.length) s += `<text class="mg-unit" x="${m.l + f.pw / 2}" y="${m.t + f.ph / 2}" text-anchor="middle">${opts.empty || 'Ingen data för perioden'}</text>`;
+  s += xAxis(ctx, f, opts.axis || '');
+  f.y = y; f.key = opts.key;
+  return { svg: s, f };
+};
+
 // Ritar en panel i el. Returnerar geometrin (för hårkorset).
 chart.draw = (el, kind, ctx, opts = {}) => {
   ctx = { ...ctx, width: el.clientWidth || el.getBoundingClientRect().width || 600 };
