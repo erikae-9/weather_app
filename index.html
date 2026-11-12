@@ -349,7 +349,6 @@ footer a { color: var(--ink-2); }
 .wdetails[open] summary { margin-bottom: 6px; }
 .wlink { margin-top: 0 !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .wlink code { font-size: .74rem; background: var(--page); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; max-width: 100%; overflow-wrap: anywhere; user-select: all; }
-.wlink input[type="checkbox"] { vertical-align: -2px; margin: 0 4px 0 0; accent-color: var(--accent); }
 .wlink select { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 2px 4px; font-size: .78rem; }
 .wlink button { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 3px 10px; font-size: .78rem; }
 .wlink button:hover { color: var(--ink); border-color: var(--line-strong); }
@@ -481,7 +480,7 @@ footer a { color: var(--ink-2); }
     <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
     <details class="wdetails">
       <summary>Hemskärmswidget</summary>
-      <p class="wlink"><span>Länk för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <label>Tema <select id="wlinkTheme"><option value="mork">mörkt</option><option value="neutral">neutralt</option><option value="ljus">ljust</option><option value="">följ telefonen</option></select></label> <label><input type="checkbox" id="wlinkFollow"> Följ min position (experiment)</label> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
+      <p class="wlink"><span>Länk för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <label>Tema <select id="wlinkTheme"><option value="mork">mörkt</option><option value="neutral">neutralt</option><option value="ljus">ljust</option><option value="">följ telefonen</option></select></label> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
       <p>Öppna länken i en widgetapp, till exempel AnyWidget, välj skrivbordsvy och rama in rutan.</p>
     </details>
   </div>
@@ -564,9 +563,7 @@ function renderWidgetLink() {
   const u = new URL('widget.html', location.href);
   u.search = '';
   u.hash = '';
-  // Följ position: widgeten frågar efter positionen och har vald plats som reserv
-  if ($('wlinkFollow').checked) { u.searchParams.set('plats', 'position'); u.searchParams.set('namn', S.loc.name); }
-  else u.searchParams.set('plats', S.loc.name);
+  u.searchParams.set('plats', S.loc.name);
   u.searchParams.set('lat', S.loc.lat.toFixed(4));
   u.searchParams.set('lon', S.loc.lon.toFixed(4));
   const m = app.effectiveMode();
@@ -578,7 +575,6 @@ function renderWidgetLink() {
 }
 $('wlinkTheme').value = WX.theme.current() === 'dark' ? 'mork' : 'ljus';
 $('wlinkTheme').onchange = () => renderWidgetLink();
-$('wlinkFollow').onchange = () => renderWidgetLink();
 $('wlinkCopy').onclick = () => {
   const txt = $('wlink').textContent;
   const done = () => { $('wlinkCopy').textContent = 'Kopierad'; setTimeout(() => { $('wlinkCopy').textContent = 'Kopiera länk'; }, 2000); };
