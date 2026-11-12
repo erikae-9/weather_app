@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Eriks Väder</title>
 <meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
@@ -340,6 +343,10 @@ table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-
 footer { border-top: 1px solid var(--line); background: var(--band); color: var(--ink-3); font-size: .78rem; padding-block: 20px 30px; }
 footer p { margin: 0 0 4px; max-width: 75ch; }
 footer a { color: var(--ink-2); }
+.wlink { margin-top: 12px !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.wlink code { font-size: .74rem; background: var(--page); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; max-width: 100%; overflow-wrap: anywhere; user-select: all; }
+.wlink button { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 3px 10px; font-size: .78rem; }
+.wlink button:hover { color: var(--ink); border-color: var(--line-strong); }
 
 @media (max-width: 860px) {
 }
@@ -466,6 +473,7 @@ footer a { color: var(--ink-2); }
 <footer>
   <div class="wrap">
     <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
+    <p class="wlink"><span>Hemskärmswidget för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
   </div>
 </footer>
 
@@ -540,9 +548,31 @@ $('pApply').onclick = () => {
 };
 
 // ── Platsband: namn, just nu, dygnsflikar ──
+// Länk till widget.html för vald plats och källa (widgetappar delar inte
+// lagring med webbläsaren, så platsen måste stå i adressen)
+function renderWidgetLink() {
+  const u = new URL('widget.html', location.href);
+  u.search = '';
+  u.hash = '';
+  u.searchParams.set('plats', S.loc.name);
+  u.searchParams.set('lat', S.loc.lat.toFixed(4));
+  u.searchParams.set('lon', S.loc.lon.toFixed(4));
+  const m = app.effectiveMode();
+  if (m !== 'met') u.searchParams.set('kalla', m === 'both' ? 'blend' : m);
+  $('wlink').textContent = u.href;
+  $('wlinkPlace').textContent = S.loc.name;
+}
+$('wlinkCopy').onclick = () => {
+  const txt = $('wlink').textContent;
+  const done = () => { $('wlinkCopy').textContent = 'Kopierad'; setTimeout(() => { $('wlinkCopy').textContent = 'Kopiera länk'; }, 2000); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('wlink')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+};
+
 function renderBand() {
   $('locName').textContent = S.loc.name;
   document.title = `${S.loc.name} · Eriks Väder`;
+  renderWidgetLink();
   $('favBtn').setAttribute('aria-pressed', String(app.isFav()));
   $('favBtn').setAttribute('aria-label', app.isFav() ? 'Ta bort från favoriter' : 'Spara som favorit');
   const eff = app.effectiveMode();
