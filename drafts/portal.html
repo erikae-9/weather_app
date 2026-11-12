@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eriks Väder Portal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#f3f5f7">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Utkast A · "Portal": ljus, lugn väderportal. En kolumn som läses uppifrån
+   och ned: läget nu → närmaste dygnet → noteringar → 10 dygn. Fördjupning i
+   flikarna Timme för timme och Diagram. */
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --surface-2: #eef2f6; --line: #e1e6ec; --line-strong: #c6cfda;
+  --ink: #122033; --ink-2: #44546a; --ink-3: #66768a;
+  --accent: #1a5cbd; --accent-soft: rgba(26,92,189,.09); --accent-ink: #ffffff;
+  --warm: #c9402e; --cold: #2a6fc4; --feels: #7656c4;
+  --precip: #2c84d4; --precip-soft: rgba(44,132,212,.2); --band-temp: rgba(26,92,189,.11);
+  --wind: #16805c; --gust: #b8740f; --band-wind: rgba(22,128,92,.13); --thunder: #7a4fd0;
+  --night: rgba(28,48,78,.055);
+  --src-met: #1b6fd1; --src-smhi: #d0601a;
+  --ok: #1f7f55; --warn: #a96c12; --crit: #c0352b;
+  --ic-sun: #f0a500; --ic-moon: #95a7bf; --ic-cloud: #c4cedb; --ic-cloud-dark: #8293a8;
+  --ic-rain: #2c84d4; --ic-snow: #5d98d6; --ic-bolt: #f0b000; --ic-fog: #98a5b4;
+  --shadow: 0 1px 2px rgba(18,32,51,.05), 0 4px 16px -6px rgba(18,32,51,.08);
+  --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1218; --surface: #131b24; --surface-2: #19232e; --line: #222f3e; --line-strong: #344559;
+    --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+    --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.12); --accent-ink: #0b1320;
+    --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+    --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+    --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff;
+    --night: rgba(0,0,0,.24);
+    --src-met: #58acff; --src-smhi: #ff9a4d;
+    --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+    --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+    --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px -8px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1218; --surface: #131b24; --surface-2: #19232e; --line: #222f3e; --line-strong: #344559;
+  --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+  --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.12); --accent-ink: #0b1320;
+  --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+  --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+  --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff;
+  --night: rgba(0,0,0,.24);
+  --src-met: #58acff; --src-smhi: #ff9a4d;
+  --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+  --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+  --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px -8px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font-ui); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ── Toppfält ── */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; align-items: center; gap: 14px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); font: 800 1.08rem/1 var(--font-display); letter-spacing: -.01em; white-space: nowrap; }
+.brand svg { flex: none; }
+.brand b { color: var(--accent); font-weight: 800; }
+.search { position: relative; flex: 1; min-width: 0; max-width: 520px; margin-left: auto; display: flex; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; height: 40px; }
+.search:focus-within { border-color: var(--accent); background: var(--surface); }
+.search > svg { margin-left: 13px; flex: none; color: var(--ink-3); }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; padding: 0 10px; height: 100%; }
+.search input::placeholder { color: var(--ink-3); }
+.geo { border: 0; background: transparent; color: var(--accent); height: 34px; padding: 0 12px; margin-right: 3px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: .85rem; white-space: nowrap; }
+.geo:hover { background: var(--accent-soft); }
+.icon-btn { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; color: var(--ink-2); }
+.icon-btn:hover { color: var(--ink); border-color: var(--line-strong); }
+.search-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 6px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); max-height: 60vh; overflow: auto; z-index: 40; }
+.sp-head { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 4px; }
+.sp-item { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.sp-item:hover, .sp-item[aria-selected="true"] { background: var(--accent-soft); }
+.sp-name { font-weight: 500; }
+.sp-detail { grid-column: 1; font-size: .8rem; color: var(--ink-3); }
+.sp-tag { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: .72rem; color: var(--ink-3); }
+.sp-note { font-size: .8rem; color: var(--ink-3); padding: 8px 10px; }
+
+/* ── Platsrubrik ── */
+.loc { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; padding-block: 26px 14px; }
+.loc-kicker { font-size: .78rem; color: var(--ink-3); letter-spacing: .02em; }
+.loc h1 { margin: 2px 0 4px; font: 800 clamp(1.7rem, 4.2vw, 2.4rem)/1.1 var(--font-display); letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; text-wrap: balance; }
+.fav { border: 0; background: transparent; color: var(--ink-3); padding: 4px; border-radius: 8px; display: grid; }
+.fav[aria-pressed="true"] { color: var(--ic-sun); }
+.fav:hover { background: var(--surface-2); }
+.loc-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--ink-3); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.pill.demo { color: var(--warn); border-color: currentColor; background: transparent; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 12px; border-radius: 7px; font-size: .84rem; font-weight: 500; white-space: nowrap; }
+.seg button:hover:not(:disabled) { color: var(--ink); }
+.seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg button:disabled { opacity: .45; cursor: not-allowed; }
+.src-wrap { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.src-wrap .lab { font-size: .72rem; color: var(--ink-3); }
+
+/* ── Flikar ── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { padding: 10px 14px 11px; text-decoration: none; color: var(--ink-2); font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+main { padding-bottom: 48px; }
+.view { display: flex; flex-direction: column; gap: 18px; padding-top: 20px; }
+.view[hidden] { display: none; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.card-h { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 16px 18px 0; }
+.card-h h2 { margin: 0; font: 700 1.05rem/1.3 var(--font-display); letter-spacing: -.005em; }
+.card-h .aside { font-size: .8rem; color: var(--ink-3); }
+.link-btn { border: 0; background: none; color: var(--accent); font-weight: 500; font-size: .85rem; padding: 4px 0; }
+.link-btn:hover { text-decoration: underline; }
+
+/* ── Just nu ── */
+.top-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 18px; }
+.now { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.now-when { font-size: .8rem; color: var(--ink-3); display: flex; justify-content: space-between; gap: 8px; }
+.now-main { display: flex; align-items: center; gap: 16px; }
+.now-main .wxi { flex: none; }
+.now-temp { font: 700 4.4rem/0.9 var(--font-display); letter-spacing: -.04em; }
+.now-temp.cold { color: var(--cold); } .now-temp.warm { color: var(--warm); }
+.now-desc { font-weight: 600; font-size: 1.05rem; }
+.now-sub { font-size: .86rem; color: var(--ink-2); }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0; border-top: 1px solid var(--line); }
+.fact { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fact:nth-child(odd) { padding-right: 12px; }
+.fact:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--line); }
+.fact dt { font-size: .72rem; color: var(--ink-3); letter-spacing: .02em; }
+.fact dd { margin: 0; font-weight: 600; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.fact .s { font-size: .78rem; color: var(--ink-3); font-weight: 400; }
+.wxa path { fill: var(--ink-2); }
+.sunline { display: flex; gap: 18px; flex-wrap: wrap; font-size: .84rem; color: var(--ink-2); }
+.sunline span { display: inline-flex; align-items: center; gap: 6px; }
+
+.next { display: flex; flex-direction: column; }
+.next .chart { padding: 6px 6px 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .74rem; color: var(--ink-3); padding: 0 18px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.legend i.box { height: 9px; border: 0; border-radius: 2px; }
+.legend i.dot { border-top-style: dotted; }
+.legend i.dash { border-top-style: dashed; }
+
+/* ── Noteringar ── */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--sev, var(--line-strong)); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.note[data-level="high"] { --sev: var(--crit); } .note[data-level="medium"] { --sev: var(--warn); } .note[data-level="low"] { --sev: var(--accent); }
+.note .wxi { flex: none; margin-top: -2px; }
+.note b { display: block; font-weight: 600; font-size: .92rem; }
+.note span { font-size: .84rem; color: var(--ink-2); }
+.notes-h { display: flex; align-items: baseline; gap: 10px; }
+.notes-h h2 { margin: 0; font: 700 1.05rem var(--font-display); }
+.notes-h span { font-size: .8rem; color: var(--ink-3); }
+
+/* ── 10 dygn ── */
+.days { list-style: none; margin: 10px 0 0; padding: 0; }
+.day { border-top: 1px solid var(--line); }
+.day-row { width: 100%; display: grid; align-items: center; gap: 10px; grid-template-columns: 112px 44px minmax(0, 1fr) minmax(150px, 1.6fr) 92px 92px 18px; padding: 10px 18px; background: none; border: 0; text-align: left; }
+.day-row:hover { background: var(--surface-2); }
+.day-name b { display: block; font-weight: 600; }
+.day-name span { font-size: .78rem; color: var(--ink-3); }
+.day-desc { font-size: .88rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trange { display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.trange .lo { text-align: right; color: var(--ink-3); }
+.trange .hi { font-weight: 700; }
+.tbar { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); }
+.tbar span { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.day-p { font-variant-numeric: tabular-nums; font-size: .88rem; }
+.day-p b { color: var(--precip); font-weight: 600; }
+.day-p small, .day-w small { display: block; font-size: .74rem; color: var(--ink-3); }
+.day-w { display: flex; align-items: center; gap: 6px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.chev { color: var(--ink-3); transition: transform .2s; }
+.day[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.day-x { padding: 2px 18px 16px; }
+.day-x[hidden] { display: none; }
+.hours { display: flex; gap: 2px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.hr { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 10px; font-variant-numeric: tabular-nums; font-size: .82rem; }
+.hr:nth-child(odd) { background: var(--surface-2); }
+.hr .t { color: var(--ink-3); font-size: .74rem; }
+.hr .tt { font-weight: 700; font-size: .95rem; }
+.hr .p { color: var(--precip); min-height: 1.2em; }
+.hr .w { display: flex; align-items: center; gap: 2px; color: var(--ink-2); }
+.day-x .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: .8rem; color: var(--ink-3); }
+
+/* ── Periodväljare (Timmar + Diagram) ── */
+.period { display: flex; flex-direction: column; gap: 10px; }
+.period-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.period-top h2 { margin: 0; font: 700 1.05rem var(--font-display); }
+.period-top .what { font-size: .85rem; color: var(--ink-2); }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 64px; padding: 7px 8px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: .8rem; }
+.chip:hover { border-color: var(--line-strong); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed="true"] .wxi * { opacity: .95; }
+.chip b { font-weight: 600; }
+.chip small { font-size: .72rem; opacity: .8; font-variant-numeric: tabular-nums; }
+.chip.txt { justify-content: center; padding-inline: 12px; font-weight: 500; }
+.custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); }
+.custom[hidden] { display: none; }
+.custom input { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 6px 8px; min-height: 36px; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: .85rem; }
+.btn.ghost { background: transparent; color: var(--accent); }
+
+/* ── Tabell ── */
+.tbl-wrap { overflow: auto; max-height: 72vh; border-radius: var(--radius); }
+table.hourly { border-collapse: separate; border-spacing: 0; width: 100%; font-size: .85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hourly th { position: sticky; top: 0; z-index: 3; background: var(--surface-2); color: var(--ink-3); font-weight: 500; font-size: .74rem; text-align: right; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+.hourly th:first-child, .hourly td:first-child { position: sticky; left: 0; text-align: left; background: var(--surface); z-index: 1; }
+.hourly th:first-child { z-index: 4; background: var(--surface-2); }
+.hourly td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+.hourly td.l, .hourly th.l { text-align: left; }
+.hourly tr.sep td { position: sticky; top: 35px; z-index: 2; background: var(--surface); text-align: left; font-weight: 600; padding: 12px 10px 6px; color: var(--ink); border-bottom: 1px solid var(--line-strong); }
+.hourly tr.sep td span { position: sticky; left: 10px; }
+.hourly tr.sep small { font-weight: 400; color: var(--ink-3); margin-left: 10px; }
+.hourly tr.is-now td { background-image: linear-gradient(var(--accent-soft), var(--accent-soft)); }
+.hourly tr.is-now td:first-child { color: var(--accent); font-weight: 600; }
+.hourly tr:not(.sep):hover td { background-image: linear-gradient(var(--accent-soft), var(--accent-soft)); }
+.cond { display: flex; align-items: center; gap: 6px; }
+.dim { color: var(--ink-3); font-size: .78rem; }
+.t-warm { color: var(--warm); font-weight: 600; } .t-cold { color: var(--cold); font-weight: 600; }
+.p-wet { color: var(--precip); font-weight: 600; }
+.lvl-med { color: var(--warn); font-weight: 600; } .lvl-high { color: var(--crit); font-weight: 600; }
+
+/* ── Diagram ── */
+.readout { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 61px); z-index: 10; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 10px 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; min-height: 64px; }
+.readout .when { font: 700 .95rem var(--font-display); display: flex; align-items: center; gap: 8px; }
+.readout .tag { font: 600 .66rem var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid currentColor; padding: 1px 6px; border-radius: 999px; }
+.readout .vals { display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: .85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.readout .vals b { color: var(--ink); }
+.readout .ic { grid-row: 1 / span 2; }
+.readout .hint { font-size: .74rem; color: var(--ink-3); }
+.mg-card { padding: 4px 6px 10px; }
+.mg-sec { padding-top: 10px; }
+.mg-sec + .mg-sec { border-top: 1px solid var(--line); }
+.mg-sec-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 0 12px 2px; }
+.mg-sec-h h3 { margin: 0; font: 700 .9rem var(--font-display); }
+.mg-sec-h .legend { padding: 0; }
+.mg-sec-h .val { margin-left: auto; font-size: .8rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+.stat { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.stat .k { font-size: .74rem; color: var(--ink-3); }
+.stat .v { font: 700 1.6rem/1.15 var(--font-display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stat .s { font-size: .8rem; color: var(--ink-2); min-height: 1.2em; }
+.stat .spark { margin-top: 6px; }
+.spark-line { fill: none; stroke: var(--c, var(--accent)); stroke-width: 1.6; }
+.spark-area { fill: var(--c, var(--accent)); opacity: .12; }
+
+/* ── Meteogram (klasser från core.js) ── */
+.mg-plot { position: relative; user-select: none; -webkit-user-select: none; touch-action: pan-y; cursor: crosshair; }
+.mg-panning .mg-plot { cursor: grabbing; }
+.mg-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mg-xhair { position: absolute; width: 0; border-left: 1px solid var(--ink-2); pointer-events: none; opacity: .55; }
+.mg-xhair.pinned { opacity: .9; border-left-width: 2px; }
+.mg-night { fill: var(--night); }
+.mg-midnight { stroke: var(--line-strong); stroke-width: 1; }
+.mg-now { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.mg-grid { stroke: var(--line); stroke-width: 1; }
+.mg-grid.mg-zero { stroke: var(--line-strong); stroke-width: 1.4; }
+.mg-ylab, .mg-tick, .mg-unit, .mg-strip-lab, .mg-bft-lab { fill: var(--ink-3); font: 500 10.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.mg-tick-day { fill: var(--ink); font-weight: 600; }
+.mg-dayname { fill: var(--ink-2); font: 600 11.5px var(--font-ui); }
+.mg-temp { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.mg-temp-warm { stroke: var(--warm); } .mg-temp-cold { stroke: var(--cold); }
+.mg-feels { fill: none; stroke: var(--feels); stroke-width: 1.5; stroke-dasharray: 1.5 3.5; stroke-linecap: round; }
+.mg-band { stroke: none; } .mg-band-temp { fill: var(--band-temp); } .mg-band-wind { fill: var(--band-wind); }
+.mg-bar { fill: var(--precip); } .mg-bar-hi { fill: var(--precip-soft); }
+.mg-risk { fill: var(--precip); } .mg-thunder { fill: var(--thunder); }
+.mg-wind { fill: none; stroke: var(--wind); stroke-width: 2.2; stroke-linejoin: round; }
+.mg-gust { fill: none; stroke: var(--gust); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.mg-bft { stroke: var(--line-strong); stroke-dasharray: 1 3; }
+.mg-arrow path { fill: var(--ink-2); }
+.mg-src { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.mg-src-met { stroke: var(--src-met); } .mg-src-smhi { stroke: var(--src-smhi); }
+.mg-dash { stroke-width: 1.3; stroke-dasharray: 4 3; }
+.mg-bar-met { fill: var(--src-met); } .mg-bar-smhi { fill: var(--src-smhi); }
+
+/* ── Väderikoner (klasser från core.js) ── */
+.wxi-sun { fill: var(--ic-sun); }
+.wxi-ray { stroke: var(--ic-sun); stroke-width: 2.8; stroke-linecap: round; fill: none; }
+.wxi-moon { fill: var(--ic-moon); }
+.wxi-cloud { fill: var(--ic-cloud); } .wxi-cloud-dark { fill: var(--ic-cloud-dark); }
+.wxi-rain { stroke: var(--ic-rain); stroke-width: 3; stroke-linecap: round; fill: none; }
+.wxi-snow { fill: var(--ic-snow); }
+.wxi-bolt { fill: var(--ic-bolt); }
+.wxi-fog { stroke: var(--ic-fog); stroke-width: 3; stroke-linecap: round; fill: none; }
+.chip[aria-pressed="true"] .wxi-cloud { fill: #ffffff; }
+
+/* ── Laddning, fel, sidfot ── */
+.notice { border-radius: 10px; padding: 10px 14px; font-size: .88rem; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+.notice.error { background: transparent; border: 1px solid var(--crit); color: var(--crit); }
+.notice button { border: 0; background: none; color: inherit; font-size: 1rem; }
+.loading { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); z-index: 50; background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 999px; font-size: .82rem; font-weight: 500; box-shadow: var(--shadow); }
+.skeleton { opacity: .45; transition: opacity .2s; }
+footer { border-top: 1px solid var(--line); color: var(--ink-3); font-size: .78rem; padding-block: 18px 30px; }
+footer p { margin: 0 0 4px; max-width: 75ch; }
+footer a { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .top-grid { grid-template-columns: 1fr; }
+  .day-row { grid-template-columns: 92px 40px minmax(130px, 1fr) 76px 18px; }
+  .day-desc, .day-w { display: none; }
+}
+@media (max-width: 560px) {
+  .brand span { display: none; }
+  .geo span { display: none; }
+  .topbar-in { gap: 10px; }
+  .now-temp { font-size: 3.6rem; }
+  .day-row { grid-template-columns: 74px 36px minmax(0, 1fr) 54px 14px; gap: 8px; padding-inline: 14px; }
+  .day-row .day-p small { display: none; }
+  .trange { grid-template-columns: 32px 1fr 32px; gap: 6px; }
+  .card-h { padding-inline: 14px; }
+  .legend { padding-inline: 14px; }
+  .readout { grid-template-columns: 1fr; }
+  .readout .ic { display: none; }
+  .day-x { padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#oversikt" aria-label="Eriks Väder, startsida">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="var(--accent)"/><circle cx="11" cy="11" r="4.2" fill="var(--ic-sun)"/><path d="M8 20.5h11a3.6 3.6 0 0 0 0-7.2 5 5 0 0 0-9.4 1.2A3 3 0 0 0 8 20.5z" fill="#fff"/></svg>
+      <span>Eriks <b>Väder</b></span>
+    </a>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <label class="sr" for="q">Sök plats</label>
+      <input id="q" type="search" placeholder="Sök ort eller koordinater" autocomplete="off" spellcheck="false">
+      <button class="geo" id="geoBtn" type="button" title="Använd min position">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 0v3M8 13v3M0 8h3M13 8h3" stroke="currentColor" stroke-width="1.4"/></svg>
+        <span>Min position</span>
+      </button>
+      <ul class="search-pop" id="searchPop" hidden></ul>
+    </div>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Byt till mörkt läge"></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="loc">
+    <div>
+      <div class="loc-kicker" id="locKicker">Väderprognos</div>
+      <h1><span id="locName">—</span>
+        <button class="fav" id="favBtn" type="button" aria-pressed="false" aria-label="Spara som favorit">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg>
+        </button>
+      </h1>
+      <div class="loc-meta" id="locMeta"></div>
+    </div>
+    <div class="src-wrap">
+      <span class="lab" id="srcLab">Prognoskälla</span>
+      <div class="seg" id="modeSeg" role="radiogroup" aria-labelledby="srcLab"></div>
+    </div>
+  </section>
+
+  <nav class="tabs" aria-label="Vyer">
+    <a href="#oversikt" data-view="oversikt">Översikt</a>
+    <a href="#timmar" data-view="timmar">Timme för timme</a>
+    <a href="#diagram" data-view="diagram">Diagram</a>
+  </nav>
+
+  <div id="err" class="notice error" hidden role="alert"></div>
+
+  <!-- ÖVERSIKT -->
+  <section class="view" id="view-oversikt">
+    <div class="top-grid">
+      <article class="card now" id="nowCard" aria-labelledby="nowH">
+        <h2 class="sr" id="nowH">Just nu</h2>
+        <div class="now-when"><span id="nowWhen">—</span><span id="nowSrc"></span></div>
+        <div class="now-main" id="nowMain"></div>
+        <dl class="facts" id="nowFacts"></dl>
+        <div class="sunline" id="sunLine"></div>
+      </article>
+      <article class="card next" aria-labelledby="nextH">
+        <div class="card-h"><h2 id="nextH">Närmaste dygnet</h2><button class="link-btn" type="button" data-go="diagram">Hela diagrammet →</button></div>
+        <div class="legend" id="nextLegend"></div>
+        <div class="chart">
+          <div id="nextTemp"></div>
+          <div id="nextPrecip"></div>
+        </div>
+      </article>
+    </div>
+
+    <section class="period" id="notesSec" aria-labelledby="notesH">
+      <div class="notes-h"><h2 id="notesH">Prognosen i korthet</h2><span>närmaste tre dygnen</span></div>
+      <div class="notes" id="notes"></div>
+    </section>
+
+    <section class="card" aria-labelledby="daysH">
+      <div class="card-h"><h2 id="daysH">10 dygn</h2><span class="aside">Tryck på ett dygn för timvärden</span></div>
+      <ol class="days" id="dayList"></ol>
+    </section>
+  </section>
+
+  <!-- TIMME FÖR TIMME -->
+  <section class="view" id="view-timmar" hidden>
+    <div class="period" data-period></div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table class="hourly" id="hourly">
+          <thead><tr>
+            <th class="l">Tid</th><th class="l">Väder</th><th>Temp</th><th>Känns</th>
+            <th>Nederbörd</th><th>Risk 1 h</th><th>Risk 3 h</th><th>Åska</th>
+            <th>Vind (byar)</th><th class="l">Riktning</th><th>UV</th><th>Moln</th><th>Fukt</th><th>Tryck</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIAGRAM -->
+  <section class="view" id="view-diagram" hidden>
+    <div class="period" data-period></div>
+    <div class="readout" id="readout" aria-live="polite"></div>
+    <div class="card mg-card">
+      <div class="mg-sec">
+        <div class="mg-sec-h"><h3>Temperatur</h3><div class="legend" id="lgTemp"></div><span class="val" id="valTemp"></span></div>
+        <div id="mgTemp"></div>
+      </div>
+      <div class="mg-sec">
+        <div class="mg-sec-h"><h3>Nederbörd</h3><div class="legend" id="lgPrecip"></div><span class="val" id="valPrecip"></span></div>
+        <div id="mgPrecip"></div>
+      </div>
+      <div class="mg-sec">
+        <div class="mg-sec-h"><h3>Vind</h3><div class="legend" id="lgWind"></div><span class="val" id="valWind"></span></div>
+        <div id="mgWind"></div>
+      </div>
+    </div>
+    <div class="period-top"><h2>Sammanfattning för perioden</h2><span class="what" id="statsWhat"></span></div>
+    <div class="stats" id="stats"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
+    <p>Utkast A · Portal. Viktad prognos, persistensjusterad nederbördsrisk och åska (SMHI) som i nuvarande app.</p>
+  </div>
+</footer>
+
+<div class="loading" id="loading" hidden>Hämtar prognos …</div>
+
+<script src="../forecast-sources.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/demo.js"></script>
+<script src="../js/app.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const H = WX.H;
+const THEME_KEY = 'wxA.theme';
+WX.theme.init(THEME_KEY);
+
+const app = WX.createApp({
+  prefix: 'wxA',
+  onData: () => { dirty.all(); renderHeader(); renderView(); },
+  onPeriod: () => { dirty.period(); renderView(); },
+  onLoading: on => { $('loading').hidden = !on; document.querySelector('main').classList.toggle('skeleton', on); },
+  onError: showError,
+});
+const S = app.S;
+
+function showError(msg) {
+  const el = $('err');
+  el.hidden = false;
+  el.innerHTML = `<span>${WX.esc(msg)}</span><button type="button" aria-label="Stäng">✕</button>`;
+  el.querySelector('button').onclick = () => { el.hidden = true; };
+}
+
+// ── Tema-knapp ──
+const sunIc = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const moonIc = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="currentColor"/></svg>';
+function paintThemeBtn() {
+  const dark = WX.theme.current() === 'dark';
+  $('themeBtn').innerHTML = dark ? sunIc : moonIc;
+  $('themeBtn').setAttribute('aria-label', dark ? 'Byt till ljust läge' : 'Byt till mörkt läge');
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim();
+}
+$('themeBtn').onclick = () => { WX.theme.toggle(THEME_KEY); paintThemeBtn(); };
+paintThemeBtn();
+
+// ── Sök, position, favorit ──
+app.bindSearch($('q'), $('searchPop'));
+$('geoBtn').onclick = () => app.geolocate();
+$('favBtn').onclick = () => {
+  const on = app.toggleFav();
+  $('favBtn').setAttribute('aria-pressed', String(on));
+  $('favBtn').setAttribute('aria-label', on ? 'Ta bort från favoriter' : 'Spara som favorit');
+};
+
+// ── Källa ──
+function renderModes() {
+  const eff = app.effectiveMode();
+  $('modeSeg').innerHTML = WX.MODES.map(m => `<button type="button" role="radio" data-mode="${m.id}" aria-checked="${m.id === eff}" title="${m.hint}" ${app.modeAvailable(m.id) ? '' : 'disabled'}>${m.label}</button>`).join('');
+  $('modeSeg').querySelectorAll('button').forEach(b => b.onclick = () => app.setMode(b.dataset.mode));
+}
+
+// ── Router och "smutsiga" vyer ──
+const VIEWS = ['oversikt', 'timmar', 'diagram'];
+const isDirty = { oversikt: true, timmar: true, diagram: true };
+const dirty = {
+  all() { VIEWS.forEach(v => isDirty[v] = true); },
+  period() { isDirty.timmar = isDirty.diagram = true; },
+};
+const router = WX.router(VIEWS, v => {
+  VIEWS.forEach(x => { $('view-' + x).hidden = x !== v; });
+  document.querySelectorAll('.tabs a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  renderView();
+});
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => router.go(b.dataset.go));
+
+function renderView() {
+  if (!S.wd) return;
+  const v = router.current();
+  if (!isDirty[v]) { if (v === 'diagram') mg.render(); return; }
+  isDirty[v] = false;
+  if (v === 'oversikt') renderOverview();
+  if (v === 'timmar') { renderPeriod(); renderTable(); }
+  if (v === 'diagram') { renderPeriod(); renderDiagram(); }
+}
+
+// ── Rubrik ──
+function renderHeader() {
+  $('locName').textContent = S.loc.name;
+  $('locKicker').textContent = S.loc.detail ? `Väderprognos · ${S.loc.detail}` : 'Väderprognos';
+  document.title = `${S.loc.name} · Eriks Väder`;
+  const fav = app.isFav();
+  $('favBtn').setAttribute('aria-pressed', String(fav));
+  $('favBtn').setAttribute('aria-label', fav ? 'Ta bort från favoriter' : 'Spara som favorit');
+  const lat = S.loc.lat, lon = S.loc.lon;
+  const coord = `${WX.fmt(Math.abs(lat), 2)}° ${lat >= 0 ? 'N' : 'S'}, ${WX.fmt(Math.abs(lon), 2)}° ${lon >= 0 ? 'Ö' : 'V'}`;
+  const src = S.wd.sourceIds.map(id => WX.SOURCE_LABELS[id]).join(' + ');
+  $('locMeta').innerHTML = `<span class="num">${coord}</span><span>Uppdaterad ${WX.hhmm(S.fetchedAt)}</span><span>Data: ${src}</span>`
+    + (S.live ? '' : '<span class="pill demo" title="met.no och SMHI gick inte att nå härifrån. Visar påhittad exempeldata.">Exempeldata</span>');
+  renderModes();
+}
+
+// ═══ ÖVERSIKT ═══
+function renderOverview() {
+  const wd = S.wd, D = wd.data, i = WX.nowIndex(wd), t = wd.times[i];
+  const today = S.days[0];
+  const temp = D.temp[i], fl = D.feels_like[i];
+  $('nowWhen').textContent = `Just nu · ${WX.WEEKDAYS_LONG[t.getDay()]} ${WX.hh(t)}:00`;
+  $('nowSrc').textContent = wd.mode === 'both' ? 'Viktat medel' : WX.MODES.find(m => m.id === wd.mode).label;
+  $('nowMain').innerHTML = `${WX.icon(D.symbols[i], 92)}
+    <div class="now-temp num ${temp < 0 ? 'cold' : temp >= 20 ? 'warm' : ''}">${WX.fmtTemp(temp)}</div>
+    <div><div class="now-desc">${WX.describe(D.symbols[i])}</div>
+      <div class="now-sub">Känns som ${WX.fmtTemp(fl)}</div>
+      <div class="now-sub">${today ? `Max ${WX.fmtTemp(today.hi)} · min ${WX.fmtTemp(today.lo)}` : ''}</div></div>`;
+
+  const bft = WX.beaufort(D.wind[i]);
+  const pr3 = D.pressure[Math.max(0, i - 3)], prN = D.pressure[i];
+  const prTrend = prN !== null && pr3 !== null && i >= 3 ? (prN - pr3 > 1 ? 'stigande' : prN - pr3 < -1 ? 'fallande' : 'oförändrat') : '';
+  const uv = D.uv[i];
+  const uvTxt = uv === null ? '' : uv < 3 ? 'Låg' : uv < 6 ? 'Måttlig' : uv < 8 ? 'Hög' : 'Mycket hög';
+  const th = D.thunder[i] ?? D.thunder[i + 1];
+  const nextRisk = WX.periodRisk(wd, i, Math.min(wd.n, i + 6));
+  const fact = (k, v, s = '') => `<div class="fact"><dt>${k}</dt><dd>${v}${s ? ` <span class="s">${s}</span>` : ''}</dd></div>`;
+  $('nowFacts').innerHTML =
+    fact('Vind', `${WX.windArrow(D.wind_direction[i], 18)} ${WX.fmt(D.wind[i])} m/s`, `byar ${WX.fmt(D.gust[i])} · ${WX.windDir(D.wind_direction[i])}`)
+    + fact('Nederbörd', `${WX.fmt(D.precip[i], 1)} mm/h`, D.precip_prob[i] != null ? `risk ${Math.round(D.precip_prob[i])} %` : '')
+    + fact('Risk närmaste 6 h', nextRisk === null ? '—' : `${nextRisk} %`, D.rolling3h[i] != null ? `3 h: ${D.rolling3h[i]} %` : '')
+    + fact('Vindstyrka', bft ? bft.name : '—')
+    + fact('Luftfuktighet', `${WX.fmt(D.humidity[i])} %`)
+    + fact('Lufttryck', `${WX.fmt(D.pressure[i])} hPa`, prTrend)
+    + fact('UV-index', WX.fmt(uv, 1), uvTxt)
+    + fact('Åska', th === null || th === undefined ? '—' : `${Math.round(th)} %`, th === null || th === undefined ? 'utanför SMHI' : th >= WX.THUNDER_MED ? 'håll koll' : 'låg risk');
+
+  const st = today?.sun;
+  const sunUp = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12h12" stroke="var(--ink-3)" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 12a3.5 3.5 0 0 1 7 0z" fill="var(--ic-sun)"/><path d="M8 2v4M6 4l2-2 2 2" stroke="var(--ink-3)" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>';
+  const sunDn = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12h12" stroke="var(--ink-3)" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 12a3.5 3.5 0 0 1 7 0z" fill="var(--ic-sun)"/><path d="M8 2v4M6 4l2 2 2-2" stroke="var(--ink-3)" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>';
+  if (st?.polar === 'night') $('sunLine').innerHTML = '<span>Polarnatt: solen går inte upp idag</span>';
+  else if (st?.polar === 'day') $('sunLine').innerHTML = '<span>Midnattssol: solen går inte ned idag</span>';
+  else if (st) {
+    const len = (st.set - st.rise) / 60e3;
+    $('sunLine').innerHTML = `<span>${sunUp} ${WX.hhmm(st.rise)}</span><span>${sunDn} ${WX.hhmm(st.set)}</span><span>Dagens längd ${Math.floor(len / 60)} h ${Math.round(len % 60)} min</span>`;
+  }
+
+  renderNext();
+  renderNotes();
+  renderDays();
+}
+
+// Närmaste dygnet: temperatur med ikoner + nederbörd
+let nextGroup = null;
+function renderNext() {
+  const both = S.wd.mode === 'both';
+  $('nextLegend').innerHTML = both
+    ? '<span><i style="border-color:var(--src-met)"></i>met.no</span><span><i style="border-color:var(--src-smhi)"></i>SMHI</span>'
+    : '<span><i style="border-color:var(--warm)"></i>Temperatur</span><span><i class="dot" style="border-color:var(--feels)"></i>Känns som</span><span><i class="box" style="background:var(--precip)"></i>Nederbörd</span><span><i class="box" style="background:var(--precip);opacity:.5"></i>Risk</span>';
+  if (!nextGroup) {
+    nextGroup = WX.chart.group({
+      panels: [
+        { el: $('nextTemp'), kind: 'temp', opts: { height: 170, icons: true } },
+        { el: $('nextPrecip'), kind: 'precip', opts: { height: 112, axis: 'hours' } },
+      ],
+      getCtx: () => S.wd && { wd: S.wd, nowMs: Date.now(), night: S.night, ml: 36, mr: 14 },
+    });
+  }
+  const a = S.wd.ms[WX.nowIndex(S.wd)];
+  nextGroup.setRange([a, Math.min(a + 25 * H, S.wd.end(S.wd.n - 1))], app.extent());
+}
+
+function renderNotes() {
+  const list = WX.highlights(S.wd, S.days);
+  $('notesSec').hidden = !list.length;
+  const ic = { wind: 'cloudy', thunder: 'rainandthunder', freeze: 'lightsleet', trend: 'partlycloudy_day' };
+  $('notes').innerHTML = list.map(n => `<div class="note" data-level="${n.level}">${WX.icon(n.kind === 'precip' ? n.sym : ic[n.kind], 34)}<div><b>${WX.esc(n.title)}</b><span>${WX.esc(n.text)}</span></div></div>`).join('');
+}
+
+function renderDays() {
+  const days = S.days, D = S.wd.data;
+  const gLo = Math.min(...days.map(d => d.lo)), gHi = Math.max(...days.map(d => d.hi));
+  const span = Math.max(1, gHi - gLo);
+  $('dayList').innerHTML = days.map((d, k) => {
+    const left = (d.lo - gLo) / span * 100, width = Math.max(4, (d.hi - d.lo) / span * 100);
+    const grad = `linear-gradient(90deg, hsl(${WX.tempHue(d.lo).toFixed(0)} 70% 52%), hsl(${WX.tempHue(d.hi).toFixed(0)} 70% 52%))`;
+    const wet = (d.precip ?? 0) >= 0.1;
+    return `<li class="day" aria-expanded="false" data-k="${k}">
+      <button class="day-row" type="button" aria-controls="dx${k}">
+        <span class="day-name"><b>${d.label}</b><span>${WX.dateShort(d.date)}</span></span>
+        ${WX.icon(d.symbol, 40)}
+        <span class="day-desc">${WX.describe(d.symbol)}${d.thunder >= WX.THUNDER_MED ? ' · åska ' + Math.round(d.thunder) + ' %' : ''}</span>
+        <span class="trange"><span class="lo">${WX.fmtTemp(d.lo)}</span><span class="tbar"><span style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${grad}"></span></span><span class="hi">${WX.fmtTemp(d.hi)}</span></span>
+        <span class="day-p">${wet ? `<b>${WX.fmt(d.precip, d.precip < 10 ? 1 : 0)} mm</b>` : '<span class="dim">0 mm</span>'}<small>${d.risk !== null ? `risk ${d.risk} %` : ''}</small></span>
+        <span class="day-w">${WX.windArrow(d.windDir, 16)} ${WX.fmt(d.windMax)}<small>(${WX.fmt(d.gustMax)})</small></span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <div class="day-x" id="dx${k}" hidden></div>
+    </li>`;
+  }).join('');
+  $('dayList').querySelectorAll('.day').forEach(li => {
+    li.querySelector('.day-row').onclick = () => {
+      const open = li.getAttribute('aria-expanded') !== 'true';
+      li.setAttribute('aria-expanded', String(open));
+      const x = li.querySelector('.day-x');
+      x.hidden = !open;
+      if (open && !x.innerHTML) x.innerHTML = dayHours(days[+li.dataset.k]);
+      x.querySelector('[data-show]')?.addEventListener('click', e => { app.setDays([e.target.dataset.show]); router.go('diagram'); });
+    };
+  });
+}
+function dayHours(d) {
+  const wd = S.wd, D = wd.data;
+  const hrs = d.idx.map(i => {
+    const t = wd.times[i], step = wd.step(i);
+    return `<div class="hr"><span class="t">${WX.hh(t)}${step > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</span>${WX.icon(D.symbols[i], 32)}
+      <span class="tt" style="color:${D.temp[i] < 0 ? 'var(--cold)' : 'var(--warm)'}">${WX.fmtTemp(D.temp[i])}</span>
+      <span class="p">${(D.precip_step[i] ?? 0) >= 0.1 ? WX.fmt(D.precip_step[i], 1) : ''}</span>
+      <span class="w">${WX.windArrow(D.wind_direction[i], 13)}${WX.fmt(D.wind[i])}</span></div>`;
+  }).join('');
+  const sun = d.sun.polar ? (d.sun.polar === 'night' ? 'Polarnatt' : 'Midnattssol') : `Sol ${WX.hhmm(d.sun.rise)}–${WX.hhmm(d.sun.set)}`;
+  return `<div class="hours">${hrs}</div><div class="foot"><span>${sun} · UV max ${WX.fmt(d.uv, 1)} · byar upp till ${WX.fmt(d.gustMax)} m/s</span><button class="link-btn" type="button" data-show="${d.key}">Visa dygnet i diagram →</button></div>`;
+}
+
+// ═══ PERIODVÄLJARE ═══
+function renderPeriod() {
+  const html = `
+    <div class="period-top"><h2>Period</h2><span class="what num">${app.periodLabel()}</span></div>
+    <div class="chips" role="group" aria-label="Välj dygn">
+      ${S.days.map(d => `<button class="chip" type="button" data-day="${d.key}" aria-pressed="${S.sel.has(d.key) && S.periodKind !== 'all'}"><b>${d.label}</b>${WX.icon(d.symbol, 26)}<small>${WX.fmtTemp(d.hi)} / ${WX.fmtTemp(d.lo)}</small></button>`).join('')}
+      <button class="chip txt" type="button" data-all aria-pressed="${S.periodKind === 'all'}">Alla dygn</button>
+      <button class="chip txt" type="button" data-custom aria-pressed="${S.periodKind === 'custom'}" aria-expanded="false">Välj tider</button>
+    </div>
+    <div class="custom" hidden>
+      <label for="pFrom-X">Från</label><input type="datetime-local" id="pFrom-X">
+      <label for="pTo-X">Till</label><input type="datetime-local" id="pTo-X">
+      <button class="btn" type="button" data-apply>Visa</button>
+    </div>`;
+  document.querySelectorAll('[data-period]').forEach((el, k) => {
+    el.innerHTML = html.replaceAll('-X', '-' + k);
+    el.querySelectorAll('[data-day]').forEach(b => b.onclick = () => app.toggleDay(b.dataset.day));
+    el.querySelector('[data-all]').onclick = () => app.setAll();
+    const cust = el.querySelector('.custom'), cb = el.querySelector('[data-custom]');
+    const [a, b] = app.periodRange();
+    const f = el.querySelector(`#pFrom-${k}`), t = el.querySelector(`#pTo-${k}`);
+    f.value = WX.toLocalInput(new Date(a)); t.value = WX.toLocalInput(new Date(b));
+    f.min = t.min = WX.toLocalInput(S.wd.times[0]); f.max = t.max = WX.toLocalInput(new Date(app.extent()[1]));
+    cb.onclick = () => { cust.hidden = !cust.hidden; cb.setAttribute('aria-expanded', String(!cust.hidden)); };
+    el.querySelector('[data-apply]').onclick = () => {
+      if (!f.value || !t.value) return showError('Välj både start- och sluttid.');
+      const A = WX.parseLocalInput(f.value), B = WX.parseLocalInput(t.value);
+      if (A >= B) return showError('Starttiden måste vara före sluttiden.');
+      app.setRange(A.getTime(), B.getTime());
+    };
+  });
+}
+
+// ═══ TIMME FÖR TIMME ═══
+function renderTable() {
+  const wd = S.wd, D = wd.data, nowI = WX.nowIndex(wd);
+  const { start, end } = S.period;
+  let html = '', lastKey = null;
+  for (let i = start; i < end; i++) {
+    const t = wd.times[i], key = WX.dateKey(t);
+    if (key !== lastKey) {
+      lastKey = key;
+      const st = WX.sunTimes(t, S.loc.lat, S.loc.lon);
+      const sun = st.polar ? (st.polar === 'night' ? 'polarnatt' : 'midnattssol') : `sol ${WX.hhmm(st.rise)}–${WX.hhmm(st.set)}`;
+      html += `<tr class="sep"><td colspan="14"><span>${WX.dayLabel(t, true)} ${t.getDate()} ${WX.MONTHS[t.getMonth()]}<small>${sun}</small></span></td></tr>`;
+    }
+    const step = wd.step(i);
+    const tv = D.temp[i], amt = D.precip_step[i], lo = (D.precip_p10[i] ?? 0) * step, hi = (D.precip_p90[i] ?? 0) * step;
+    const p1 = D.precip_prob[i], p3 = D.rolling3h[i], th = D.thunder[i], w = D.wind[i];
+    const lvl = (v, m, h) => v >= h ? 'lvl-high' : v >= m ? 'lvl-med' : '';
+    html += `<tr class="${i === nowI ? 'is-now' : ''}">
+      <td>${i === nowI ? 'Nu ' : ''}${WX.hh(t)}${step > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</td>
+      <td class="l"><span class="cond">${WX.icon(D.symbols[i], 24)}${WX.describe(D.symbols[i])}</span></td>
+      <td><span class="${tv < 0 ? 't-cold' : tv >= 20 ? 't-warm' : ''}">${WX.fmtTemp(tv, 1)}</span> <span class="dim">${D.temp_p10[i] != null ? WX.fmt(D.temp_p10[i]) + '…' + WX.fmt(D.temp_p90[i]) : ''}</span></td>
+      <td>${WX.fmtTemp(D.feels_like[i])}</td>
+      <td><span class="${amt >= 0.1 ? 'p-wet' : ''}">${WX.fmt(amt, 1)}</span> <span class="dim">${hi >= 0.1 ? WX.fmt(lo, 1) + '…' + WX.fmt(hi, 1) : ''}</span></td>
+      <td class="${lvl(p1, 40, 70)}">${p1 == null ? '—' : Math.round(p1) + ' %'}</td>
+      <td>${p3 == null ? '—' : p3 + ' %'}</td>
+      <td class="${lvl(th, WX.THUNDER_MED, WX.THUNDER_HIGH)}">${th == null ? '—' : Math.round(th) + ' %'}</td>
+      <td class="${lvl(w, 10, 15)}">${WX.fmt(w)} <span class="dim">(${WX.fmt(D.gust[i])})</span></td>
+      <td class="l">${WX.windArrow(D.wind_direction[i], 14)} ${WX.windDir(D.wind_direction[i])}</td>
+      <td>${WX.fmt(D.uv[i], 1)}</td><td>${WX.fmt(D.cloud[i])} %</td><td>${WX.fmt(D.humidity[i])} %</td><td>${WX.fmt(D.pressure[i])}</td>
+    </tr>`;
+  }
+  $('hourly').tBodies[0].innerHTML = html;
+}
+
+// ═══ DIAGRAM ═══
+let cursorIdx = null;
+const mg = WX.chart.group({
+  panels: [
+    { el: $('mgTemp'), kind: 'temp', opts: { height: 230, icons: true, axis: 'days' } },
+    { el: $('mgPrecip'), kind: 'precip', opts: { height: 150 } },
+    { el: $('mgWind'), kind: 'wind', opts: { height: 170, axis: 'hours' } },
+  ],
+  getCtx: () => S.wd && { wd: S.wd, nowMs: Date.now(), night: S.night, ml: 40, mr: 60 },
+  onCursor: (i, pinned) => { cursorIdx = i; renderReadout(pinned); },
+  onRange: r => { app.setRange(r[0], r[1], 'pan'); },
+});
+
+function renderDiagram() {
+  const both = S.wd.mode === 'both';
+  const L = (c, txt, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${txt}</span>`;
+  const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
+  $('lgTemp').innerHTML = both ? srcs('') : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', '80 % av utfallen', 'box');
+  $('lgPrecip').innerHTML = (both ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'kan bli upp till', 'box'))
+    + L('var(--precip)', 'Risk', 'box') + (WX.valid(S.wd.data.thunder).length ? L('var(--thunder)', 'Åska', 'box') : '');
+  $('lgWind').innerHTML = both ? srcs('') + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--gust)', 'Byar', 'dash') + L('var(--band-wind)', '80 %', 'box');
+  const st = app.stats();
+  $('valTemp').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
+  $('valPrecip').textContent = `${WX.fmt(st.pSum, 1)} mm · risk ${st.pRisk ?? '—'} %`;
+  $('valWind').textContent = `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) m/s`;
+  mg.cursor = null; mg.pinned = false;
+  mg.setRange(app.periodRange(), app.extent());
+  renderStats(st);
+}
+
+function renderReadout(pinned) {
+  const wd = S.wd; if (!wd) return;
+  const i = cursorIdx ?? WX.nowIndex(wd), D = wd.data, t = wd.times[i], step = wd.step(i);
+  const isNow = i === WX.nowIndex(wd);
+  const both = wd.mode === 'both';
+  const tag = id => `<span style="color:var(--src-${id})">●</span> ${WX.SOURCE_LABELS[id]}`;
+  let temp, wind, prec;
+  if (both) {
+    temp = wd.sourceIds.map(id => `${tag(id)} <b>${WX.fmtTemp(D[`temp_src_${id}`][i], 1)}</b>`).join(' · ');
+    wind = wd.sourceIds.map(id => `${tag(id)} <b>${WX.fmt(D[`wind_src_${id}`][i])}</b> (${WX.fmt(D[`gust_src_${id}`][i])}) m/s`).join(' · ');
+    prec = wd.sourceIds.map(id => `${tag(id)} <b>${WX.fmt(D[`precip_step_src_${id}`][i], 1)} mm</b> ${D[`precip_prob_src_${id}`][i] != null ? Math.round(D[`precip_prob_src_${id}`][i]) + ' %' : ''}`).join(' · ');
+  } else {
+    temp = `<b>${WX.fmtTemp(D.temp[i], 1)}</b> känns ${WX.fmtTemp(D.feels_like[i])}${D.temp_p10[i] != null ? ` · ${WX.fmt(D.temp_p10[i], 1)}…${WX.fmt(D.temp_p90[i], 1)}°` : ''}`;
+    wind = `<b>${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</b> byar ${WX.fmt(D.gust[i])} · ${WX.beaufort(D.wind[i])?.name ?? ''}`;
+    prec = `<b>${WX.fmt(D.precip_step[i], 1)} mm</b>${step > 1 ? ` på ${step} h` : ''} · risk ${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) + ' %' : '—'}${D.rolling3h[i] != null ? ` (3 h ${D.rolling3h[i]} %)` : ''}`;
+  }
+  if (D.thunder[i] != null) prec += ` · åska ${Math.round(D.thunder[i])} %`;
+  $('readout').innerHTML = `<span class="ic">${WX.icon(D.symbols[i], 44)}</span>
+    <div class="when">${WX.dayLabel(t)} ${WX.hh(t)}:00${step > 1 ? '–' + WX.hh(new Date(wd.end(i))) + ':00' : ''} <span style="font-weight:500;color:var(--ink-2);font-family:var(--font-ui);font-size:.85rem">${WX.describe(D.symbols[i])}</span>${isNow && cursorIdx === null ? '<span class="tag">Nu</span>' : ''}${pinned ? '<span class="tag">Fäst</span>' : ''}</div>
+    <div class="vals"><span>Temp ${temp}</span><span>Vind ${wind}</span><span>Nederbörd ${prec}</span></div>`
+    + (cursorIdx === null ? '<div></div><div class="hint">Peka i diagrammet för detaljer. Dra i sidled för att bläddra i tiden.</div>' : '');
+}
+
+function renderStats(st) {
+  const wd = S.wd, D = wd.data, s = st.start, e = st.end;
+  const sl = k => D[k].slice(s, e);
+  $('statsWhat').textContent = app.periodLabel();
+  const tile = (k, v, sub, key, color) => `<div class="card stat" style="--c:${color}"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${sub}</span>${key ? WX.sparkline(sl(key), { h: 34 }) : ''}</div>`;
+  $('stats').innerHTML =
+    tile('Medeltemperatur', WX.fmtTemp(st.tMean, 1), `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}, känns som lägst ${WX.fmtTemp(st.fMin)}`, 'temp', 'var(--warm)')
+    + tile('Medelvind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (byar ${WX.fmt(st.gMax)}) · mest ${WX.windDirLong(st.wDir)}`, 'wind', 'var(--wind)')
+    + tile('Nederbörd', `${WX.fmt(st.pSum, 1)} mm`, st.pRisk === null ? '' : `${st.pRisk} % risk under perioden`, 'precip', 'var(--precip)')
+    + tile('Åska, högst', st.thMax === null ? '—' : `${Math.round(st.thMax)} %`, st.thMax === null ? 'Ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'Låg risk under perioden', st.thMax === null ? null : 'thunder', 'var(--thunder)')
+    + tile('UV-index, högst', WX.fmt(st.uvMax, 1), st.uvMax === null ? '' : st.uvMax < 3 ? 'Lågt, inget skydd behövs' : st.uvMax < 6 ? 'Måttligt' : 'Högt, skydda huden', 'uv', 'var(--ic-sun)')
+    + tile('Molnighet', `${WX.fmt(st.cMean)} %`, `${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'cloud', 'var(--ink-3)')
+    + tile('Luftfuktighet', `${WX.fmt(st.hMean)} %`, `${WX.fmt(st.hMin)}–${WX.fmt(st.hMax)} %`, 'humidity', 'var(--feels)')
+    + tile('Lufttryck', `${WX.fmt(st.prMean)} hPa`, st.prFirst != null && st.prLast != null ? `${WX.fmt(st.prFirst)} → ${WX.fmt(st.prLast)} hPa` : '', 'pressure', 'var(--accent)');
+  renderReadout(false);
+}
+
+// ── Start ──
+router.apply();
+app.load(S.loc);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eriks Väder Rullande</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Utkast E · som D, men de små graferna ligger i en vågrät rad som rullas
+   i sidled, ungefär två grafer i taget, och fler typer får plats.
+   Utkast D: vit sida, huvudmeny överst, ett grått platsband
+   med dygnsflikar som går ihop med sidan under. Tre sidor: Översikt (text
+   och små linjegrafer), Diagram (så stora grafer som möjligt) och Timme för
+   timme (tabell). Få ramar, mer luft och linjer. */
+:root {
+  --page: #ffffff; --band: #eef2f6; --band-2: #e3e9f0; --line: #dde3ea; --line-strong: #c3ccd7;
+  --ink: #142235; --ink-2: #46566b; --ink-3: #68788b;
+  --accent: #1a5cbd; --accent-soft: rgba(26,92,189,.08); --accent-ink: #ffffff;
+  --warm: #c9402e; --cold: #2a6fc4; --feels: #7656c4;
+  --precip: #2c84d4; --precip-soft: rgba(44,132,212,.2); --band-temp: rgba(26,92,189,.1);
+  --wind: #16805c; --gust: #b8740f; --band-wind: rgba(22,128,92,.12); --thunder: #7a4fd0; --cloud: #7b8796;
+  --night: rgba(28,48,78,.05);
+  --src-met: #1b6fd1; --src-smhi: #d0601a;
+  --ok: #1f7f55; --warn: #a96c12; --crit: #c0352b;
+  --ic-sun: #f0a500; --ic-moon: #95a7bf; --ic-cloud: #c4cedb; --ic-cloud-dark: #8293a8;
+  --ic-rain: #2c84d4; --ic-snow: #5d98d6; --ic-bolt: #f0b000; --ic-fog: #98a5b4;
+  --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gut-l: max(16px, env(safe-area-inset-left, 0px));
+  --gut-r: max(16px, env(safe-area-inset-right, 0px));
+  --top-h: 60px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0e141b; --band: #151d27; --band-2: #1b2531; --line: #233040; --line-strong: #344559;
+    --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+    --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.1); --accent-ink: #0b1320;
+    --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+    --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+    --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff; --cloud: #9aa7b6;
+    --night: rgba(0,0,0,.22);
+    --src-met: #58acff; --src-smhi: #ff9a4d;
+    --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+    --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+    --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0e141b; --band: #151d27; --band-2: #1b2531; --line: #233040; --line-strong: #344559;
+  --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+  --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.1); --accent-ink: #0b1320;
+  --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+  --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+  --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff; --cloud: #9aa7b6;
+  --night: rgba(0,0,0,.22);
+  --src-met: #58acff; --src-smhi: #ff9a4d;
+  --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+  --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+  --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 15px/1.55 var(--font-ui); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--page); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: var(--gut-l); padding-right: var(--gut-r); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── Huvudmeny ── */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--page); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; align-items: center; gap: 22px; height: var(--top-h); }
+.brand { display: flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font: 800 1.08rem/1 var(--font-display); white-space: nowrap; }
+.brand b { color: var(--accent); }
+.menu { display: flex; gap: 2px; align-self: stretch; }
+.menu a { display: flex; align-items: center; padding: 0 12px; color: var(--ink-2); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.menu a:hover { color: var(--ink); }
+.menu a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.search { position: relative; flex: 1; min-width: 0; max-width: 340px; margin-left: auto; display: flex; align-items: center; height: 38px; border: 1px solid var(--line); border-radius: 999px; background: var(--page); }
+.search:focus-within { border-color: var(--accent); }
+.search > svg { margin-left: 12px; flex: none; color: var(--ink-3); }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; padding: 0 8px; height: 100%; }
+.search input::placeholder { color: var(--ink-3); }
+.geo { border: 0; background: transparent; color: var(--accent); width: 34px; height: 34px; margin-right: 2px; border-radius: 999px; display: grid; place-items: center; }
+.geo:hover { background: var(--accent-soft); }
+.icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); background: var(--page); border-radius: 999px; color: var(--ink-2); }
+.icon-btn:hover { color: var(--ink); }
+.search-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 260px; margin: 0; padding: 6px; list-style: none; background: var(--page); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.25); max-height: 60vh; overflow: auto; z-index: 40; }
+.sp-head { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 4px; }
+.sp-item { display: grid; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.sp-item:hover, .sp-item[aria-selected="true"] { background: var(--accent-soft); }
+.sp-name { font-weight: 500; } .sp-detail { font-size: .8rem; color: var(--ink-3); }
+.sp-note { font-size: .8rem; color: var(--ink-3); padding: 8px 10px; }
+
+/* ── Platsband med dygnsflikar ── */
+.band { background: var(--band); border-bottom: 1px solid var(--line); }
+.locrow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 28px; padding-block: 24px 18px; }
+.meta label { display: inline-flex; align-items: center; gap: 4px; }
+.meta select { border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: .8rem; padding: 0 2px; cursor: pointer; }
+.band .wrap { position: relative; }
+.day.ct { flex: 0 0 auto; justify-content: center; padding-inline: 14px; font-weight: 500; }
+.day.ct[aria-expanded="true"] { background: var(--page); border-left-color: var(--line); border-right-color: var(--line); }
+.ctpop { position: absolute; right: var(--gut-r); top: 100%; z-index: 15; margin-top: 1px; background: var(--page); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 10px 10px; box-shadow: 0 14px 30px -16px rgba(0,0,0,.3); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); max-width: calc(100% - var(--gut-l) - var(--gut-r)); }
+.ctpop input { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; min-height: 34px; }
+h1 { margin: 2px 0 2px; font: 800 clamp(1.7rem, 4.4vw, 2.5rem)/1.08 var(--font-display); letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
+.fav { border: 0; background: transparent; color: var(--ink-3); padding: 4px; border-radius: 6px; display: grid; }
+.fav[aria-pressed="true"] { color: var(--ic-sun); }
+.meta { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .8rem; color: var(--ink-3); }
+.demo { color: var(--warn); font-weight: 600; }
+.now { display: flex; align-items: center; gap: 12px; }
+.now .t { font: 700 2.7rem/1 var(--font-display); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.now .t.cold { color: var(--cold); } .now .t.warm { color: var(--warm); }
+.now .d { display: flex; flex-direction: column; font-size: .84rem; color: var(--ink-2); line-height: 1.4; }
+.now .d b { color: var(--ink); font-weight: 600; font-size: .95rem; }
+.now .d .k { font-size: .72rem; color: var(--ink-3); }
+
+.days { display: flex; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
+.days::-webkit-scrollbar { display: none; }
+.day { flex: 1 0 82px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 10px; border: 0; border-top: 3px solid transparent; border-left: 1px solid transparent; border-right: 1px solid transparent; background: transparent; color: var(--ink-2); position: relative; }
+.day + .day::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 1px; background: var(--line); }
+.day:hover { background: var(--band-2); }
+.day[aria-pressed="true"] { background: var(--page); color: var(--ink); border-top-color: var(--accent); border-left-color: var(--line); border-right-color: var(--line); }
+.day[aria-pressed="true"]::before, .day[aria-pressed="true"] + .day::before { display: none; }
+.day b { font-weight: 600; font-size: .9rem; color: var(--ink); }
+.day small { font-size: .72rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.day .tt { font-variant-numeric: tabular-nums; font-size: .9rem; }
+.day .tt strong { font-weight: 700; color: var(--ink); }
+.day .mm { font-size: .76rem; color: var(--ink-3); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.day .mm.wet { color: var(--precip); font-weight: 600; }
+.day.all { flex: 0 0 auto; justify-content: center; padding-inline: 16px; font-weight: 500; }
+
+/* ── Sidinnehåll ── */
+main { padding-block: 26px 56px; }
+.view { display: flex; flex-direction: column; gap: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.head h2 { margin: 0; font: 700 1.5rem/1.2 var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
+.head .sub { font-size: .85rem; color: var(--ink-3); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: .85rem; color: var(--ink-2); }
+.tools select { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; }
+.linkbtn { border: 0; background: none; color: var(--accent); padding: 0; font-weight: 500; }
+.linkbtn:hover { text-decoration: underline; }
+.custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); }
+.custom input { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; min-height: 34px; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 6px; padding: 6px 14px; font-weight: 600; font-size: .85rem; }
+h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
+
+/* Små linjegrafer */
+.minis-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.minis-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; }
+.minis-h span { font-size: .78rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.minis-nav { display: flex; align-items: center; gap: 6px; }
+.minis-nav button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--page); border-radius: 999px; color: var(--ink-2); }
+.minis-nav button:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
+.minis-nav button:disabled { opacity: .35; cursor: default; }
+.minis { display: grid; grid-auto-flow: column; grid-auto-columns: calc(50% - 28px); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.minis::-webkit-scrollbar { display: none; }
+.mini { scroll-snap-align: start; }
+.mini { padding: 10px 16px 6px; min-width: 0; }
+.mini + .mini { border-left: 1px solid var(--line); }
+.mini:first-child { padding-left: 0; }
+.mini .k { font-size: .74rem; color: var(--ink-3); line-height: 1.3; }
+.mini .v { font: 700 1rem/1.3 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini .v small { font: 400 .76rem var(--font-ui); color: var(--ink-3); letter-spacing: 0; margin-left: 5px; }
+.mini svg { display: block; width: 100%; margin-top: 2px; overflow: visible; }
+.ml-line { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.ml-line2 { fill: none; stroke: var(--c); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.ml-base { stroke: var(--line); stroke-width: 1; }
+.ml-area { fill: var(--c); opacity: .16; }
+.ml-band { fill: var(--c); opacity: .15; }
+.ml-strip { fill: var(--c); }
+.mini { overflow: hidden; }
+.mini .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mlg { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin-top: 3px; font-size: .68rem; line-height: 1.5; color: var(--ink-3); }
+.mlg > span { white-space: nowrap; }
+.mnote { margin-left: 14px; white-space: nowrap; }
+.mnote i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; background: var(--ink-3); opacity: .25; margin-right: 5px; vertical-align: 0; }
+.mlg i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--c); margin-right: 3px; vertical-align: middle; }
+.mlg i.a { height: 8px; border: 0; background: var(--c); opacity: .3; }
+.mlg i.d { border-top-style: dashed; border-top-width: 1.5px; }
+.mlg i.b { height: 8px; border: 0; background: var(--c); opacity: .2; }
+.mlg i.s { height: 4px; border: 0; background: var(--c); }
+.ml-zero { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
+.ml-day { stroke: var(--line); stroke-width: 1; }
+.ml-dot { fill: var(--page); stroke: var(--c); stroke-width: 1.6; }
+.ml-lab { fill: var(--ink-3); font: 500 9.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.ml-val { fill: var(--ink-2); font: 600 10px var(--font-ui); font-variant-numeric: tabular-nums; }
+
+/* Noteringar och textprognos */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 28px; }
+.note { display: flex; gap: 12px; align-items: flex-start; padding-left: 12px; border-left: 3px solid var(--sev, var(--line-strong)); }
+.note[data-level="high"] { --sev: var(--crit); } .note[data-level="medium"] { --sev: var(--warn); } .note[data-level="low"] { --sev: var(--accent); }
+.note .wxi { flex: none; }
+.note b { display: block; font-weight: 600; font-size: .92rem; }
+.note span { font-size: .86rem; color: var(--ink-2); }
+.texts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px 40px; }
+.tx { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 14px; align-items: start; padding-top: 16px; border-top: 1px solid var(--line); }
+.tx .wxi { grid-row: span 2; }
+.tx h4 { margin: 2px 0 0; font: 700 1.02rem var(--font-display); }
+.tx h4 small { font: 400 .8rem var(--font-ui); color: var(--ink-3); margin-left: 8px; }
+.tx p { margin: 0; font-size: .95rem; line-height: 1.6; color: var(--ink-2); max-width: 64ch; }
+.tx p b { color: var(--ink); font-weight: 600; }
+.more { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: .9rem; }
+.more a { color: var(--accent); font-weight: 500; text-decoration: none; }
+.more a:hover { text-decoration: underline; }
+
+/* ── Diagram ── */
+.chart-sec { display: flex; flex-direction: column; gap: 4px; }
+.chart-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.chart-h h3 { margin: 0; font: 700 1.05rem var(--font-display); }
+.chart-h .val { margin-left: auto; font-size: .82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: .76rem; color: var(--ink-3); }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.legend i.box { height: 9px; border: 0; border-radius: 2px; }
+.legend i.dot { border-top-style: dotted; } .legend i.dash { border-top-style: dashed; }
+.chart { min-width: 0; }
+.tiphint { margin: -16px 0 0; font-size: .82rem; color: var(--ink-3); }
+.mg-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--page); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.35); padding: 6px 9px; font-size: .78rem; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mg-tip b { color: var(--ink); font-weight: 600; }
+.mg-tip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--ink); }
+.mg-tip .big { font: 700 1.05rem var(--font-display); color: var(--ink); }
+.mg-tip.pinned { border-color: var(--accent); }
+.mg-dots { position: absolute; inset: 0; pointer-events: none; }
+.mg-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--page); border: 2.5px solid var(--c); }
+
+/* ── Tabell (transponerad) ── */
+.hm-wrap { overflow-x: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm th, .hm td { padding: 0 2px; text-align: center; min-width: 42px; height: 30px; border-bottom: 1px solid var(--line); }
+.hm tr:last-child th, .hm tr:last-child td { border-bottom: 0; }
+.hm th.rl { position: sticky; left: 0; z-index: 2; background: var(--page); text-align: left; padding: 0 12px 0 0; min-width: 120px; font-weight: 500; font-size: .78rem; color: var(--ink-2); border-right: 1px solid var(--line); }
+.hm th.rl small { color: var(--ink-3); font-weight: 400; margin-left: 4px; }
+.hm tr.dayrow th { text-align: left; padding: 0 8px; font: 700 .82rem var(--font-display); color: var(--ink); border-left: 2px solid var(--line-strong); }
+.hm tr.dayrow th.rl { border-left: 0; padding-left: 0; font: 500 .78rem var(--font-ui); }
+.hm tr.dayrow th span { position: sticky; left: 132px; }
+.hm tr.hourrow td { color: var(--ink-3); font-size: .74rem; height: 26px; }
+.hm td.nd { border-left: 2px solid var(--line-strong); }
+.hm td.cur { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.hm td.ic { height: 40px; }
+.hm td.dim { color: var(--ink-3); }
+.tog { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); margin-top: -10px; cursor: pointer; }
+.tog input { width: 16px; height: 16px; accent-color: var(--accent); }
+.hm tr.unc th.rl { font-weight: 400; color: var(--ink-3); padding-left: 12px; font-size: .74rem; }
+.hm tr.unc td { color: var(--ink-3); font-size: .74rem; height: 24px; }
+.hm tr.unc-first td, .hm tr.unc-first th { border-top: 0; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .78rem; color: var(--ink-3); align-items: center; }
+.hm-scale { display: inline-block; width: 140px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px; }
+
+/* ── Meteogram (klasser från core.js) ── */
+.mg-plot { position: relative; user-select: none; -webkit-user-select: none; touch-action: pan-y; cursor: crosshair; }
+.mg-panning .mg-plot { cursor: grabbing; }
+.mg-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mg-xhair { position: absolute; width: 0; border-left: 1px solid var(--ink-2); pointer-events: none; opacity: .55; }
+.mg-xhair.pinned { opacity: .9; border-left-width: 2px; }
+.mg-night { fill: var(--night); }
+.mg-midnight { stroke: var(--line-strong); }
+.mg-now { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.mg-grid { stroke: var(--line); }
+.mg-grid.mg-zero { stroke: var(--line-strong); stroke-width: 1.4; }
+.mg-ylab, .mg-tick, .mg-unit, .mg-strip-lab, .mg-bft-lab { fill: var(--ink-3); font: 500 10.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.mg-tick-day { fill: var(--ink); font-weight: 600; }
+.mg-dayname { fill: var(--ink-2); font: 600 11.5px var(--font-ui); }
+.mg-temp { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.mg-temp-warm { stroke: var(--warm); } .mg-temp-cold { stroke: var(--cold); }
+.mg-feels { fill: none; stroke: var(--feels); stroke-width: 1.5; stroke-dasharray: 1.5 3.5; stroke-linecap: round; }
+.mg-band { stroke: none; } .mg-band-temp { fill: var(--band-temp); } .mg-band-wind { fill: var(--band-wind); }
+.mg-bar { fill: var(--precip); } .mg-bar-hi { fill: var(--precip-soft); }
+.mg-risk { fill: var(--precip); } .mg-thunder { fill: var(--thunder); }
+.mg-wind { fill: none; stroke: var(--wind); stroke-width: 2.2; stroke-linejoin: round; }
+.mg-gust { fill: none; stroke: var(--gust); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.mg-bft { stroke: var(--line-strong); stroke-dasharray: 1 3; }
+.mg-arrow path { fill: var(--ink-2); }
+.mg-src { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.mg-src-met { stroke: var(--src-met); } .mg-src-smhi { stroke: var(--src-smhi); }
+.mg-dash { stroke-width: 1.3; stroke-dasharray: 4 3; }
+.mg-bar-met { fill: var(--src-met); } .mg-bar-smhi { fill: var(--src-smhi); }
+.wxi-sun { fill: var(--ic-sun); }
+.wxi-ray { stroke: var(--ic-sun); stroke-width: 2.8; stroke-linecap: round; fill: none; }
+.wxi-moon { fill: var(--ic-moon); }
+.wxi-cloud { fill: var(--ic-cloud); } .wxi-cloud-dark { fill: var(--ic-cloud-dark); }
+.wxi-rain { stroke: var(--ic-rain); stroke-width: 3; stroke-linecap: round; fill: none; }
+.wxi-snow { fill: var(--ic-snow); }
+.wxi-bolt { fill: var(--ic-bolt); }
+.wxi-fog { stroke: var(--ic-fog); stroke-width: 3; stroke-linecap: round; fill: none; }
+.wxa path { fill: var(--ink-2); }
+
+.notice { border: 1px solid var(--crit); color: var(--crit); border-radius: 8px; padding: 9px 12px; font-size: .86rem; display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
+.notice button { border: 0; background: none; color: inherit; }
+.loading { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); z-index: 50; background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 999px; font-size: .82rem; }
+.busy { opacity: .45; transition: opacity .2s; }
+footer { border-top: 1px solid var(--line); background: var(--band); color: var(--ink-3); font-size: .78rem; padding-block: 20px 30px; }
+footer p { margin: 0 0 4px; max-width: 75ch; }
+footer a { color: var(--ink-2); }
+
+@media (max-width: 860px) {
+}
+/* Mobil: menyn får en egen rad, toppen klistrar inte, graferna går kant i kant */
+@media (max-width: 640px) {
+  :root { --top-h: 0px; }
+  .topbar { position: static; }
+  .topbar-in { flex-wrap: wrap; height: auto; padding-block: 10px 0; gap: 10px; }
+  .brand span { display: none; }
+  .search { order: 2; max-width: none; }
+  .icon-btn { order: 3; }
+  .menu { order: 4; flex-basis: 100%; height: 42px; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; }
+  .menu a { padding: 0 10px; }
+  .locrow { padding-block: 16px 12px; }
+  .now .t { font-size: 2.3rem; }
+  .day { flex: 0 0 78px; padding-inline: 2px; }
+  main { padding-block: 18px 40px; }
+  .view { gap: 20px; }
+  .head h2 { font-size: 1.25rem; }
+  .bleed { margin-left: calc(-1 * var(--gut-l)); margin-right: calc(-1 * var(--gut-r)); }
+  .chart-h { padding-inline: 0; }
+  .texts { grid-template-columns: 1fr; }
+  .minis { grid-auto-columns: calc(50% - 18px); }
+  .mini { padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#oversikt" aria-label="Eriks Väder, översikt">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="var(--accent)"/><circle cx="11" cy="11" r="4.2" fill="var(--ic-sun)"/><path d="M8 20.5h11a3.6 3.6 0 0 0 0-7.2 5 5 0 0 0-9.4 1.2A3 3 0 0 0 8 20.5z" fill="#fff"/></svg>
+      <span>Eriks <b>Väder</b></span>
+    </a>
+    <nav class="menu" aria-label="Sidor">
+      <a href="#oversikt" data-view="oversikt">Översikt</a>
+      <a href="#diagram" data-view="diagram">Diagram</a>
+      <a href="#timmar" data-view="timmar">Timme för timme</a>
+    </nav>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <label class="sr" for="q">Sök plats</label>
+      <input id="q" type="search" placeholder="Sök plats" autocomplete="off" spellcheck="false">
+      <button class="geo" id="geoBtn" type="button" title="Använd min position" aria-label="Använd min position">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 0v3M8 13v3M0 8h3M13 8h3" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <ul class="search-pop" id="searchPop" hidden></ul>
+    </div>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Byt till mörkt läge"></button>
+  </div>
+</header>
+
+<section class="band" aria-label="Plats och dygn">
+  <div class="wrap">
+    <div class="locrow">
+      <div>
+        <h1><span id="locName">—</span><button class="fav" id="favBtn" type="button" aria-pressed="false" aria-label="Spara som favorit"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg></button></h1>
+        <div class="meta" id="meta"></div>
+      </div>
+      <div class="now" id="now" aria-label="Just nu"></div>
+    </div>
+    <div class="days" id="days" role="group" aria-label="Välj dygn"></div>
+    <div class="ctpop" id="ctpop" hidden>
+      <label for="pFrom">Från</label><input type="datetime-local" id="pFrom">
+      <label for="pTo">till</label><input type="datetime-local" id="pTo">
+      <button class="btn" type="button" id="pApply">Visa</button>
+    </div>
+  </div>
+</section>
+
+<main class="wrap" id="main">
+  <div class="notice" id="err" hidden role="alert"></div>
+
+  <!-- ÖVERSIKT -->
+  <section class="view" id="view-oversikt">
+    <div class="head" data-head></div>
+    <div class="minis-box">
+      <div class="minis-h"><span><span id="minisPos">1–2 av 7</span><span class="mnote"><i></i>skuggat: troligt spann (80 %)</span></span>
+        <div class="minis-nav">
+          <button type="button" id="mPrev" aria-label="Föregående graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          <button type="button" id="mNext" aria-label="Nästa graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+      <div class="minis" id="minis" tabindex="0" aria-label="Små grafer för perioden, rulla i sidled"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+    <div>
+      <h3 class="sec">Prognos dygn för dygn</h3>
+      <div class="texts" id="texts"></div>
+    </div>
+    <div class="more"><a href="#diagram">Se diagram för perioden →</a><a href="#timmar">Se timme för timme →</a></div>
+  </section>
+
+  <!-- DIAGRAM -->
+  <section class="view" id="view-diagram" hidden>
+    <div class="head" data-head></div>
+    <p class="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Temperatur</h3><div class="legend" id="lgT"></div><span class="val" id="vT"></span></div>
+      <div class="chart bleed" id="mgT"></div>
+    </section>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Nederbörd</h3><div class="legend" id="lgP"></div><span class="val" id="vP"></span></div>
+      <div class="chart bleed" id="mgP"></div>
+    </section>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Vind</h3><div class="legend" id="lgW"></div><span class="val" id="vW"></span></div>
+      <div class="chart bleed" id="mgW"></div>
+    </section>
+  </section>
+
+  <!-- TIMME FÖR TIMME -->
+  <section class="view" id="view-timmar" hidden>
+    <div class="head" data-head></div>
+    <label class="tog"><input type="checkbox" id="unc"> Visa osäkerhet: det spann som 80 % av utfallen hamnar inom</label>
+    <div class="hm-wrap bleed"><table class="hm" id="hm"></table></div>
+    <div class="hm-legend"><span>Temperatur <span class="hm-scale" id="hmScale"></span> −20° till +30°</span><span>Nederbörd, risk, vind och byar blir starkare ju högre värdet är.</span></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
+    <p>Utkast E · Webbplats med rullande grafer.</p>
+  </div>
+</footer>
+
+<div class="loading" id="loading" hidden>Hämtar prognos …</div>
+
+<script src="../forecast-sources.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/demo.js"></script>
+<script src="../js/app.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const H = WX.H;
+const THEME_KEY = 'wxE.theme';
+WX.theme.init(THEME_KEY);
+
+const VIEWS = ['oversikt', 'diagram', 'timmar'];
+const dirty = {};
+const app = WX.createApp({
+  prefix: 'wxE',
+  onData: () => { renderBand(); markDirty(); renderView(); },
+  onPeriod: () => { renderDays(); markDirty(); renderView(); },
+  onLoading: on => { $('loading').hidden = !on; $('main').classList.toggle('busy', on); },
+  onError: msg => {
+    $('err').hidden = false;
+    $('err').innerHTML = `<span>${WX.esc(msg)}</span><button type="button" aria-label="Stäng">✕</button>`;
+    $('err').querySelector('button').onclick = () => { $('err').hidden = true; };
+  },
+});
+const S = app.S;
+const markDirty = () => VIEWS.forEach(v => dirty[v] = true);
+
+const router = WX.router(VIEWS, v => {
+  VIEWS.forEach(x => $('view-' + x).hidden = x !== v);
+  document.querySelectorAll('.menu a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  renderView();
+});
+function renderView() {
+  if (!S.wd) return;
+  const v = router.current();
+  if (!dirty[v]) { if (v === 'diagram') mg.render(); return; }
+  dirty[v] = false;
+  renderHead();
+  ({ oversikt: renderOverview, diagram: renderDiagram, timmar: renderTable })[v]();
+}
+
+// ── Tema, sök, position, favorit ──
+const sunIc = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const moonIc = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="currentColor"/></svg>';
+function paintTheme() {
+  const dark = WX.theme.current() === 'dark';
+  $('themeBtn').innerHTML = dark ? sunIc : moonIc;
+  $('themeBtn').setAttribute('aria-label', dark ? 'Byt till ljust läge' : 'Byt till mörkt läge');
+}
+$('themeBtn').onclick = () => { WX.theme.toggle(THEME_KEY); paintTheme(); if (S.wd) { dirty.oversikt = true; renderView(); } };
+paintTheme();
+app.bindSearch($('q'), $('searchPop'));
+$('geoBtn').onclick = () => app.geolocate();
+$('favBtn').onclick = () => { app.toggleFav(); renderBand(); };
+$('pApply').onclick = () => {
+  const A = WX.parseLocalInput($('pFrom').value), B = WX.parseLocalInput($('pTo').value);
+  if (!(A < B)) return;
+  $('ctpop').hidden = true;
+  app.setRange(A.getTime(), B.getTime());
+};
+
+// ── Platsband: namn, just nu, dygnsflikar ──
+function renderBand() {
+  $('locName').textContent = S.loc.name;
+  document.title = `${S.loc.name} · Eriks Väder`;
+  $('favBtn').setAttribute('aria-pressed', String(app.isFav()));
+  $('favBtn').setAttribute('aria-label', app.isFav() ? 'Ta bort från favoriter' : 'Spara som favorit');
+  const eff = app.effectiveMode();
+  $('meta').innerHTML = `<span>Uppdaterad ${WX.hhmm(S.fetchedAt)}</span>`
+    + `<label>Källa <select id="src" title="Prognoskälla">${WX.MODES.map(m => `<option value="${m.id}" ${m.id === eff ? 'selected' : ''} ${app.modeAvailable(m.id) ? '' : 'disabled'}>${m.label}</option>`).join('')}</select></label>`
+    + (S.live ? '' : '<span class="demo" title="met.no och SMHI gick inte att nå härifrån. Visar påhittad exempeldata.">Exempeldata</span>');
+  $('src').onchange = e => app.setMode(e.target.value);
+  const wd = S.wd, D = wd.data, i = WX.nowIndex(wd), tv = D.temp[i];
+  $('now').innerHTML = `${WX.icon(D.symbols[i], 50)}<span class="t ${tv < 0 ? 'cold' : tv >= 20 ? 'warm' : ''}">${WX.fmtTemp(tv)}</span>
+    <span class="d"><span class="k">Just nu, ${WX.hh(wd.times[i])}:00</span><b>${WX.describe(D.symbols[i])}</b><span>Känns som ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</span></span>`;
+  renderDays();
+}
+function renderDays() {
+  $('days').innerHTML = S.days.map(d => {
+    const mm = d.precip ?? 0;
+    return `<button class="day" type="button" data-day="${d.key}" aria-pressed="${S.sel.has(d.key) && S.periodKind !== 'all'}" title="${WX.describe(d.symbol)}">
+      <b>${d.label}</b><small>${d.date.getDate()} ${WX.MONTHS[d.date.getMonth()]}</small>${WX.icon(d.symbol, 40)}
+      <span class="tt"><strong>${WX.fmtTemp(d.hi)}</strong> ${WX.fmtTemp(d.lo)}</span>
+      <span class="mm ${mm >= 0.1 ? 'wet' : ''}">${mm >= 0.1 ? WX.fmt(mm, mm < 10 ? 1 : 0) + ' mm' : '0 mm'}</span></button>`;
+  }).join('') + `<button class="day all" type="button" id="allDays" aria-pressed="${S.periodKind === 'all'}">Alla<br>dygn</button>`
+    + `<button class="day ct" type="button" id="ctBtn" aria-expanded="${!$('ctpop').hidden}" aria-pressed="${S.periodKind === 'custom'}" aria-controls="ctpop">Egna<br>tider</button>`;
+  $('days').querySelectorAll('[data-day]').forEach(b => b.onclick = () => app.toggleDay(b.dataset.day));
+  $('allDays').onclick = () => app.setAll();
+  $('ctBtn').onclick = () => {
+    const pop = $('ctpop'); pop.hidden = !pop.hidden;
+    $('ctBtn').setAttribute('aria-expanded', String(!pop.hidden));
+    if (!pop.hidden) {
+      const [a, b] = app.periodRange();
+      $('pFrom').value = WX.toLocalInput(new Date(a)); $('pTo').value = WX.toLocalInput(new Date(b));
+      $('pFrom').min = $('pTo').min = WX.toLocalInput(S.wd.times[0]);
+      $('pFrom').max = $('pTo').max = WX.toLocalInput(new Date(app.extent()[1]));
+    }
+  };
+}
+
+// Rubrik för varje sida: bara vald period, på en rad
+function renderHead() {
+  const sel = S.days.filter(d => d.last > S.period.start && d.first < S.period.end);
+  const title = S.periodKind === 'all' ? 'Alla dygn' : sel.length === 1 ? `${sel[0].labelLong} ${WX.dateShort(sel[0].date)}`
+    : sel.length ? `${sel[0].labelLong} – ${sel[sel.length - 1].labelLong.toLowerCase()}` : 'Vald period';
+  document.querySelectorAll('[data-head]').forEach(el => {
+    el.innerHTML = `<h2>${title}</h2><span class="sub num">${app.periodLabel()}</span>`;
+  });
+}
+
+// ═══ ÖVERSIKT ═══
+// Minimal linjegraf: en linje, punkter vid högsta/lägsta, dygnsgränser
+function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero, floor0, scaleToLine, h = 42 }) {
+  const wd = S.wd, { start, end } = S.period;
+  const W = Math.max(120, el.clientWidth), Hh = h, padT = 11, padB = 12;
+  const a = wd.ms[start], b = wd.end(end - 1);
+  const xs = [], vals = [], vals2 = [];
+  for (let i = start; i < end; i++) { xs.push(wd.ms[i] + wd.step(i) * H / 2); vals.push(ys[i - start]); if (ys2) vals2.push(ys2[i - start]); }
+  const bLo = [], bHi = [];
+  if (band) for (let i = start; i < end; i++) { bLo.push(band[0][i - start]); bHi.push(band[1][i - start]); }
+  const all = WX.valid(scaleToLine ? [...vals, ...vals2] : [...vals, ...vals2, ...bLo, ...bHi]);
+  if (!all.length) { el.innerHTML = ''; return; }
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (floor0) lo = 0;
+  if (hi - lo < 1) { hi += 0.5; lo -= floor0 ? 0 : 0.5; }
+  if (scaleToLine) hi = Math.max(hi * 1.3, 1);   // lite luft ovanför linjen; bandet klipps i toppen
+  const X = t => 3 + (t - a) / (b - a) * (W - 6);
+  const Y = v => padT + (hi - v) / (hi - lo) * (Hh - padT - padB);
+  const path = arr => { let d = '', pen = false; arr.forEach((v, k) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(xs[k]).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; }); return d; };
+  let s = `<line class="ml-base" x1="0" x2="${W}" y1="${Hh - padB}" y2="${Hh - padB}"/>`;
+  if (zero && lo < 0 && hi > 0) s += `<line class="ml-zero" x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  // dygnsgränser + etiketter
+  const d0 = new Date(a); d0.setHours(0, 0, 0, 0);
+  for (let d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 1); d.getTime() < b; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    const x = X(d.getTime());
+    s += `<line class="ml-day" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${padT - 4}" y2="${Hh - padB + 3}"/>`;
+    if (x < W - 30) s += `<text class="ml-lab" x="${(x + 3).toFixed(1)}" y="${Hh - 1}">${WX.WEEKDAYS[d.getDay()]}</text>`;
+  }
+  s += `<text class="ml-lab" x="0" y="${Hh - 1}">${WX.hh(new Date(a))}</text>`;
+  // Yta 0–100 % bakom linjen (används för nederbördsrisk), trappsteg per tidssteg
+  if (area) {
+    const top = padT - 2, base = Hh - padB;
+    let d = '';
+    for (let i = start; i < end; i++) {
+      const p = area[i - start]; if (p == null) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i)), y = base - p / 100 * (base - top);
+      d += `M${x0.toFixed(1)} ${base}V${y.toFixed(1)}H${x1.toFixed(1)}V${base}Z`;
+    }
+    s += `<path class="ml-area" d="${d}" style="--c:${areaColor || color}"/>`;
+  }
+  // Osäkerhetsband (80 % av utfallen) som ljus yta runt linjen
+  if (band) {
+    let d = '', seg = [];
+    const flush = () => {
+      if (seg.length > 1) d += 'M' + seg.map(k => `${X(xs[k]).toFixed(1)} ${Y(bHi[k]).toFixed(1)}`).join('L')
+        + 'L' + seg.slice().reverse().map(k => `${X(xs[k]).toFixed(1)} ${Y(bLo[k]).toFixed(1)}`).join('L') + 'Z';
+      seg = [];
+    };
+    xs.forEach((_, k) => { if (bLo[k] == null || bHi[k] == null) flush(); else seg.push(k); });
+    flush();
+    const cid = `mlc${Math.random().toString(36).slice(2, 8)}`;
+    s += `<clipPath id="${cid}"><rect x="0" y="${padT - 3}" width="${W}" height="${Hh - padB - padT + 3}"/></clipPath><path class="ml-band" clip-path="url(#${cid})" d="${d}" style="--c:${color}"/>`;
+  }
+  // Riskremsa längs botten: opacitet = sannolikhet
+  if (strip) {
+    const base = Hh - padB;
+    for (let i = start; i < end; i++) {
+      const p = strip[i - start]; if (p == null || p < 2) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i));
+      s += `<rect class="ml-strip" x="${x0.toFixed(1)}" y="${base - 4}" width="${Math.max(0.6, x1 - x0 - 0.4).toFixed(1)}" height="4" style="--c:${areaColor || color}" opacity="${Math.min(1, 0.1 + p / 100 * 0.9).toFixed(2)}"/>`;
+    }
+  }
+  if (ys2) s += `<path class="ml-line2" d="${path(vals2)}" style="--c:${color}"/>`;
+  s += `<path class="ml-line" d="${path(vals)}" style="--c:${color}"/>`;
+  const v = WX.valid(vals);
+  const iMax = vals.indexOf(Math.max(...v)), iMin = vals.indexOf(Math.min(...v));
+  const dot = (k, above) => {
+    const x = X(xs[k]), y = Y(vals[k]);
+    const anchor = x < 20 ? 'start' : x > W - 20 ? 'end' : 'middle';
+    return `<circle class="ml-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" style="--c:${color}"/><text class="ml-val" x="${x.toFixed(1)}" y="${(above ? y - 4 : y + 12).toFixed(1)}" text-anchor="${anchor}">${fmt(vals[k])}</text>`;
+  };
+  if (iMax >= 0) s += dot(iMax, true);
+  if (iMin >= 0 && iMin !== iMax && !floor0 && Y(vals[iMin]) + 13 < Hh - padB) s += dot(iMin, false);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" aria-hidden="true">${s}</svg>`;
+}
+
+function renderOverview() {
+  const wd = S.wd, D = wd.data, st = app.stats(), { start, end } = S.period;
+  const sl = k => D[k].slice(start, end);
+  // Ackumulerad nederbörd ger en lugn linje som visar när och hur mycket
+  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
+  const hasTh = st.thMax != null;
+  const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
+  // Samma grafer och ordning som i nuvarande app
+  const items = [
+    ['Temperatur', WX.fmtTemp(st.tMean, 1), `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, ''],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
+    ['Nederbörd, totalt', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `risk ${st.pRisk ?? '—'} %`, 'miP', { ys: sl('precip'), band: [sl('precip_p10'), sl('precip_p90')], strip: sl('precip_prob'), scaleToLine: true, color: 'var(--precip)', fmt: v => WX.fmt(v, 1) + ' mm/h', floor0: true }, lg(['var(--precip)', 'mm/h'], ['var(--precip)', 'risk', 's'])],
+    ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
+    ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
+    ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
+    ['Luftfuktighet', `${WX.fmt(st.hMean)} %`, `i snitt · ${WX.fmt(st.hMin)}–${WX.fmt(st.hMax)} %`, 'miH', { ys: sl('humidity'), color: 'var(--feels)', fmt: v => WX.fmt(v) + ' %' }],
+  ];
+  const sc = $('minis'), keep = sc.scrollLeft;
+  sc.innerHTML = items.map(([k, v, sub, id, , l]) => m(k, v, sub, id, l)).join('');
+  items.forEach(it => { if (it[4]) miniLine($(it[3]), it[4]); else $(it[3]).innerHTML = '<svg height="42" width="10" aria-hidden="true"></svg>'; });
+  sc.scrollLeft = keep;
+  updateMiniNav();
+
+  const sel = S.days.filter(d => d.last > start && d.first < end);
+  const notes = WX.highlights(wd, sel, S.period);
+  const ic = { wind: 'cloudy', thunder: 'rainandthunder', freeze: 'lightsleet', trend: 'partlycloudy_day' };
+  $('notes').innerHTML = notes.map(n => `<div class="note" data-level="${n.level}">${WX.icon(n.kind === 'precip' ? n.sym : ic[n.kind], 32)}<div><b>${WX.esc(n.title)}</b><span>${WX.esc(n.text)}</span></div></div>`).join('');
+  $('notes').hidden = !notes.length;
+  $('texts').innerHTML = sel.map(d => {
+    const t = WX.dayText(wd, d);
+    return `<div class="tx">${WX.icon(d.symbol, 46)}<h4>${d.labelLong}<small>${WX.dateShort(d.date)} · ${WX.fmtTemp(d.lo)} / ${WX.fmtTemp(d.hi)}</small></h4><p><b>${WX.esc(t.lead)}</b> ${WX.esc(t.text.slice(t.lead.length).trim())}</p></div>`;
+  }).join('');
+}
+
+// ═══ DIAGRAM: så stora som möjligt, särskilt på mobil ═══
+const isPhone = w => w < 600;
+const vh = () => window.innerHeight || 800;
+// Värdeetiketter i graferna: tid + värden vid hårkorset, punkter på kurvorna
+const D_ = () => S.wd.data;
+const both = () => S.wd.mode === 'both';
+const srcVals = (key, i, f) => S.wd.sourceIds.map(id => `<span style="color:var(--src-${id})">●</span> <b>${f(D_()[`${key}_src_${id}`][i])}</b>`).join('  ');
+const tipTime = i => {
+  const wd = S.wd, t = wd.times[i], st = wd.step(i);
+  return `${WX.dayLabel(t)} ${WX.hh(t)}:00${st > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}`;
+};
+const mg = WX.chart.group({
+  panels: [
+    { el: $('mgT'), kind: 'temp', opts: {
+      icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('temp', i, v => WX.fmtTemp(v, 1))
+        : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`
+          + (D.temp_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.temp_p10[i], 1)} till ${WX.fmtTemp(D.temp_p90[i], 1)}</b>` : '')); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`temp_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().temp[i], c: D_().temp[i] < 0 ? 'var(--cold)' : 'var(--warm)' }, { v: D_().feels_like[i], c: 'var(--feels)' }],
+    } },
+    { el: $('mgP'), kind: 'precip', opts: {
+      axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200,
+      tip: i => { const D = D_(), st = S.wd.step(i); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('precip_step', i, v => WX.fmt(v, 1) + ' mm')
+        : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`
+          + ((D.precip_p90[i] ?? 0) * st >= 0.1 ? `<br>troligen <b>${WX.fmt((D.precip_p10[i] ?? 0) * st, 1)}–${WX.fmt(D.precip_p90[i] * st, 1)} mm</b>` : ''))
+        + `<br>risk <b>${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</b>${D.rolling3h[i] != null ? ` · 3 h ${D.rolling3h[i]} %` : ''}${D.thunder[i] != null ? ` · åska ${Math.round(D.thunder[i])} %` : ''}`; },
+    } },
+    { el: $('mgW'), kind: 'wind', opts: {
+      axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('wind', i, v => WX.fmt(v) + ' m/s')
+        : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`
+          + (D.wind_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.wind_p10[i])}–${WX.fmt(D.wind_p90[i])} m/s</b>` : '')); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`wind_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().wind[i], c: 'var(--wind)' }, { v: D_().gust[i], c: 'var(--gust)' }],
+    } },
+  ],
+  getCtx: () => {
+    const w = $('mgT').clientWidth || 600;
+    return S.wd && { wd: S.wd, night: S.night, nowMs: Date.now(), ml: isPhone(w) ? 32 : 40, mr: isPhone(w) ? 10 : 64 };
+  },
+  onRange: r => app.setRange(r[0], r[1], 'pan'),
+});
+function renderDiagram() {
+  const L = (c, t, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${t}</span>`;
+  const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
+  $('lgT').innerHTML = both() ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet (80 %)', 'box');
+  $('lgP').innerHTML = (both() ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'Kan bli upp till', 'box')) + L('var(--precip)', 'Risk', 'box');
+  $('lgW').innerHTML = both() ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--band-wind)', 'Osäkerhet (80 %)', 'box') + L('var(--gust)', 'Byar', 'dash');
+  const st = app.stats();
+  $('vT').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
+  $('vP').textContent = `${WX.fmt(st.pSum, 1)} mm, risk ${st.pRisk ?? '—'} %`;
+  $('vW').textContent = `max ${WX.fmt(st.wMax)} m/s, byar ${WX.fmt(st.gMax)}`;
+  mg.cursor = null; mg.pinned = false;
+  mg.setRange(app.periodRange(), app.extent());
+}
+
+// ═══ TIMME FÖR TIMME ═══
+const UNC_KEY = 'wxE.unc';
+$('unc').checked = WX.store.get(UNC_KEY, true);
+$('unc').onchange = () => { WX.store.set(UNC_KEY, $('unc').checked); renderTable(); };
+function renderTable() {
+  const unc = $('unc').checked;
+  const wd = S.wd, D = wd.data, { start, end } = S.period, nowI = WX.nowIndex(wd);
+  const idx = []; for (let i = start; i < end; i++) idx.push(i);
+  const newDay = i => i === start || WX.dateKey(wd.times[i]) !== WX.dateKey(wd.times[i - 1]);
+  const nd = i => (newDay(i) ? ' nd' : '') + (i === nowI ? ' cur' : '');
+  let dayRow = '<tr class="dayrow"><th class="rl">Dygn</th>';
+  for (let k = 0; k < idx.length;) {
+    let n = 1; while (k + n < idx.length && !newDay(idx[k + n])) n++;
+    const t = wd.times[idx[k]];
+    dayRow += `<th colspan="${n}"><span>${n > 3 ? WX.dayLabel(t, true) + ' ' + WX.dateShort(t) : WX.dayLabel(t)}</span></th>`;
+    k += n;
+  }
+  const row = (label, unit, fn, cls = '') => `<tr class="${cls}"><th class="rl">${label}${unit ? `<small>${unit}</small>` : ''}</th>${idx.map(i => fn(i, nd(i))).join('')}</tr>`;
+  const shade = (v, max, cvar) => v == null || v <= 0 ? '' : `background:color-mix(in srgb, var(${cvar}) ${Math.round(Math.min(1, v / max) * 55)}%, transparent)`;
+  $('hm').innerHTML = '<tbody>' + dayRow + '</tr>'
+    + row('Tid', '', (i, c) => `<td class="${c}">${WX.hh(wd.times[i])}${wd.step(i) > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</td>`, 'hourrow')
+    + row('Väder', '', (i, c) => `<td class="ic${c}" title="${WX.describe(D.symbols[i])}">${WX.icon(D.symbols[i], 28)}</td>`)
+    + row('Temperatur', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.temp[i], .28)}"><b>${WX.fmt(D.temp[i])}</b></td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p90[i])}</td>`, 'unc') : '')
+    + row('Känns som', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.feels_like[i], .13)}">${WX.fmt(D.feels_like[i])}</td>`)
+    + row('Nederbörd', 'mm', (i, c) => `<td class="${c}${(D.precip_step[i] ?? 0) < 0.05 ? ' dim' : ''}" style="${shade(D.precip[i], 2, '--precip')}">${(D.precip_step[i] ?? 0) < 0.05 ? '·' : WX.fmt(D.precip_step[i], 1)}</td>`)
+    + (unc ? row('kan bli upp till', '', (i, c) => { const v = (D.precip_p90[i] ?? 0) * wd.step(i); return `<td class="${c}">${v < 0.05 ? '·' : WX.fmt(v, 1)}</td>`; }, 'unc') : '')
+    + row('Risk', '%', (i, c) => `<td class="${c}" style="${shade(D.precip_prob[i], 100, '--precip')}">${D.precip_prob[i] == null ? '—' : Math.round(D.precip_prob[i])}</td>`)
+    + row('Risk 3 h', '%', (i, c) => `<td class="dim${c}">${D.rolling3h[i] ?? ''}</td>`)
+    + row('Åska', '%', (i, c) => `<td class="${c}${(D.thunder[i] ?? 0) < 1 ? ' dim' : ''}" style="${shade(D.thunder[i], 50, '--thunder')}">${D.thunder[i] == null ? '—' : Math.round(D.thunder[i])}</td>`)
+    + row('Vind', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.wind[i] - 3, 14, '--wind')}">${WX.fmt(D.wind[i])}</td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p90[i])}</td>`, 'unc') : '')
+    + row('Byar', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.gust[i] - 8, 18, '--gust')}">${WX.fmt(D.gust[i])}</td>`)
+    + row('Riktning', '', (i, c) => `<td class="${c}" title="${WX.windDir(D.wind_direction[i])}">${WX.windArrow(D.wind_direction[i], 15)}</td>`)
+    + row('Moln', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.cloud[i])}</td>`)
+    + row('Fukt', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.humidity[i])}</td>`)
+    + row('UV', '', (i, c) => `<td class="dim${c}">${WX.fmt(D.uv[i], 1)}</td>`)
+    + row('Tryck', 'hPa', (i, c) => `<td class="dim${c}">${WX.fmt(D.pressure[i])}</td>`)
+    + '</tbody>';
+  $('hmScale').style.background = `linear-gradient(90deg, ${[-20, -10, 0, 10, 20, 30].map(t => WX.tempTint(t, .8)).join(',')})`;
+}
+
+// Rullande rad med små grafer: pilar och "1–2 av 9"
+function miniStep() { const f = $('minis').querySelector('.mini'); return f ? f.getBoundingClientRect().width : 200; }
+function updateMiniNav() {
+  const sc = $('minis'), n = sc.children.length; if (!n) return;
+  const w = miniStep(), first = Math.round(sc.scrollLeft / w) + 1;
+  const vis = Math.max(1, Math.floor((sc.clientWidth + 2) / w));
+  const last = Math.min(n, first + vis - 1);
+  $('minisPos').textContent = `${first}${last > first ? '–' + last : ''} av ${n}`;
+  $('mPrev').disabled = sc.scrollLeft < 4;
+  $('mNext').disabled = sc.scrollLeft + sc.clientWidth >= sc.scrollWidth - 4;
+}
+$('mPrev').onclick = () => $('minis').scrollBy({ left: -miniStep(), behavior: 'smooth' });
+$('mNext').onclick = () => $('minis').scrollBy({ left: miniStep(), behavior: 'smooth' });
+$('minis').addEventListener('scroll', () => requestAnimationFrame(updateMiniNav), { passive: true });
+
+let rt = null;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.wd && router.current() === 'oversikt') renderOverview(); }, 150); });
+router.apply();
+app.load(S.loc);
+})();
+</script>
+</body>
+</html>

@@ -4,11 +4,11 @@ Draft of how the app could combine met.no and SMHI (snow1g) into one weighted
 forecast, and let the user switch between **met.no**, **SMHI**, **Viktad** (weighted) and
 **Båda** (both sources side by side).
 
-The code is in [`forecast-sources.js`](../forecast-sources.js), loaded by `index.html`, and tests
+The code is in [`forecast-sources.js`](../forecast-sources.js), used by `index.html` through `js/core.js`, and tests
 are in [`tests/forecast-sources.test.js`](../tests/forecast-sources.test.js)
 (`node --test tests/forecast-sources.test.js`).
 
-**Deployment:** `forecast-sources.js` must be published next to `index.html`.
+**Deployment:** `forecast-sources.js` and the `js/` folder must be published next to `index.html`.
 
 ## Structure
 
@@ -114,7 +114,9 @@ This gives local weights that adapt over time, possibly by season.
 
 ## UI plan
 
-Decisions from reviewing the Grafer view. **Status:** built in `index.html`.
+Decisions from reviewing the Grafer view in the previous app. **Status:** the November 2026 redesign keeps
+the forecast switch, Båda mode, ranges and panning, but replaces Plotly with SVG charts and the
+detail panel with value labels inside each chart (see *How `index.html` uses it*).
 
 **Forecast switch.** Four options in the controls row at the top: met.no, SMHI, Viktad, Båda.
 - met.no, SMHI and Viktad look identical apart from the numbers. They never show source names
@@ -167,15 +169,17 @@ and Tabell follow when you open them. The charts are not redrawn while panning.
 
 ## How `index.html` uses it
 
-- `fetchWeather` fetches both raw responses in parallel and keeps them in `rawForecasts`.
-  SMHI may fail silently (for example outside the Nordics); then only met.no is offered.
-- `applyForecastMode` builds `weatherData` with `ForecastSources.buildForecast` (Båda uses the
-  weighted build) and adds feels-like, persistence `L` and the 3 h risk, as before.
-- Switching mode rebuilds from the stored responses without a new fetch. The selected period is
-  kept as times, since SMHI's time axis differs from met.no's.
-- The choice is saved in `localStorage` (`weatherAppForecastMode`). The default is met.no.
-- The met.no parity test compares against `tests/fixtures/met-legacy-output.json`. That file is
-  the old `processWeatherData` output, saved before the function was removed.
+- `js/core.js` (`WX`) fetches both raw responses in parallel (`WX.fetchForecast`). SMHI may fail
+  silently (for example outside the Nordics); then only met.no is offered. If neither answers,
+  the page shows an error with a retry button. `?demo=1` uses synthetic data from `js/demo.js`.
+- `WX.build` calls `ForecastSources.buildForecast` (Båda uses the weighted build) and adds
+  feels-like, persistence `L` and the 3 h risk.
+- `js/app.js` (`WX.createApp`) holds the place, source, selected period and favourites.
+  Switching source rebuilds from the stored responses without a new fetch, and keeps the
+  selected period as times, since SMHI's time axis differs from met.no's.
+- The choice is saved in `localStorage` (`wx.mode`). The default is met.no.
+- The met.no parity test compares against `tests/fixtures/met-legacy-output.json`, the output of
+  the old `processWeatherData`, saved before that function was removed.
 
 ## Open questions and things to check
 

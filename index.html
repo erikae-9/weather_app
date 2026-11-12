@@ -1,3032 +1,782 @@
 <!DOCTYPE html>
-<html>
+<html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#090e1a">
-<title>Eriks väderapp</title>
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<script src="forecast-sources.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eriks Väder</title>
+<meta name="theme-color" content="#ffffff">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
-
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
 <style>
+/* Eriks Väder. Huvudmeny överst, ett platsband med dygnsflikar som styr
+   perioden, och tre sidor: Översikt (rullande små grafer och textprognos),
+   Diagram (stora grafer) och Timme för timme (tabell). Data, ikoner och
+   grafer kommer från js/core.js; plats, källa och period från js/app.js. */
 :root {
-  --bg:        #090e1a;
-  --surface:   #111827;
-  --surface2:  #1a2438;
-  --border:    #1f2e47;
-  --muted:     #4a6080;
-  --text:      #e2eaf7;
-  --text-dim:  #7a94b8;
-  --accent:    #38bdf8;
-  --accent-hover: #7dd3fc;
-  --accent-contrast: #000;
-  --green:     #34d399;
-  --amber:     #fbbf24;
-  --red:       #f87171;
-  --purple:    #a78bfa;
-  --cyan:      #67e8f9;
-  --orange:    #f97316;
-  --night-swatch: rgba(3,6,14,0.85);
-  --border-soft: rgba(31,46,71,0.5);
-  --row-hover: rgba(56,189,248,0.06);
-  --row-now:   rgba(56,189,248,0.10);
-  /* P10–P90-band och nederbördsstaplar (matchar graffärgerna i chartColors) */
-  --band-accent: rgba(56,189,248,0.35);
-  --band-green:  rgba(52,211,153,0.35);
-  --precip-bar:  rgba(103,232,249,0.6);
-  --precip-band: rgba(103,232,249,0.22);
-  --risk-rgb:    103,232,249;
-  --thunder-rgb: 167,139,250;
-  --src-met:     #0b94d4;
-  --src-smhi:    #ea580c;
+  --page: #ffffff; --band: #eef2f6; --band-2: #e3e9f0; --line: #dde3ea; --line-strong: #c3ccd7;
+  --ink: #142235; --ink-2: #46566b; --ink-3: #68788b;
+  --accent: #1a5cbd; --accent-soft: rgba(26,92,189,.08); --accent-ink: #ffffff;
+  --warm: #c9402e; --cold: #2a6fc4; --feels: #7656c4;
+  --precip: #2c84d4; --precip-soft: rgba(44,132,212,.2); --band-temp: rgba(26,92,189,.1);
+  --wind: #16805c; --gust: #b8740f; --band-wind: rgba(22,128,92,.12); --thunder: #7a4fd0; --cloud: #7b8796;
+  --night: rgba(28,48,78,.05);
+  --src-met: #1b6fd1; --src-smhi: #d0601a;
+  --ok: #1f7f55; --warn: #a96c12; --crit: #c0352b;
+  --ic-sun: #f0a500; --ic-moon: #95a7bf; --ic-cloud: #c4cedb; --ic-cloud-dark: #8293a8;
+  --ic-rain: #2c84d4; --ic-snow: #5d98d6; --ic-bolt: #f0b000; --ic-fog: #98a5b4;
+  --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gut-l: max(16px, env(safe-area-inset-left, 0px));
+  --gut-r: max(16px, env(safe-area-inset-right, 0px));
+  --top-h: 60px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0e141b; --band: #151d27; --band-2: #1b2531; --line: #233040; --line-strong: #344559;
+    --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+    --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.1); --accent-ink: #0b1320;
+    --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+    --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+    --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff; --cloud: #9aa7b6;
+    --night: rgba(0,0,0,.22);
+    --src-met: #58acff; --src-smhi: #ff9a4d;
+    --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+    --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+    --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0e141b; --band: #151d27; --band-2: #1b2531; --line: #233040; --line-strong: #344559;
+  --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9;
+  --accent: #6ea8ff; --accent-soft: rgba(110,168,255,.1); --accent-ink: #0b1320;
+  --warm: #ff7d69; --cold: #6cb0ff; --feels: #b39bff;
+  --precip: #58acff; --precip-soft: rgba(88,172,255,.24); --band-temp: rgba(110,168,255,.15);
+  --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff; --cloud: #9aa7b6;
+  --night: rgba(0,0,0,.22);
+  --src-met: #58acff; --src-smhi: #ff9a4d;
+  --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
+  --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
+  --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
   color-scheme: dark;
 }
 
-:root[data-theme="light"] {
-  --bg:        #eef3f9;
-  --surface:   #ffffff;
-  --surface2:  #e3ebf4;
-  --border:    #d0dcea;
-  --muted:     #5a6f8c;
-  --text:      #1a2740;
-  --text-dim:  #43597a;
-  --accent:    #0284c7;
-  --accent-hover: #0369a1;
-  --accent-contrast: #fff;
-  --green:     #059669;
-  --amber:     #b45309;
-  --red:       #dc2626;
-  --purple:    #7c3aed;
-  --cyan:      #0e7490;
-  --orange:    #ea580c;
-  --night-swatch: rgba(71,85,105,0.30);
-  --border-soft: rgba(208,220,234,0.8);
-  --row-hover: rgba(2,132,199,0.06);
-  --row-now:   rgba(2,132,199,0.10);
-  --band-accent: rgba(2,132,199,0.30);
-  --band-green:  rgba(5,150,105,0.30);
-  --precip-bar:  rgba(14,116,144,0.60);
-  --precip-band: rgba(14,116,144,0.25);
-  --risk-rgb:    14,116,144;
-  --thunder-rgb: 124,58,237;
-  --src-met:     #0284c7;
-  --src-smhi:    #c2410c;
-  color-scheme: light;
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 15px/1.55 var(--font-ui); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--page); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: var(--gut-l); padding-right: var(--gut-r); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── Huvudmeny ── */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--page); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; align-items: center; gap: 22px; height: var(--top-h); }
+.brand { display: flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font: 800 1.08rem/1 var(--font-display); white-space: nowrap; }
+.brand b { color: var(--accent); }
+.menu { display: flex; gap: 2px; align-self: stretch; }
+.menu a { display: flex; align-items: center; padding: 0 12px; color: var(--ink-2); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.menu a:hover { color: var(--ink); }
+.menu a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.search { position: relative; flex: 1; min-width: 0; max-width: 340px; margin-left: auto; display: flex; align-items: center; height: 38px; border: 1px solid var(--line); border-radius: 999px; background: var(--page); }
+.search:focus-within { border-color: var(--accent); }
+.search > svg { margin-left: 12px; flex: none; color: var(--ink-3); }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; padding: 0 8px; height: 100%; }
+.search input::placeholder { color: var(--ink-3); }
+.geo { border: 0; background: transparent; color: var(--accent); width: 34px; height: 34px; margin-right: 2px; border-radius: 999px; display: grid; place-items: center; }
+.geo:hover { background: var(--accent-soft); }
+.icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); background: var(--page); border-radius: 999px; color: var(--ink-2); }
+.icon-btn:hover { color: var(--ink); }
+.search-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 260px; margin: 0; padding: 6px; list-style: none; background: var(--page); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.25); max-height: 60vh; overflow: auto; z-index: 40; }
+.sp-head { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 4px; }
+.sp-item { display: grid; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.sp-item:hover, .sp-item[aria-selected="true"] { background: var(--accent-soft); }
+.sp-name { font-weight: 500; } .sp-detail { font-size: .8rem; color: var(--ink-3); }
+.sp-note { font-size: .8rem; color: var(--ink-3); padding: 8px 10px; }
+
+/* ── Platsband med dygnsflikar ── */
+.band { background: var(--band); border-bottom: 1px solid var(--line); }
+.locrow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 28px; padding-block: 24px 18px; }
+.meta label { display: inline-flex; align-items: center; gap: 4px; }
+.meta select { border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: .8rem; padding: 0 2px; cursor: pointer; }
+.band .wrap { position: relative; }
+.day.ct { flex: 0 0 auto; justify-content: center; padding-inline: 14px; font-weight: 500; }
+.day.ct[aria-expanded="true"] { background: var(--page); border-left-color: var(--line); border-right-color: var(--line); }
+.ctpop { position: absolute; right: var(--gut-r); top: 100%; z-index: 15; margin-top: 1px; background: var(--page); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 10px 10px; box-shadow: 0 14px 30px -16px rgba(0,0,0,.3); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); max-width: calc(100% - var(--gut-l) - var(--gut-r)); }
+.ctpop input { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; min-height: 34px; }
+h1 { margin: 2px 0 2px; font: 800 clamp(1.7rem, 4.4vw, 2.5rem)/1.08 var(--font-display); letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
+.fav { border: 0; background: transparent; color: var(--ink-3); padding: 4px; border-radius: 6px; display: grid; }
+.fav[aria-pressed="true"] { color: var(--ic-sun); }
+.meta { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .8rem; color: var(--ink-3); }
+.demo { color: var(--warn); font-weight: 600; }
+.now { display: flex; align-items: center; gap: 12px; }
+.now .t { font: 700 2.7rem/1 var(--font-display); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.now .t.cold { color: var(--cold); } .now .t.warm { color: var(--warm); }
+.now .d { display: flex; flex-direction: column; font-size: .84rem; color: var(--ink-2); line-height: 1.4; }
+.now .d b { color: var(--ink); font-weight: 600; font-size: .95rem; }
+.now .d .k { font-size: .72rem; color: var(--ink-3); }
+
+.days { display: flex; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
+.days::-webkit-scrollbar { display: none; }
+.day { flex: 1 0 82px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 10px; border: 0; border-top: 3px solid transparent; border-left: 1px solid transparent; border-right: 1px solid transparent; background: transparent; color: var(--ink-2); position: relative; }
+.day + .day::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 1px; background: var(--line); }
+.day:hover { background: var(--band-2); }
+.day[aria-pressed="true"] { background: var(--page); color: var(--ink); border-top-color: var(--accent); border-left-color: var(--line); border-right-color: var(--line); }
+.day[aria-pressed="true"]::before, .day[aria-pressed="true"] + .day::before { display: none; }
+.day b { font-weight: 600; font-size: .9rem; color: var(--ink); }
+.day small { font-size: .72rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.day .tt { font-variant-numeric: tabular-nums; font-size: .9rem; }
+.day .tt strong { font-weight: 700; color: var(--ink); }
+.day .mm { font-size: .76rem; color: var(--ink-3); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.day .mm.wet { color: var(--precip); font-weight: 600; }
+.day.all { flex: 0 0 auto; justify-content: center; padding-inline: 16px; font-weight: 500; }
+
+/* ── Sidinnehåll ── */
+main { padding-block: 26px 56px; }
+.view { display: flex; flex-direction: column; gap: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.head h2 { margin: 0; font: 700 1.5rem/1.2 var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
+.head .sub { font-size: .85rem; color: var(--ink-3); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: .85rem; color: var(--ink-2); }
+.tools select { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; }
+.linkbtn { border: 0; background: none; color: var(--accent); padding: 0; font-weight: 500; }
+.linkbtn:hover { text-decoration: underline; }
+.custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--ink-3); }
+.custom input { border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 5px 8px; min-height: 34px; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 6px; padding: 6px 14px; font-weight: 600; font-size: .85rem; }
+h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
+
+/* Små linjegrafer */
+.minis-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.minis-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; }
+.minis-h span { font-size: .78rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.minis-nav { display: flex; align-items: center; gap: 6px; }
+.minis-nav button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--page); border-radius: 999px; color: var(--ink-2); }
+.minis-nav button:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
+.minis-nav button:disabled { opacity: .35; cursor: default; }
+.minis { display: grid; grid-auto-flow: column; grid-auto-columns: calc(50% - 28px); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.minis::-webkit-scrollbar { display: none; }
+.mini { scroll-snap-align: start; }
+.mini { padding: 10px 16px 6px; min-width: 0; }
+.mini + .mini { border-left: 1px solid var(--line); }
+.mini:first-child { padding-left: 0; }
+.mini .k { font-size: .74rem; color: var(--ink-3); line-height: 1.3; }
+.mini .v { font: 700 1rem/1.3 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini .v small { font: 400 .76rem var(--font-ui); color: var(--ink-3); letter-spacing: 0; margin-left: 5px; }
+.mini svg { display: block; width: 100%; margin-top: 2px; overflow: visible; }
+.ml-line { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.ml-line2 { fill: none; stroke: var(--c); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.ml-base { stroke: var(--line); stroke-width: 1; }
+.ml-area { fill: var(--c); opacity: .16; }
+.ml-band { fill: var(--c); opacity: .15; }
+.ml-strip { fill: var(--c); }
+.mini { overflow: hidden; }
+.mini .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mlg { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin-top: 3px; font-size: .68rem; line-height: 1.5; color: var(--ink-3); }
+.mlg > span { white-space: nowrap; }
+.mnote { margin-left: 14px; white-space: nowrap; }
+.mnote i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; background: var(--ink-3); opacity: .25; margin-right: 5px; vertical-align: 0; }
+.mlg i { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--c); margin-right: 3px; vertical-align: middle; }
+.mlg i.a { height: 8px; border: 0; background: var(--c); opacity: .3; }
+.mlg i.d { border-top-style: dashed; border-top-width: 1.5px; }
+.mlg i.b { height: 8px; border: 0; background: var(--c); opacity: .2; }
+.mlg i.s { height: 4px; border: 0; background: var(--c); }
+.ml-zero { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 3; }
+.ml-day { stroke: var(--line); stroke-width: 1; }
+.ml-dot { fill: var(--page); stroke: var(--c); stroke-width: 1.6; }
+.ml-lab { fill: var(--ink-3); font: 500 9.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.ml-val { fill: var(--ink-2); font: 600 10px var(--font-ui); font-variant-numeric: tabular-nums; }
+
+/* Noteringar och textprognos */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 28px; }
+.note { display: flex; gap: 12px; align-items: flex-start; padding-left: 12px; border-left: 3px solid var(--sev, var(--line-strong)); }
+.note[data-level="high"] { --sev: var(--crit); } .note[data-level="medium"] { --sev: var(--warn); } .note[data-level="low"] { --sev: var(--accent); }
+.note .wxi { flex: none; }
+.note b { display: block; font-weight: 600; font-size: .92rem; }
+.note span { font-size: .86rem; color: var(--ink-2); }
+.texts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px 40px; }
+.tx { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 14px; align-items: start; padding-top: 16px; border-top: 1px solid var(--line); }
+.tx .wxi { grid-row: span 2; }
+.tx h4 { margin: 2px 0 0; font: 700 1.02rem var(--font-display); }
+.tx h4 small { font: 400 .8rem var(--font-ui); color: var(--ink-3); margin-left: 8px; }
+.tx p { margin: 0; font-size: .95rem; line-height: 1.6; color: var(--ink-2); max-width: 64ch; }
+.tx p b { color: var(--ink); font-weight: 600; }
+.more { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: .9rem; }
+.more a { color: var(--accent); font-weight: 500; text-decoration: none; }
+.more a:hover { text-decoration: underline; }
+
+/* ── Diagram ── */
+.chart-sec { display: flex; flex-direction: column; gap: 4px; }
+.chart-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.chart-h h3 { margin: 0; font: 700 1.05rem var(--font-display); }
+.chart-h .val { margin-left: auto; font-size: .82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: .76rem; color: var(--ink-3); }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.legend i.box { height: 9px; border: 0; border-radius: 2px; }
+.legend i.dot { border-top-style: dotted; } .legend i.dash { border-top-style: dashed; }
+.chart { min-width: 0; }
+.tiphint { margin: -16px 0 0; font-size: .82rem; color: var(--ink-3); }
+.mg-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--page); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.35); padding: 6px 9px; font-size: .78rem; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mg-tip b { color: var(--ink); font-weight: 600; }
+.mg-tip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--ink); }
+.mg-tip .big { font: 700 1.05rem var(--font-display); color: var(--ink); }
+.mg-tip.pinned { border-color: var(--accent); }
+.mg-dots { position: absolute; inset: 0; pointer-events: none; }
+.mg-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--page); border: 2.5px solid var(--c); }
+
+/* ── Tabell (transponerad) ── */
+.hm-wrap { overflow-x: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm th, .hm td { padding: 0 2px; text-align: center; min-width: 42px; height: 30px; border-bottom: 1px solid var(--line); }
+.hm tr:last-child th, .hm tr:last-child td { border-bottom: 0; }
+.hm th.rl { position: sticky; left: 0; z-index: 2; background: var(--page); text-align: left; padding: 0 12px 0 0; min-width: 120px; font-weight: 500; font-size: .78rem; color: var(--ink-2); border-right: 1px solid var(--line); }
+.hm th.rl small { color: var(--ink-3); font-weight: 400; margin-left: 4px; }
+.hm tr.dayrow th { text-align: left; padding: 0 8px; font: 700 .82rem var(--font-display); color: var(--ink); border-left: 2px solid var(--line-strong); }
+.hm tr.dayrow th.rl { border-left: 0; padding-left: 0; font: 500 .78rem var(--font-ui); }
+.hm tr.dayrow th span { position: sticky; left: 132px; }
+.hm tr.hourrow td { color: var(--ink-3); font-size: .74rem; height: 26px; }
+.hm td.nd { border-left: 2px solid var(--line-strong); }
+.hm td.cur { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.hm td.ic { height: 40px; }
+.hm td.dim { color: var(--ink-3); }
+.tog { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); margin-top: -10px; cursor: pointer; }
+.tog input { width: 16px; height: 16px; accent-color: var(--accent); }
+.hm tr.unc th.rl { font-weight: 400; color: var(--ink-3); padding-left: 12px; font-size: .74rem; }
+.hm tr.unc td { color: var(--ink-3); font-size: .74rem; height: 24px; }
+.hm tr.unc-first td, .hm tr.unc-first th { border-top: 0; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .78rem; color: var(--ink-3); align-items: center; }
+.hm-scale { display: inline-block; width: 140px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px; }
+
+/* ── Meteogram (klasser från core.js) ── */
+.mg-plot { position: relative; user-select: none; -webkit-user-select: none; touch-action: pan-y; cursor: crosshair; }
+.mg-panning .mg-plot { cursor: grabbing; }
+.mg-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mg-xhair { position: absolute; width: 0; border-left: 1px solid var(--ink-2); pointer-events: none; opacity: .55; }
+.mg-xhair.pinned { opacity: .9; border-left-width: 2px; }
+.mg-night { fill: var(--night); }
+.mg-midnight { stroke: var(--line-strong); }
+.mg-now { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.mg-grid { stroke: var(--line); }
+.mg-grid.mg-zero { stroke: var(--line-strong); stroke-width: 1.4; }
+.mg-ylab, .mg-tick, .mg-unit, .mg-strip-lab, .mg-bft-lab { fill: var(--ink-3); font: 500 10.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.mg-tick-day { fill: var(--ink); font-weight: 600; }
+.mg-dayname { fill: var(--ink-2); font: 600 11.5px var(--font-ui); }
+.mg-temp { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.mg-temp-warm { stroke: var(--warm); } .mg-temp-cold { stroke: var(--cold); }
+.mg-feels { fill: none; stroke: var(--feels); stroke-width: 1.5; stroke-dasharray: 1.5 3.5; stroke-linecap: round; }
+.mg-band { stroke: none; } .mg-band-temp { fill: var(--band-temp); } .mg-band-wind { fill: var(--band-wind); }
+.mg-bar { fill: var(--precip); } .mg-bar-hi { fill: var(--precip-soft); }
+.mg-risk { fill: var(--precip); } .mg-thunder { fill: var(--thunder); }
+.mg-wind { fill: none; stroke: var(--wind); stroke-width: 2.2; stroke-linejoin: round; }
+.mg-gust { fill: none; stroke: var(--gust); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.mg-bft { stroke: var(--line-strong); stroke-dasharray: 1 3; }
+.mg-arrow path { fill: var(--ink-2); }
+.mg-src { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.mg-src-met { stroke: var(--src-met); } .mg-src-smhi { stroke: var(--src-smhi); }
+.mg-dash { stroke-width: 1.3; stroke-dasharray: 4 3; }
+.mg-bar-met { fill: var(--src-met); } .mg-bar-smhi { fill: var(--src-smhi); }
+.wxi-sun { fill: var(--ic-sun); }
+.wxi-ray { stroke: var(--ic-sun); stroke-width: 2.8; stroke-linecap: round; fill: none; }
+.wxi-moon { fill: var(--ic-moon); }
+.wxi-cloud { fill: var(--ic-cloud); } .wxi-cloud-dark { fill: var(--ic-cloud-dark); }
+.wxi-rain { stroke: var(--ic-rain); stroke-width: 3; stroke-linecap: round; fill: none; }
+.wxi-snow { fill: var(--ic-snow); }
+.wxi-bolt { fill: var(--ic-bolt); }
+.wxi-fog { stroke: var(--ic-fog); stroke-width: 3; stroke-linecap: round; fill: none; }
+.wxa path { fill: var(--ink-2); }
+
+.notice { border: 1px solid var(--crit); color: var(--crit); border-radius: 8px; padding: 9px 12px; font-size: .86rem; display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
+.notice { align-items: center; }
+.notice [data-close] { border: 0; background: none; color: inherit; }
+.err-act { display: flex; align-items: center; gap: 10px; flex: none; }
+.nodata .view { display: none !important; }
+.loading { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); z-index: 50; background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 999px; font-size: .82rem; }
+.busy { opacity: .45; transition: opacity .2s; }
+footer { border-top: 1px solid var(--line); background: var(--band); color: var(--ink-3); font-size: .78rem; padding-block: 20px 30px; }
+footer p { margin: 0 0 4px; max-width: 75ch; }
+footer a { color: var(--ink-2); }
+
+@media (max-width: 860px) {
 }
-
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-.header {
-  padding: 20px 20px 0;
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.header-title {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.8rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--text);
-  line-height: 1;
-}
-
-.header-title span { color: var(--accent); }
-
-.header-sub {
-  font-size: 0.72rem;
-  color: var(--muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.app { padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 1200px; margin: 0 auto; }
-
-.location-pill {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  flex: 1;
-  min-width: 240px;
-}
-
-.location-pill input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  padding: 9px 12px;
-  outline: none;
-}
-
-.location-pill input::placeholder { color: var(--muted); }
-
-.pill-btn {
-  background: transparent;
-  border: none;
-  border-left: 1px solid var(--border);
-  color: var(--accent);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  padding: 9px 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-  min-height: 44px;
-}
-.pill-btn:hover { background: var(--surface2); }
-.pill-btn:active { background: var(--border); }
-
-.preset-strip {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.preset-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.8rem;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  min-height: 44px;
-}
-.preset-btn:hover { border-color: var(--accent); color: var(--accent); }
-.preset-btn.active { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); font-weight: 600; }
-
-.geo-btn {
-  background: transparent;
-  border: 1px solid var(--green);
-  border-radius: 6px;
-  color: var(--green);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  padding: 9px 16px;
-  cursor: pointer;
-  transition: all 0.15s;
-  touch-action: manipulation;
-  min-height: 44px;
-  white-space: nowrap;
-}
-.geo-btn:hover { background: rgba(52,211,153,0.08); }
-.geo-btn:active { background: rgba(52,211,153,0.15); }
-
-/* ── PLATS-VYN: centrerad "hero" med tre tydliga val ─────────────────── */
-.plats-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: min(10vh, 90px) 4px 24px;
-  text-align: center;
-}
-
-.plats-title {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.plats-sub {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  margin-top: -8px;
-  margin-bottom: 4px;
-}
-
-.plats-hero .location-pill {
-  width: 100%;
-  flex: none;
-}
-.plats-hero .location-pill input { font-size: 0.9rem; padding: 12px 14px; }
-.plats-hero .pill-btn { font-size: 0.88rem; padding: 12px 16px; }
-
-.plats-hero .geo-btn {
-  width: 100%;
-  font-size: 0.88rem;
-  padding: 12px 16px;
-}
-
-.plats-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.plats-divider::before,
-.plats-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.plats-hero .preset-strip {
-  justify-content: center;
-  width: 100%;
-}
-.plats-hero .preset-btn { font-size: 0.84rem; padding: 10px 14px; }
-
-/* Avancerat: manuella koordinater, hopfällt bakom en textlänk */
-.coord-toggle {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  padding: 6px 8px;
-  min-height: 34px;
-  margin-top: 6px;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-  -webkit-tap-highlight-color: transparent;
-}
-.coord-toggle:hover { color: var(--accent); }
-
-.coord-row {
-  display: none;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.coord-row.open { display: flex; }
-
-.coord-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; font-weight: 500; }
-
-.coord-input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  padding: 9px 10px;
-  width: 120px;
-  outline: none;
-  min-height: 44px;
-}
-.coord-input:focus { border-color: var(--accent); }
-
-.coord-fetch-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 6px;
-  color: var(--accent-contrast);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 9px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-  touch-action: manipulation;
-  min-height: 44px;
-}
-.coord-fetch-btn:hover { background: var(--accent-hover); }
-
-/* ── UNIFIED RANGE CONTROL ─────────────────────────────────────────── */
-.range-control {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.range-row {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.range-group-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 0 2px;
-  white-space: nowrap;
-  align-self: center;
-}
-
-.range-sep {
-  width: 1px;
-  height: 22px;
-  background: var(--border);
-  margin: 0 4px;
-  flex-shrink: 0;
-  align-self: center;
-}
-
-.range-tab {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text-dim);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 6px 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-  touch-action: manipulation;
-  min-height: 34px;
-  white-space: nowrap;
-}
-.range-tab:hover { color: var(--text); background: var(--surface2); }
-.range-tab.active { background: var(--surface2); color: var(--accent); border-color: var(--border); }
-.range-tab:disabled { opacity: 0.4; cursor: not-allowed; }
-.range-tab:disabled:hover { background: none; color: var(--text-dim); }
-.src-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 3px;
-  vertical-align: 0;
-}
-
-.date-pickers-row {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.date-pickers-row.open { display: flex; }
-
-.date-picker-label {
-  font-size: 0.65rem;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-
-.date-picker-input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  padding: 6px 8px;
-  flex: 1;
-  min-width: 148px;
-  max-width: 180px;
-  outline: none;
-}
-.date-picker-input:focus { border-color: var(--accent); color: var(--text); }
-.date-picker-input::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
-
-.date-apply-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--accent);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 6px 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  min-height: 34px;
-  transition: background 0.15s;
-}
-.date-apply-btn:hover { background: var(--border); }
-
+/* Mobil: menyn får en egen rad, toppen klistrar inte, graferna går kant i kant */
 @media (max-width: 640px) {
-  .date-picker-input { min-width: 130px; font-size: 0.8rem; padding: 8px; }
-  .range-tab { min-height: 38px; }
-  .date-apply-btn { min-height: 38px; }
-  .range-group-label { display: none; }
-  .range-sep { display: none; }
-}
-/* ────────────────────────────────────────────────────────────────────── */
-
-.current-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-}
-
-.current-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px 12px;
-  position: relative;
-  overflow: hidden;
-}
-
-.current-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--card-color, var(--accent));
-}
-
-.current-card-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.current-card-value {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.55rem;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--card-color, var(--text));
-  margin-bottom: 4px;
-}
-
-.current-card-sub {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  line-height: 1.4;
-  font-weight: 400;
-}
-
-.current-card-spark {
-  margin-top: 6px;
-  height: 40px;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 8px;
-}
-
-.stat-block {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.stat-value {
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.stat-range {
-  font-size: 0.65rem;
-  color: var(--text-dim);
-}
-
-.risk-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.risk-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 100px;
-  font-size: 0.72rem;
-  border: 1px solid;
-}
-
-.risk-badge.low  { border-color: var(--green);  color: var(--green);  background: rgba(52,211,153,0.07); }
-.risk-badge.medium { border-color: var(--amber); color: var(--amber); background: rgba(251,191,36,0.07); }
-.risk-badge.high { border-color: var(--red);   color: var(--red);   background: rgba(248,113,113,0.07); }
-
-.risk-badge-icon { font-size: 0.9rem; }
-.risk-section-label {
-  font-size: 0.65rem;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  align-self: center;
-  white-space: nowrap;
-}
-
-.chart-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.chart-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-
-.chart-panel-title {
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.chart-panel-live {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text);
-}
-/* Inline chart legend: colored dots + labels shown in header */
-.chart-legend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-left: auto;
-}
-.chart-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.62rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-.chart-legend-line {
-  display: inline-block;
-  width: 18px;
-  height: 2px;
-  border-radius: 1px;
-  flex-shrink: 0;
-}
-.chart-legend-dashed {
-  border-top: 2px dashed;
-  background: transparent !important;
-  height: 0;
-}
-.chart-legend-dotted {
-  border-top: 2px dotted;
-  background: transparent !important;
-  height: 0;
-}
-
-.chart-legend-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 8px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-/* Plot-ytan: Plotly ritar statiskt, gester hanteras i JS. pan-y låter
-   webbläsaren scrolla sidan vid lodrät svepning; sidledes svep panorerar. */
-.chart-plot-wrap {
-  position: relative;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: crosshair;
-}
-.chart-plot-wrap, .chart-plot-wrap * { touch-action: pan-y; }
-.chart-plot-wrap.panning { cursor: grabbing; }
-.xhair {
-  position: absolute;
-  width: 0;
-  border-left: 1px solid var(--text-dim);
-  pointer-events: none;
-  display: none;
-  opacity: 0.7;
-}
-
-/* Detaljpanel: följer hårkorset, visar "nu" annars */
-.chart-detail {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 12px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  box-shadow: 0 6px 14px -8px rgba(0,0,0,0.35);
-}
-.chart-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 0.78rem;
-  color: var(--text-dim);
-}
-.chart-detail-time {
-  font-family: 'Manrope', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-.chart-detail-now {
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 100px;
-  padding: 1px 6px;
-}
-.chart-detail-rows {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 3px 18px;
-}
-.chart-detail-row {
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: var(--text-dim);
-}
-.chart-detail-row b { color: var(--text); font-weight: 600; }
-.chart-hint {
-  font-size: 0.65rem;
-  color: var(--muted);
-  margin-left: 8px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-@media (max-width: 760px) {
-  .chart-detail-rows { grid-template-columns: 1fr; }
-}
-
-.timeline-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.timeline-header {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.timeline-scroll {
-  overflow: auto;
-  max-height: 70vh; /* gör behållaren till vertikal scroller => sticky thead fungerar */
-  -webkit-overflow-scrolling: touch;
-}
-
-.timeline-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.timeline-table th {
-  background: var(--surface2);
-  color: var(--muted);
-  padding: 8px 10px;
-  text-align: left;
-  font-weight: 400;
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 3; /* överst: över både Tid-kolumnen och dagrubrikerna */
-}
-
-.timeline-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-soft);
-  color: var(--text-dim);
-  font-size: 0.73rem;
-}
-
-.timeline-table td.highlight {
-  color: var(--text);
-  font-weight: 500;
-}
-
-/* Radtoningar läggs som background-image så att de kan tona ovanpå den
-   klistrade Tid-kolumnens ogenomskinliga background-color. Med "background"
-   (kortformen) skulle de i stället ersätta bottenfärgen och kolumnen bli
-   genomskinlig – då syns raderna som scrollar förbi bakom tidsstämplarna. */
-.timeline-table tr:hover td {
-  background-image: linear-gradient(var(--row-hover), var(--row-hover));
-  color: var(--text);
-}
-
-.timeline-table tr:last-child td { border-bottom: none; }
-
-.time-cell {
-  color: var(--text-dim) !important;
-  font-size: 0.68rem !important;
-}
-
-/* Highlight current-time row in table */
-.timeline-table tr.now-row td {
-  background-image: linear-gradient(var(--row-now), var(--row-now));
-  color: var(--text) !important;
-}
-.timeline-table tr.now-row .time-cell {
-  color: var(--accent) !important;
-  font-weight: 600 !important;
-}
-
-/* Dagrubriken klistrar sig strax under kolumnrubrikerna och följer med tills
-   nästa dag skjuter upp den. --thead-h mäts i updateTable().
-   Selektorn måste vara minst lika specifik som .timeline-table td:first-child
-   nedan – annars vinner den regelns z-index och dataraderna ritas ovanpå. */
-.timeline-table tr.day-separator td {
-  background: var(--surface2) !important;
-  color: var(--accent) !important;
-  font-size: 0.68rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 6px 10px !important;
-  border-bottom: 1px solid var(--border) !important;
-  border-top: 2px solid var(--border) !important;
-  position: sticky;
-  top: calc(var(--thead-h, 30px) - 1px);
-  left: 0;                 /* datumet syns även när tabellen scrollas i sidled */
-  z-index: 2;              /* över Tid-kolumnen, under kolumnrubrikerna */
-  border-right: none !important;
-  /* border-collapse döljer kanter på klistrade celler – rita dem som skugga */
-  box-shadow: inset 0 -1px 0 var(--border), inset 0 2px 0 var(--border);
-}
-
-/* Datumtexten följer med i sidled så den syns även när tabellen scrollas höger */
-.day-sep-label {
-  position: sticky;
-  left: 10px;
-  display: inline-block;
-}
-
-.timeline-table th:first-child,
-.timeline-table td:first-child {
-  position: sticky;
-  left: 0;
-  background-color: var(--surface);   /* ogenomskinlig botten under radtoningar */
-  z-index: 1;
-  border-right: 1px solid var(--border);
-}
-
-.timeline-table th:first-child {
-  background-color: var(--surface2);
-  z-index: 4; /* hörnet: över både rubrikrad och Tid-kolumn */
-}
-
-.cond-cell {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 130px;
-}
-
-.temp-hot  { color: var(--red) !important; }
-.temp-cold { color: var(--cyan) !important; }
-.temp-norm { color: var(--text) !important; }
-
-.wind-high { color: var(--red) !important; }
-.wind-med  { color: var(--amber) !important; }
-
-.precip-wet { color: var(--accent) !important; }
-
-.error-box {
-  background: rgba(248,113,113,0.1);
-  border: 1px solid var(--red);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: var(--red);
-  font-size: 0.8rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.error-dismiss {
-  background: none;
-  border: none;
-  color: var(--red);
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
-  padding: 2px 4px;
-  flex-shrink: 0;
-}
-
-.loading-box {
-  text-align: center;
-  padding: 40px;
-  color: var(--muted);
-  font-size: 0.85rem;
-  letter-spacing: 0.1em;
-}
-
-.loading-box::after {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-left: 8px;
-  animation: pulse 1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
-
-.blink {
-  animation: blink 1.5s ease-in-out infinite;
-  color: var(--accent);
-  font-size: 0.9em;
-  display: inline-block;
-}
-
-.section-title {
-  font-size: 0.62rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding-top: 4px;
-}
-
-@media (max-width: 480px) {
-  .header-title { font-size: 1.3rem; }
-  .header { padding: 12px 14px 0; }
-  .current-card-value { font-size: 1.15rem; }
-  .current-row { grid-template-columns: repeat(2, 1fr); }
-  .location-pill { min-width: 0; }
-  .preset-strip { gap: 5px; }
-  .preset-btn { font-size: 0.75rem; padding: 6px 9px; }
-  .risk-badge { font-size: 0.67rem; padding: 5px 9px; gap: 5px; }
-  .app { padding: 10px 10px 32px; gap: 8px; }
-  .current-card { padding: 8px 10px 10px; }
-  .chart-legend { margin-left: 0; flex-basis: 100%; gap: 8px; }
-}
-
-@media (max-width: 360px) {
-  .current-card-value { font-size: 1.1rem; }
-}
-
-/* ── DAY SUMMARY STRIP ──────────────────────────────────────────────── */
-.day-strip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.day-strip::-webkit-scrollbar { display: none; }
-
-.day-card {
-  flex-shrink: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  min-width: 68px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.day-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: transparent;
-  transition: background 0.15s;
-}
-.day-card:hover { border-color: var(--accent); }
-.day-card.active { border-color: var(--accent); background: var(--surface2); }
-.day-card.active::before { background: var(--accent); }
-
-.day-card-name {
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.day-card-icon { font-size: 1.4rem; line-height: 1; margin-bottom: 4px; }
-.day-card-temps {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-.day-card-temps span { color: var(--text-dim); font-weight: 400; }
-.day-card-precip {
-  font-size: 0.62rem;
-  color: var(--text-dim);
-}
-.day-card-precip.wet { color: var(--accent); }
-
-/* Thunder marker on day cards */
-.day-card-thunder {
-  font-size: 0.6rem;
-  color: var(--amber);
-  margin-top: 1px;
-  min-height: 0.8em;
-}
-
-.day-card-sun {
-  font-size: 0.58rem;
-  color: var(--muted);
-  margin-top: 2px;
-  white-space: nowrap;
-  min-height: 0.8em;
-}
-
-/* ── VYER (hash-routade sidor i samma fil) ──────────────────────────── */
-.view { display: none; }
-.view.active { display: flex; flex-direction: column; gap: 12px; }
-
-/* Global dag-strip – överst på varje vy som överblick + dagväljare (ej klistrad) */
-.day-strip-global {
-  padding: 2px 0 4px;
-}
-.day-hint {
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 5px;
-}
-
-/* Större kort på Översikt-vyn (desktop) – fasta kolumner ger flera rader */
-@media (min-width: 768px) {
-  #view-oversikt .current-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  #view-oversikt .current-card { padding: 16px 18px 18px; border-radius: 12px; }
-  #view-oversikt .current-card-label { font-size: 0.72rem; margin-bottom: 8px; }
-  #view-oversikt .current-card-value { font-size: 2.2rem; margin-bottom: 6px; }
-  #view-oversikt .current-card-sub { font-size: 0.85rem; }
-  #view-oversikt .current-card-spark { height: 56px; margin-top: 10px; }
-  #view-oversikt .risk-badge { font-size: 0.85rem; padding: 9px 16px; gap: 8px; }
-  #view-oversikt .risk-badge-icon { font-size: 1.05rem; }
-}
-@media (min-width: 1100px) {
-  #view-oversikt .current-row { grid-template-columns: repeat(4, 1fr); }
-}
-
-/* Tema-växlare (ljust/mörkt läge) */
-.theme-toggle {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 1rem;
-  line-height: 1;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  min-height: 38px;
-  align-self: center;
-  margin-left: auto;
-  -webkit-tap-highlight-color: transparent;
-}
-.theme-toggle:hover { border-color: var(--accent); }
-@media (min-width: 768px) { .theme-toggle { margin-left: 0; } }
-
-/* Desktop-flikar i headern */
-.top-nav { display: none; gap: 4px; margin-left: auto; align-self: center; }
-.top-nav button {
-  background: transparent; border: 1px solid transparent; border-radius: 6px;
-  color: var(--text-dim); font-family: 'Inter', sans-serif; font-size: 0.82rem;
-  padding: 7px 14px; cursor: pointer; transition: all 0.15s; min-height: 38px;
-}
-.top-nav button:hover { color: var(--text); background: var(--surface2); }
-.top-nav button.active { color: var(--accent); background: var(--surface2); border-color: var(--border); }
-
-/* Mobil bottennavigering */
-.bottom-nav {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
-  display: flex; background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.bottom-nav button {
-  flex: 1; background: none; border: none; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.6rem;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 8px 4px 9px; min-height: 54px;
-  -webkit-tap-highlight-color: transparent;
-}
-.bottom-nav .nav-icon { font-size: 1.15rem; line-height: 1; }
-.bottom-nav button.active { color: var(--accent); }
-
-body { padding-bottom: 76px; } /* utrymme för bottennav på mobil */
-
-@media (min-width: 768px) {
-  .top-nav { display: flex; }
-  .bottom-nav { display: none; }
-  body { padding-bottom: 0; }
-}
-
-/* Grafer: staplade i full bredd så att samma tidpunkt hamnar rakt under
-   varandra i alla tre */
-.charts-grid { display: flex; flex-direction: column; gap: 8px; }
-
+  :root { --top-h: 0px; }
+  .topbar { position: static; }
+  .topbar-in { flex-wrap: wrap; height: auto; padding-block: 10px 0; gap: 10px; }
+  .brand span { display: none; }
+  .search { order: 2; max-width: none; }
+  .icon-btn { order: 3; }
+  .menu { order: 4; flex-basis: 100%; height: 42px; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; }
+  .menu a { padding: 0 10px; }
+  .locrow { padding-block: 16px 12px; }
+  .now .t { font-size: 2.3rem; }
+  .day { flex: 0 0 78px; padding-inline: 2px; }
+  main { padding-block: 18px 40px; }
+  .view { gap: 20px; }
+  .head h2 { font-size: 1.25rem; }
+  .bleed { margin-left: calc(-1 * var(--gut-l)); margin-right: calc(-1 * var(--gut-r)); }
+  .chart-h { padding-inline: 0; }
+  .texts { grid-template-columns: 1fr; }
+  .minis { grid-auto-columns: calc(50% - 18px); }
+  .mini { padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-title">🌤 Eriks <span>Väderapp</span></div>
-  <div class="header-sub" style="font-size:0.62rem;">Väderprognos</div>
-  <nav class="top-nav">
-    <button data-nav="oversikt" onclick="navigate('oversikt')">Översikt</button>
-    <button data-nav="grafer" onclick="navigate('grafer')">Grafer</button>
-    <button data-nav="tabell" onclick="navigate('tabell')">Tabell</button>
-    <button data-nav="plats"  onclick="navigate('plats')">Plats</button>
-  </nav>
-  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Växla ljust/mörkt läge" aria-label="Växla ljust/mörkt läge">☀️</button>
-</div>
-
-<div class="app">
-
-  <div id="error" style="display:none;" class="error-box"></div>
-  <div id="loading" class="loading-box" style="display:none;">Laddar väderdata</div>
-
-  <div id="content" style="display:none; display:flex; flex-direction:column; gap:12px;">
-
-    <!-- UNIFIED RANGE CONTROL -->
-    <div id="globalControls" style="display:none; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-      <div class="range-control">
-        <div class="range-row">
-          <span class="range-group-label">Period</span>
-          <button class="range-tab" id="btn-all" onclick="setRange(9999)">Samtliga</button>
-          <button class="range-tab" id="btn-datepicker" onclick="toggleDatePickers()" title="Välj egen tidsperiod">📅 Anpassa</button>
-        </div>
-        <div class="range-row" id="forecastSwitch" role="group" aria-label="Prognoskälla">
-          <span class="range-group-label">Prognos</span>
-          <button class="range-tab source-tab" data-mode="met" onclick="setForecastMode('met')">met.no</button>
-          <button class="range-tab source-tab" data-mode="smhi" onclick="setForecastMode('smhi')">SMHI</button>
-          <button class="range-tab source-tab" data-mode="blend" onclick="setForecastMode('blend')" title="Viktat medel av met.no och SMHI">Viktad</button>
-          <button class="range-tab source-tab" data-mode="both" onclick="setForecastMode('both')" title="met.no och SMHI bredvid varandra i graferna">Båda</button>
-        </div>
-        <div class="date-pickers-row" id="datePickers">
-          <span class="date-picker-label">Från</span>
-          <input type="datetime-local" id="startDateTime" class="date-picker-input">
-          <span class="date-picker-label">Till</span>
-          <input type="datetime-local" id="endDateTime" class="date-picker-input">
-          <button class="date-apply-btn" onclick="applyDateTimeRange()">Visa ↵</button>
-        </div>
-      </div>
-      <div id="locationLabel" class="header-sub" style="padding-top:6px;"></div>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#oversikt" aria-label="Eriks Väder, översikt">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="var(--accent)"/><circle cx="11" cy="11" r="4.2" fill="var(--ic-sun)"/><path d="M8 20.5h11a3.6 3.6 0 0 0 0-7.2 5 5 0 0 0-9.4 1.2A3 3 0 0 0 8 20.5z" fill="#fff"/></svg>
+      <span>Eriks <b>Väder</b></span>
+    </a>
+    <nav class="menu" aria-label="Sidor">
+      <a href="#oversikt" data-view="oversikt">Översikt</a>
+      <a href="#diagram" data-view="diagram">Diagram</a>
+      <a href="#timmar" data-view="timmar">Timme för timme</a>
+    </nav>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <label class="sr" for="q">Sök plats</label>
+      <input id="q" type="search" placeholder="Sök plats" autocomplete="off" spellcheck="false">
+      <button class="geo" id="geoBtn" type="button" title="Använd min position" aria-label="Använd min position">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 0v3M8 13v3M0 8h3M13 8h3" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <ul class="search-pop" id="searchPop" hidden></ul>
     </div>
-
-    <!-- GLOBAL DAG-STRIP (överblick + dagväljare på varje vy) -->
-    <div class="day-strip-global" id="dayStripGlobal" style="display:none;">
-      <div class="day-hint">Dagar · tryck för att välja en eller flera</div>
-      <div class="day-strip" id="dayStrip"></div>
-    </div>
-
-    <!-- VY: IDAG -->
-    <section class="view active" id="view-oversikt">
-
-    <div>
-      <div id="nowSectionTitle" class="section-title" style="margin-bottom:6px;">Just nu</div>
-      <div id="riskRow" class="risk-row"></div>
-    </div>
-
-    <div>
-      <div class="section-title" style="margin-bottom:6px;">Under perioden</div>
-      <div class="current-row">
-        <div class="current-card" style="--card-color:var(--accent)">
-          <div class="current-card-label">MedelTemperatur</div>
-          <div class="current-card-value" id="cTemp">—</div>
-          <div class="current-card-sub" id="cTempRange">—</div>
-          <div class="current-card-spark" id="sparkTemp"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--green)">
-          <div class="current-card-label">Medelvind</div>
-          <div class="current-card-value" id="cWind">—</div>
-          <div class="current-card-sub" id="cWindsub">—</div>
-          <div class="current-card-spark" id="sparkWind"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--cyan)">
-          <div class="current-card-label">Nederbörd</div>
-          <div class="current-card-value" id="cPrecip">—</div>
-          <div class="current-card-sub" id="cPrecipSub">—</div>
-          <div class="current-card-spark" id="sparkPrecip"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--amber)">
-          <div class="current-card-label">Åskrisk (max)</div>
-          <div class="current-card-value" id="cThunder">—</div>
-          <div class="current-card-sub" id="cThunderSub">—</div>
-          <div class="current-card-spark" id="sparkThunder"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--orange)">
-          <div class="current-card-label">UV Index</div>
-          <div class="current-card-value" id="cUV">—</div>
-          <div class="current-card-sub" id="cUVRange">—</div>
-          <div class="current-card-spark" id="sparkUV"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--muted)">
-          <div class="current-card-label">MedelMolntäcke</div>
-          <div class="current-card-value" id="cCloud">—</div>
-          <div class="current-card-sub" id="cCloudRange">—</div>
-          <div class="current-card-spark" id="sparkCloud"></div>
-        </div>
-        <div class="current-card" style="--card-color:var(--purple)">
-          <div class="current-card-label">MedelLuftfuktighet</div>
-          <div class="current-card-value" id="cHumidity">—</div>
-          <div class="current-card-sub" id="cHumidityRange">—</div>
-          <div class="current-card-spark" id="sparkHumidity"></div>
-        </div>
-      </div>
-    </div>
-
-    </section>
-
-    <!-- VY: GRAFER -->
-    <section class="view" id="view-grafer">
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      <div class="section-title">Grafer<span class="chart-hint">Peka eller tryck för detaljer · dra i sidled för att bläddra</span></div>
-      <div class="chart-detail" id="chartDetail" aria-live="polite"></div>
-      <div class="charts-grid">
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Temperatur</span>
-            <span class="chart-panel-live" id="chartTempLive"></span>
-            <div class="chart-legend" id="legendTemp">
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--accent)"></span>Temp</span>
-              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dotted" style="border-color:var(--purple)"></span>Känns som</span>
-              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-accent)"></span>P10–90</span>
-            </div>
-          </div>
-          <div class="chart-plot-wrap"><div id="tempChart"></div><div class="xhair"></div></div>
-        </div>
-
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Vind</span>
-            <span class="chart-panel-live" id="chartWindLive"></span>
-            <div class="chart-legend" id="legendWind">
-              <span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--green)"></span>Medelvind</span>
-              <span class="chart-legend-item"><span class="chart-legend-line chart-legend-dashed" style="border-color:var(--amber)"></span>Byar</span>
-              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--band-green)"></span>P10–90</span>
-              <span class="chart-legend-item">↓ Vindriktning</span>
-            </div>
-          </div>
-          <div class="chart-plot-wrap"><div id="windChart"></div><div class="xhair"></div></div>
-        </div>
-
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Nederbörd &amp; Åska</span>
-            <span class="chart-panel-live" id="chartPrecipLive"></span>
-            <div class="chart-legend" id="legendPrecip">
-              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-bar);width:9px"></span>mm/h</span>
-              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--precip-band);width:5px"></span>P10–90</span>
-              <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, rgba(var(--risk-rgb),0.08), rgba(var(--risk-rgb),0.9))"></span>Risk</span>
-              <span class="chart-legend-item" id="legendThunder"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, rgba(var(--thunder-rgb),0.08), rgba(var(--thunder-rgb),0.9))"></span>Åska</span>
-            </div>
-          </div>
-          <div class="chart-plot-wrap"><div id="precipChart"></div><div class="xhair"></div></div>
-        </div>
-      </div>
-    </div>
-
-    </section>
-
-    <!-- VY: TABELL -->
-    <section class="view" id="view-tabell">
-    <div>
-      <div class="section-title" style="margin-bottom:6px;">Detaljer</div>
-      <div class="timeline-section">
-        <div class="timeline-scroll">
-          <table class="timeline-table" id="weatherDataTable">
-            <thead>
-              <tr>
-                <th>Tid</th>
-                <th>Väder</th>
-                <th>Temp (°C)</th>
-                <th>Känns (°C)</th>
-                <th>Nederb (mm)</th>
-                <th>Nederb risk (%)</th>
-                <th>Åska (%)</th>
-                <th>Vind (m/s)</th>
-                <th>UV</th>
-              </tr>
-            </thead>
-            <tbody id="weatherDataBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    </section>
-
-    <!-- VY: PLATS -->
-    <section class="view" id="view-plats">
-    <div class="plats-hero">
-      <div class="plats-title">Var vill du se vädret?</div>
-      <div class="plats-sub">Sök en plats, använd din position eller välj en favorit</div>
-
-      <div class="location-pill">
-        <input type="text" id="citySearchInput" placeholder="Sök plats… (ort, kommun, postnr, land)" onkeypress="if(event.key==='Enter') searchCity()">
-        <button class="pill-btn" onclick="searchCity()">🔍 Sök</button>
-      </div>
-
-      <button class="geo-btn" onclick="useGeolocation()">📍 Använd min plats</button>
-
-      <div class="plats-divider">eller välj en favorit</div>
-
-      <div class="preset-strip">
-        <button class="preset-btn" onclick="selectCity('Sjungande dalen',64.762528,20.923429)">Sjungande dalen</button>
-        <button class="preset-btn" onclick="selectCity('Skråmträsk',64.661972, 20.624056)">Skråmträsk</button>
-        <button class="preset-btn" onclick="selectCity('Stockholm',59.3293,18.0686)">Stockholm</button>
-        <button class="preset-btn" onclick="selectCity('Skarja, Sarek',67.377503,17.644642)">Skarja, Sarek</button>
-      </div>
-
-      <button class="coord-toggle" id="coordToggle" onclick="toggleCoords()" aria-expanded="false">Avancerat: ange koordinater ▾</button>
-      <div class="coord-row" id="coordRow">
-        <span class="coord-label">LAT</span>
-        <input type="number" id="latInput" class="coord-input" step="0.0001" min="-90" max="90" placeholder="64.7625"
-               onkeypress="if(event.key==='Enter') fetchFromCoords()">
-        <span class="coord-label">LON</span>
-        <input type="number" id="lonInput" class="coord-input" step="0.0001" min="-180" max="180" placeholder="20.9234"
-               onkeypress="if(event.key==='Enter') fetchFromCoords()">
-        <button class="coord-fetch-btn" onclick="fetchFromCoords()">📡 Hämta</button>
-      </div>
-    </div>
-    </section>
-
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Byt till mörkt läge"></button>
   </div>
-</div>
-
-<nav class="bottom-nav">
-  <button data-nav="oversikt" onclick="navigate('oversikt')"><span class="nav-icon">☀️</span>Översikt</button>
-  <button data-nav="grafer" onclick="navigate('grafer')"><span class="nav-icon">📈</span>Grafer</button>
-  <button data-nav="tabell" onclick="navigate('tabell')"><span class="nav-icon">📋</span>Tabell</button>
-  <button data-nav="plats"  onclick="navigate('plats')"><span class="nav-icon">📍</span>Plats</button>
-</nav>
-
-<script>
-let weatherData = null;
-let currentRange = 24;
-let currentCity = 'Skellefteå';
-let currentLat = 64.762519;   // vald plats (startläge: Sjungande dalen)
-let currentLon = 20.923440;
-let lastFetchTime = null;   // när data senast hämtades (för "uppdaterad HH:MM" + auto-refresh)
-let sunTimes = {};          // 'YYYY-MM-DD' -> { sunrise: Date|null, sunset: Date|null }
-
-// ── TEMA (ljust/mörkt läge) ───────────────────────────────────────────────────
-// Mörkt läge är standard; växling via knappen sparas i localStorage.
-const THEME_KEY = 'weatherAppTheme';
-
-function currentTheme() {
-  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-}
-
-// Plotly-färger som matchar CSS-variablerna för respektive tema.
-// Linje-, band- och stapelfärger måste hållas i synk med legenderna i HTML
-// (som använder samma CSS-variabler: --accent, --band-accent, --precip-bar…).
-function chartColors() {
-  if (currentTheme() === 'light') {
-    return {
-      bg: '#ffffff', grid: '#e2e9f2', axisLine: '#d0dcea',
-      tick: '#5a6f8c', font: '#43597a',
-      hoverBg: '#ffffff', hoverBorder: '#c6d4e4', hoverText: '#1a2740',
-      night: 'rgba(71,85,105,0.08)', moon: 'rgba(73,96,126,0.75)',
-      dayLine: 'rgba(90,111,140,0.45)',
-      riskRGB: '14,116,144', thunderRGB: '124,58,237',
-      src: { met: '#0284c7', smhi: '#c2410c' }, srcRGB: { met: '2,132,199', smhi: '194,65,12' },
-      zoneLabelBg: 'rgba(255,255,255,0.65)',
-      windArrow: 'rgba(30,41,59,0.85)',
-      nowLine: 'rgba(2,132,199,0.45)',
-      zeroLine: 'rgba(90,111,140,0.55)',
-      temp: '#0284c7', feels: '#7c3aed',
-      tempBandFill: 'rgba(2,132,199,0.14)', tempBandLine: 'rgba(2,132,199,0.45)',
-      wind: '#059669', gust: '#b45309',
-      windBandFill: 'rgba(5,150,105,0.14)', windBandLine: 'rgba(5,150,105,0.45)',
-      precipBar: 'rgba(14,116,144,0.60)', precipBand: 'rgba(14,116,144,0.25)',
-      prob1h: '#b45309', prob3h: '#ea580c',
-      thunder: '#7c3aed', thunderFill: 'rgba(124,58,237,0.08)',
-      spark: { temp:'rgb(2,132,199)', wind:'rgb(5,150,105)', precip:'rgb(14,116,144)',
-               cloud:'rgb(100,116,139)', humidity:'rgb(124,58,237)',
-               uv:'rgb(234,88,12)', thunder:'rgb(180,83,9)' }
-    };
-  }
-  return {
-    bg: '#111827', grid: '#1f2e47', axisLine: '#1f2e47',
-    tick: '#4a6080', font: '#7a94b8',
-    hoverBg: '#1a2438', hoverBorder: '#2d4060', hoverText: '#e2eaf7',
-    night: 'rgba(3,6,14,0.40)', moon: 'rgba(122,148,184,0.6)',
-    dayLine: 'rgba(122,148,184,0.35)',
-    riskRGB: '103,232,249', thunderRGB: '167,139,250',
-    src: { met: '#0b94d4', smhi: '#ea580c' }, srcRGB: { met: '11,148,212', smhi: '234,88,12' },
-    zoneLabelBg: 'rgba(17,24,39,0.6)',
-    windArrow: 'rgba(255,255,255,0.85)',
-    nowLine: 'rgba(56,189,248,0.4)',
-    zeroLine: 'rgba(122,148,184,0.5)',
-    temp: '#38bdf8', feels: '#a78bfa',
-    tempBandFill: 'rgba(56,189,248,0.1)', tempBandLine: 'rgba(56,189,248,0.2)',
-    wind: '#34d399', gust: '#fbbf24',
-    windBandFill: 'rgba(52,211,153,0.1)', windBandLine: 'rgba(52,211,153,0.2)',
-    precipBar: 'rgba(103,232,249,0.6)', precipBand: 'rgba(103,232,249,0.22)',
-    prob1h: '#fbbf24', prob3h: '#f97316',
-    thunder: '#a78bfa', thunderFill: 'rgba(167,139,250,0.08)',
-    spark: { temp:'rgb(56,189,248)', wind:'rgb(52,211,153)', precip:'rgb(103,232,249)',
-             cloud:'rgb(148,163,184)', humidity:'rgb(167,139,250)',
-             uv:'rgb(249,115,22)', thunder:'rgb(251,191,36)' }
-  };
-}
-
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', theme === 'light' ? '#eef3f9' : '#090e1a');
-  const btn = document.getElementById('themeToggle');
-  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️'; // visar läget man växlar till
-  if (weatherData) _refreshAll(); // rita om grafer/sparklines med rätt färger
-}
-
-function toggleTheme() {
-  const next = currentTheme() === 'light' ? 'dark' : 'light';
-  try { localStorage.setItem(THEME_KEY, next); } catch {}
-  applyTheme(next);
-}
-
-(function initTheme() {
-  let saved = null;
-  try { saved = localStorage.getItem(THEME_KEY); } catch {}
-  applyTheme(saved === 'light' ? 'light' : 'dark');
-})();
-
-// ── BEAUFORT ZONES (m/s) ──────────────────────────────────────────────────────
-// labelLight: mörkare etikettfärg med tillräcklig kontrast mot vit graf-bakgrund
-const BEAUFORT_ZONES = [
-  { name: 'Lugnt',       short: 'Lugnt',  min: 0,    max: 0.2,  lineColor: 'rgba(100,180,100,0.4)',  labelLight: 'rgba(46,110,46,0.85)' },
-  { name: 'Svag vind',   short: 'Svag',   min: 0.2,  max: 3.3,  lineColor: 'rgba(120,200,120,0.45)', labelLight: 'rgba(46,110,46,0.85)' },
-  { name: 'Måttlig',     short: 'Måttl.', min: 3.3,  max: 7.9,  lineColor: 'rgba(160,220,100,0.45)', labelLight: 'rgba(90,120,30,0.9)' },
-  { name: 'Frisk',       short: 'Frisk',  min: 7.9,  max: 13.8, lineColor: 'rgba(220,200,60,0.5)',   labelLight: 'rgba(140,110,10,0.9)' },
-  { name: 'Hård vind',   short: 'Hård',   min: 13.8, max: 24.4, lineColor: 'rgba(240,140,40,0.55)',  labelLight: 'rgba(170,85,15,0.9)' },
-  { name: 'Storm',       short: 'Storm',  min: 24.4, max: 32.6, lineColor: 'rgba(220,60,60,0.55)',   labelLight: 'rgba(165,35,35,0.9)' },
-  { name: 'Orkan',       short: 'Orkan',  min: 32.6, max: 60,   lineColor: 'rgba(160,40,160,0.6)',   labelLight: 'rgba(120,25,120,0.9)' },
-];
-
-function beaufortName(speed) {
-  if (speed === null || speed === undefined) return null;
-  return (BEAUFORT_ZONES.find(z => speed < z.max) || BEAUFORT_ZONES[BEAUFORT_ZONES.length - 1]).name;
-}
-
-// ── THUNDER THRESHOLDS (% probability, SMHI) ─────────────────────────────────
-const THUNDER_MED  = 15;  // "värt att hålla koll"
-const THUNDER_HIGH = 40;  // "trolig åska"
-
-function thunderClass(p) {
-  return p >= THUNDER_HIGH ? 'high' : p >= THUNDER_MED ? 'medium' : 'low';
-}
-
-// Tunna gränslinjer mellan Beaufort-zonerna och zonnamn i högermarginalen
-// (utanför plotytan, så att kurvorna aldrig döljer dem).
-function buildBeaufortLines(yMax, isMobile) {
-  const shapes = [], annotations = [];
-  const light = currentTheme() === 'light';
-  for (const zone of BEAUFORT_ZONES) {
-    if (zone.min >= yMax) continue;
-    const top = Math.min(zone.max, yMax);
-    if (zone.max < yMax && zone.max > 1) {
-      shapes.push({ type:'line', xref:'paper', yref:'y', x0:0, x1:1, y0:zone.max, y1:zone.max,
-        line:{ color: zone.lineColor, width: 1 }, layer:'below' });
-    }
-    if (top - zone.min > yMax * 0.07) {
-      annotations.push({ xref:'paper', yref:'y', x:1, xanchor:'left', xshift:4,
-        y:(zone.min + top) / 2, yanchor:'middle', showarrow:false,
-        text: isMobile ? zone.short : zone.name,
-        font:{ size: isMobile ? 8 : 9, color: light ? zone.labelLight : zone.lineColor.replace(/[\d.]+\)$/, '0.9)') } });
-    }
-  }
-  return { shapes, annotations };
-}
-
-// ── FIND CURRENT-TIME INDEX ───────────────────────────────────────────────────
-function findNowIndex() {
-  if (!weatherData || !weatherData.times.length) return null;
-  const now = Date.now();
-  let bestIdx = 0, bestDiff = Infinity;
-  for (let i = 0; i < weatherData.times.length; i++) {
-    const diff = Math.abs(weatherData.times[i].getTime() - now);
-    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-  }
-  return bestIdx;
-}
-
-// ── PERSISTENSMEDVETEN SANNOLIKHET ───────────────────────────────────────────
-// Timvisa nederbördssannolikheter är starkt autokorrelerade: regnar det 14:00
-// är det mycket troligare att det regnar 15:00. Ett oberoendeantagande (att
-// multiplicera ihop alla timmar) mättar därför mot 100 % över långa perioder.
-// unionProb interpolerar mellan oberoende (L = 1) och full persistens
-// (L → ∞, svaret blir högsta enskilda sannolikheten).
-// items: [{ p: 0..1, hours: stegets längd i timmar }]
-
-function unionProb(items, L) {
-  const v = items
-    .filter(o => o && o.p !== null && o.p !== undefined && !Number.isNaN(o.p))
-    .map(o => ({ p: Math.min(Math.max(o.p, 0), 1), hours: o.hours || 1 }))
-    .sort((a, b) => b.p - a.p);
-  if (!v.length) return null;
-  let q = 1 - v[0].p;                       // dominerande steget räknas fullt
-  for (let i = 1; i < v.length; i++) {
-    q *= Math.pow(1 - v[i].p, Math.min(1, v[i].hours / L));
-  }
-  return 1 - q;
-}
-
-// Hitta det L som får unionProb att träffa ett känt facit (t.ex. met.no:s
-// publicerade 6h-sannolikhet). unionProb avtar monotont med L → bisektion.
-function fitL(items, target) {
-  const lo0 = 1, hi0 = 240;
-  if (unionProb(items, hi0) > target) return hi0;
-  if (unionProb(items, lo0) < target) return lo0;
-  let lo = lo0, hi = hi0;
-  for (let k = 0; k < 40; k++) {
-    const mid = (lo + hi) / 2;
-    if (unionProb(items, mid) > target) lo = mid; else hi = mid;
-  }
-  return (lo + hi) / 2;
-}
-
-// Kalibrera L mot varje 6h-fönster där både timsannolikheter och met.no:s
-// next_6_hours finns. Median är robust mot enstaka avvikare.
-function estimatePersistence() {
-  const { times, data } = weatherData;
-  const Ls = [];
-  for (let i = 0; i + 5 < times.length; i++) {
-    const target = data.prob6h[i];
-    if (target === null || target === undefined) continue;
-    if (times[i + 5] - times[i] !== 5 * 3600e3) continue;      // kräver timsteg
-    const hourly = data.precip_prob.slice(i, i + 6);
-    if (hourly.some(p => p === null || p === undefined)) continue;
-    const items = hourly.map(p => ({ p: p / 100, hours: 1 }));
-    const t = target / 100;
-    if (t <= Math.max(...hourly) / 100 + 0.01) continue;        // degenererat
-    if (t >= unionProb(items, 1) - 0.01) continue;
-    Ls.push(fitL(items, t));
-  }
-  if (!Ls.length) return 4;                 // fallback när 6h-data saknas
-  Ls.sort((a, b) => a - b);
-  return Ls[Math.floor(Ls.length / 2)];
-}
-
-// Risk för nederbörd någon gång under den visade perioden. Klamras mot
-// met.no:s publicerade block: ett 6h/12h-block helt inom fönstret är ett
-// golv, ett block som omsluter hela fönstret är ett tak.
-function periodRisk(sliced, L) {
-  if (!sliced.times.length) return null;
-  const n = sliced.times.length;
-  const items = sliced.times.map((t, i) => ({
-    p: sliced.data.precip_prob[i] == null ? null : sliced.data.precip_prob[i] / 100,
-    hours: sliced.data.step_hours[i] ?? 1
-  }));
-  let p = unionProb(items, L);
-  if (p === null) return null;
-
-  const t0 = sliced.times[0].getTime();
-  const t1 = sliced.times[n - 1].getTime() + (sliced.data.step_hours[n - 1] ?? 1) * 3600e3;
-
-  const { times, data } = weatherData;
-  let floor = 0, ceil = 1;
-  for (let i = 0; i < times.length; i++) {
-    const s = times[i].getTime();
-    for (const [h, v] of [[6, data.prob6h[i]], [12, data.prob12h[i]]]) {
-      if (v === null || v === undefined) continue;
-      const e = s + h * 3600e3;
-      if (s >= t0 && e <= t1) floor = Math.max(floor, v / 100);
-      if (s <= t0 && e >= t1) ceil  = Math.min(ceil,  v / 100);
-    }
-  }
-  p = Math.max(p, floor);
-  p = Math.min(p, Math.max(ceil, floor));   // taket får aldrig tvinga under golvet
-  return Math.round(p * 100);
-}
-
-// ── 3-HOUR ROLLING PRECIPITATION PROBABILITY ─────────────────────────────────
-// Centrerad kring tidpunkten: timmen före, timmen själv och timmen efter
-// (kl 17 → 16, 17 och 18) så att värdet beskriver risken *runt* den tiden.
-// Null i svansen där stegen är 6h – där vore fönstret 18 timmar, inte 3.
-function compute3hRollingProb(precip_prob, step_hours, L) {
-  return precip_prob.map((_, i) => {
-    if (step_hours[i] !== 1) return null;
-    const items = [];
-    for (let k = Math.max(0, i - 1); k <= Math.min(precip_prob.length - 1, i + 1); k++) {
-      if (step_hours[k] !== 1) continue;      // hoppa över 6h-steg vid gränsen
-      const p = precip_prob[k];
-      if (p !== null && p !== undefined) items.push({ p: p / 100, hours: 1 });
-    }
-    if (!items.length) return null;
-    const u = unionProb(items, L);
-    return u === null ? null : Math.round(u * 100);
-  });
-}
-
-// ── STATISTIK-HJÄLPARE (ignorerar null/undefined/NaN) ────────────────────────
-const validVals = a => a.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
-function meanOf(a) { const v = validVals(a); return v.length ? v.reduce((x,y) => x+y, 0) / v.length : null; }
-function minOf(a)  { const v = validVals(a); return v.length ? Math.min(...v) : null; }
-function maxOf(a)  { const v = validVals(a); return v.length ? Math.max(...v) : null; }
-
-// Cirkulärt medel för vindriktning (vektormedel) – aritmetiskt medel av
-// t.ex. 350° och 10° ger 180° (fel håll); detta ger korrekt 0° (N).
-function circularMeanDeg(degs) {
-  const v = validVals(degs);
-  if (!v.length) return null;
-  let sx = 0, sy = 0;
-  for (const d of v) { const r = d * Math.PI / 180; sx += Math.cos(r); sy += Math.sin(r); }
-  if (Math.hypot(sx, sy) < 1e-9) return null; // riktningar tar ut varandra
-  return (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
-}
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-
-function toLocalDTString(date) {
-  const pad = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-// Felmeddelanden ligger kvar tills de stängs (eller en ny hämtning startar)
-function showError(msg) {
-  const el = document.getElementById('error');
-  el.style.display = 'flex';
-  el.innerHTML = '';
-  const text = document.createElement('span');
-  text.textContent = msg;
-  const btn = document.createElement('button');
-  btn.className = 'error-dismiss';
-  btn.setAttribute('aria-label', 'Stäng felmeddelande');
-  btn.textContent = '✕';
-  btn.onclick = () => { el.style.display = 'none'; };
-  el.append(text, btn);
-}
-
-function getWindDirection(degrees) {
-  if (degrees === null || degrees === undefined) return '—';
-  const dirs = ['N','NNÖ','NÖ','ÖNÖ','Ö','ÖSÖ','SÖ','SSÖ','S','SSV','SV','VSV','V','VNV','NV','NNV'];
-  return dirs[Math.round(degrees / 22.5) % 16];
-}
-
-function calculateFeelsLike(temp, windSpeed, humidity) {
-  if (temp === null || windSpeed === null) return temp;
-  if (temp <= 10 && windSpeed > 1.3) {
-    const wk = windSpeed * 3.6;
-    return 13.12 + 0.6215*temp - 11.37*Math.pow(wk,0.16) + 0.3965*temp*Math.pow(wk,0.16);
-  }
-  if (temp >= 27 && humidity !== null) {
-    const rh = humidity;
-    return -8.78469475556 + 1.61139411*temp + 2.33854883889*rh
-      - 0.14611605*temp*rh - 0.012308094*temp*temp
-      - 0.0164248277778*rh*rh + 0.002211732*temp*temp*rh
-      + 0.00072546*temp*rh*rh - 0.000003582*temp*temp*rh*rh;
-  }
-  return temp;
-}
-
-function getWeatherEmoji(symbolCode) {
-  const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g,'');
-  const map = {
-    clearsky:'☀️', fair:'🌤️', partlycloudy:'⛅', cloudy:'☁️', fog:'🌫️',
-    lightrainshowers:'🌦️', rainshowers:'🌧️', heavyrainshowers:'⛈️',
-    lightrain:'🌦️', rain:'🌧️', heavyrain:'⛈️',
-    lightsleetshowers:'🌨️', sleetshowers:'🌨️', heavysleetshowers:'🌨️',
-    lightsleet:'🌨️', sleet:'🌨️', heavysleet:'🌨️',
-    lightsnowshowers:'🌨️', snowshowers:'❄️', heavysnowshowers:'❄️',
-    lightsnow:'🌨️', snow:'❄️', heavysnow:'❄️',
-    rainandthunder:'⛈️', sleetandthunder:'⛈️', snowandthunder:'⛈️',
-    lightrainandthunder:'⛈️', lightsleetandthunder:'⛈️', lightsnowandthunder:'⛈️',
-    heavyrainandthunder:'⛈️', heavysleetandthunder:'⛈️', heavysnowandthunder:'⛈️'
-  };
-  return map[code] || '🌡️';
-}
-
-function getWeatherDescription(symbolCode) {
-  const code = symbolCode.toLowerCase().replace(/_day|_night|_polartwilight/g,'');
-  const map = {
-    clearsky:'Klart', fair:'Mest klart', partlycloudy:'Halvklart', cloudy:'Mulet', fog:'Dimma',
-    lightrainshowers:'Lätta regnskurar', rainshowers:'Regnskurar', heavyrainshowers:'Kraftiga regnskurar',
-    lightrain:'Duggregn', rain:'Regn', heavyrain:'Kraftigt regn',
-    lightsleetshowers:'Lätta snöblandat skurar', sleetshowers:'Snöblandat regn', heavysleetshowers:'Kraftiga snöblandat skurar',
-    lightsleet:'Lätt snöblandat regn', sleet:'Snöblandat regn', heavysleet:'Kraftigt snöblandat regn',
-    lightsnowshowers:'Lätt snöfall', snowshowers:'Snöfall', heavysnowshowers:'Kraftigt snöfall',
-    lightsnow:'Lätt snö', snow:'Snöfall', heavysnow:'Kraftigt snöfall',
-    rainandthunder:'Åska', sleetandthunder:'Snöblandat & Åska', snowandthunder:'Snö & Åska',
-    lightrainandthunder:'Lätt regn & Åska', lightsleetandthunder:'Lätt snöblandat & Åska',
-    lightsnowandthunder:'Lätt snö & Åska', heavyrainandthunder:'Kraftigt åska',
-    heavysleetandthunder:'Kraftigt snöblandat & Åska', heavysnowandthunder:'Kraftigt snö & Åska'
-  };
-  return map[code] || 'Okänt';
-}
-
-// ── GEOCODING ─────────────────────────────────────────────────────────────────
-
-async function searchCity() {
-  const cityName = document.getElementById('citySearchInput').value.trim();
-  if (!cityName) { showError('Ange ett stadsnamn'); return; }
-  const btn = document.querySelector('.pill-btn');
-  btn.disabled = true; btn.textContent = '…';
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=json&limit=1`,{ headers:{'User-Agent':'WeatherDashboard/1.0'} });
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    if (!data.length) { showError(`Hittade inte "${cityName}"`); return; }
-    const loc = data[0];
-    const lat = parseFloat(loc.lat), lon = parseFloat(loc.lon);
-    await selectCity(loc.display_name, lat, lon);
-  } catch { showError('Sökning misslyckades. Försök igen.'); }
-  finally { btn.disabled = false; btn.textContent = '🔍 Sök'; }
-}
-
-async function selectCity(name, lat, lon) {
-  currentCity = name;
-  currentLat = lat;
-  currentLon = lon;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  if (event?.target?.classList.contains('preset-btn')) event.target.classList.add('active');
-  await fetchWeather();
-}
-
-function useGeolocation() {
-  if (!navigator.geolocation) { showError('Geolokalisering stöds inte'); return; }
-  const btn = event.target; btn.textContent = '📍 Hämtar…'; btn.disabled = true;
-  const restore = () => { btn.textContent = '📍 Använd min plats'; btn.disabled = false; };
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      currentLat = pos.coords.latitude;
-      currentLon = pos.coords.longitude;
-      currentCity = 'Min plats';
-      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-      fetchWeather().finally(restore);
-    },
-    err => { showError('Kunde inte hämta plats: ' + err.message); restore(); }
-  );
-}
-
-// ── AVANCERAT: MANUELLA KOORDINATER ──────────────────────────────────────────
-
-function toggleCoords() {
-  const row = document.getElementById('coordRow');
-  const btn = document.getElementById('coordToggle');
-  const open = row.classList.toggle('open');
-  btn.textContent = `Avancerat: ange koordinater ${open ? '▴' : '▾'}`;
-  btn.setAttribute('aria-expanded', open);
-  if (open) {
-    // Förifyll med aktuell plats som utgångspunkt
-    document.getElementById('latInput').value = currentLat.toFixed(6);
-    document.getElementById('lonInput').value = currentLon.toFixed(6);
-  }
-}
-
-async function fetchFromCoords() {
-  const lat = parseFloat(document.getElementById('latInput').value);
-  const lon = parseFloat(document.getElementById('lonInput').value);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-    showError('Ogiltiga koordinater (lat −90…90, lon −180…180)');
-    return;
-  }
-  currentLat = lat;
-  currentLon = lon;
-  currentCity = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  await fetchWeather();
-}
-
-// ── SMHI-HÄMTNING ─────────────────────────────────────────────────────────────
-// SMHI:s punktprognos (snow1g). Täckningen är begränsad till Norden/Östersjö-
-// området – utanför den returnerar API:t fel, och då används bara met.no.
-
-async function fetchSMHI(lat, lon) {
-  const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon.toFixed(6)}/lat/${lat.toFixed(6)}/data.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`SMHI HTTP ${res.status}`);
-  return res.json();
-}
-
-// ── PROGNOSKÄLLA ──────────────────────────────────────────────────────────────
-// met.no, SMHI, Viktad (viktat medel) eller Båda (båda källorna i graferna,
-// viktat medel i dagstrip, översikt och tabell). Valet sparas i localStorage.
-
-const FORECAST_MODE_KEY = 'weatherAppForecastMode';
-const FORECAST_MODES = ['met', 'smhi', 'blend', 'both'];
-const SOURCE_LABELS = { met: 'met.no', smhi: 'SMHI' };
-let forecastMode = 'met';
-try {
-  const saved = localStorage.getItem(FORECAST_MODE_KEY);
-  if (FORECAST_MODES.includes(saved)) forecastMode = saved;
-} catch {}
-let rawForecasts = { met: null, smhi: null };
-
-// Läget som faktiskt kan visas med de källor som gick att hämta
-function effectiveMode() {
-  if (!rawForecasts.smhi) return 'met';
-  if (!rawForecasts.met) return 'smhi';
-  return forecastMode;
-}
-
-function applyForecastMode() {
-  const mode = effectiveMode();
-  const built = ForecastSources.buildForecast(mode === 'both' ? 'blend' : mode, rawForecasts);
-  weatherData = { times: built.times, data: built.data, mode, sourceIds: built.sourceIds };
-  const d = weatherData.data;
-  d.feels_like = d.temp.map((t, i) => calculateFeelsLike(t, d.wind[i], d.humidity[i]));
-  if (mode === 'both') {
-    for (const id of built.sourceIds) {
-      d[`feels_like_src_${id}`] = d[`temp_src_${id}`].map((t, i) =>
-        t === null ? null : calculateFeelsLike(t, d[`wind_src_${id}`][i], d[`humidity_src_${id}`][i]));
-    }
-  }
-  // Persistensen kalibreras mot met.no:s 6h-block när de finns (fallback annars)
-  d.rolling3h = [];
-  weatherData.persistenceL = estimatePersistence();
-  d.rolling3h = compute3hRollingProb(d.precip_prob, d.step_hours, weatherData.persistenceL);
-  updateForecastSwitch();
-}
-
-function updateForecastSwitch() {
-  const mode = effectiveMode();
-  document.querySelectorAll('#forecastSwitch .source-tab').forEach(b => {
-    const m = b.dataset.mode;
-    if (b.dataset.title === undefined) b.dataset.title = b.title;
-    b.disabled = (m !== 'met' && !rawForecasts.smhi) || (m !== 'smhi' && !rawForecasts.met);
-    b.title = b.disabled ? 'Saknar prognos från båda källorna för den här platsen' : b.dataset.title;
-    b.classList.toggle('active', m === mode);
-  });
-}
-
-function setForecastMode(mode) {
-  if (!FORECAST_MODES.includes(mode)) return;
-  forecastMode = mode;
-  try { localStorage.setItem(FORECAST_MODE_KEY, mode); } catch {}
-  if (!weatherData) { updateForecastSwitch(); return; }
-  // Tidsaxeln kan skilja mellan källorna: spara perioden som tider, inte index
-  const win = window.customRangeWindow;
-  const T = weatherData.times;
-  const keep = win ? [T[win.start].getTime(), T[win.end - 1].getTime()] : null;
-  applyForecastMode();
-  if (keep) {
-    const N = weatherData.times;
-    let start = N.findIndex(t => t.getTime() >= keep[0]);
-    let end = N.findIndex(t => t.getTime() > keep[1]);
-    if (start === -1) start = 0;
-    if (end === -1) end = N.length;
-    window.customRangeWindow = { start, end: Math.max(end, start + 1) };
-  }
-  _refreshAll();
-}
-
-// ── SOL UPP/NED (met.no sunrise 3.0) ─────────────────────────────────────────
-// En förfrågan per dygn i prognosen (~10 st), körs i bakgrunden.
-// Vid midnattssol/polarnatt returnerar API:t null – då utelämnas tider/skuggning.
-
-function dateKeyLocal(d) {
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
-}
-
-async function fetchSunTimes(lat, lon) {
-  sunTimes = {};
-  if (!weatherData) return;
-  const keys = [...new Set(weatherData.times.map(dateKeyLocal))];
-  const om = -new Date().getTimezoneOffset();
-  const sign = om >= 0 ? '+' : '-';
-  const abs = Math.abs(om);
-  const offset = `${sign}${String(Math.floor(abs/60)).padStart(2,'0')}:${String(abs%60).padStart(2,'0')}`;
-  await Promise.all(keys.map(async key => {
-    try {
-      const res = await fetch(
-        `https://api.met.no/weatherapi/sunrise/3.0/sun?lat=${lat}&lon=${lon}&date=${key}&offset=${encodeURIComponent(offset)}`,
-        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } });
-      if (!res.ok) return;
-      const j = await res.json();
-      sunTimes[key] = {
-        sunrise: j.properties?.sunrise?.time ? new Date(j.properties.sunrise.time) : null,
-        sunset:  j.properties?.sunset?.time  ? new Date(j.properties.sunset.time)  : null
-      };
-    } catch {}
-  }));
-}
-
-// Nattskuggning: sammanhängande intervall solnedgång → nästa soluppgång.
-// Saknas soluppgång/-nedgång (midnattssol) ritas ingen skuggning för dygnet.
-function nightRect(x0, x1) {
-  return { type:'rect', xref:'x', yref:'paper', x0, x1, y0:0, y1:1,
-    fillcolor: chartColors().night, line:{width:0}, layer:'below' };
-}
-
-function buildNightIntervals() {
-  const keys = Object.keys(sunTimes).sort();
-  const intervals = [];
-  for (let i = 0; i < keys.length; i++) {
-    const cur = sunTimes[keys[i]];
-    if (!cur) continue;
-    const [y, mo, d] = keys[i].split('-').map(Number);
-    // Natt före första dygnets soluppgång
-    if (i === 0 && cur.sunrise) {
-      intervals.push([new Date(y, mo-1, d, 0, 0, 0, 0), cur.sunrise]);
-    }
-    if (cur.sunset) {
-      const next = sunTimes[keys[i+1]];
-      if (next?.sunrise) intervals.push([cur.sunset, next.sunrise]);
-      else intervals.push([cur.sunset, new Date(y, mo-1, d, 23, 59, 59, 999)]);
-    }
-  }
-  return intervals;
-}
-
-function buildNightShapes() {
-  return buildNightIntervals().map(([a, b]) => nightRect(a, b));
-}
-
-// ☾-markör överst i varje nattband så skuggningen förklarar sig själv.
-// Band smalare än 4 % av det synliga fönstret hoppas över (markören får inte plats).
-function buildNightAnnotations(windowMs) {
-  return buildNightIntervals()
-    .filter(([a, b]) => (b - a) > windowMs * 0.04)
-    .map(([a, b]) => ({
-      x: new Date((a.getTime() + b.getTime()) / 2),
-      xref:'x', y: 1, yref:'paper', yanchor:'top',
-      text:'☾', showarrow:false,
-      font:{ size:11, color: chartColors().moon }
-    }));
-}
-
-function updateLocationLabel() {
-  const el = document.getElementById('locationLabel');
-  const ts = lastFetchTime
-    ? lastFetchTime.toLocaleTimeString('sv-SE', { hour:'2-digit', minute:'2-digit' })
-    : '';
-  el.textContent = ts ? `${currentCity} · uppdaterad ${ts}` : currentCity;
-}
-
-// ── DATA FETCH & PROCESS ──────────────────────────────────────────────────────
-
-async function fetchWeather() {
-  const lat = currentLat, lon = currentLon;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) { showError('Ogiltiga koordinater'); return; }
-
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('content').style.display = 'none';
-  document.getElementById('error').style.display = 'none';
-
-  try {
-    // Hämta met.no och SMHI parallellt. SMHI får misslyckas tyst (utanför
-    // täckning); då visas bara met.no. Fel bara om ingen källa svarar.
-    const [metRes, smhiRes] = await Promise.allSettled([
-      fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`,
-        { headers: { 'User-Agent': 'WeatherDashboard/1.0 (educational)' } })
-        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-      fetchSMHI(lat, lon)
-    ]);
-    if (metRes.status === 'rejected' && smhiRes.status === 'rejected') throw metRes.reason;
-    rawForecasts = {
-      met:  metRes.status  === 'fulfilled' ? metRes.value  : null,
-      smhi: smhiRes.status === 'fulfilled' ? smhiRes.value : null,
-    };
-    applyForecastMode();
-
-    lastFetchTime = new Date();
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'flex';
-    document.getElementById('globalControls').style.display = 'flex';
-    document.getElementById('dayStripGlobal').style.display = 'block';
-    updateLocationLabel();
-
-    // Sol upp/ned hämtas i bakgrunden; rita om när tiderna finns
-    fetchSunTimes(lat, lon).then(() => { if (weatherData) _refreshAll(); });
-    if (weatherData && weatherData.times.length > 0) {
-      const firstTime = weatherData.times[0];
-      const lastTime = weatherData.times[weatherData.times.length - 1];
-      document.getElementById('startDateTime').min = toLocalDTString(firstTime);
-      document.getElementById('startDateTime').max = toLocalDTString(lastTime);
-      document.getElementById('endDateTime').min = toLocalDTString(firstTime);
-      document.getElementById('endDateTime').max = toLocalDTString(lastTime);
-    }
-    setDefaultDayRange();
-
-    // Hämtning startad från Plats-vyn → hoppa till översikten med ny data
-    if (currentView() === 'plats') navigate('oversikt');
-  } catch(e) {
-    showError('Kunde inte hämta väderdata: ' + e.message);
-    document.getElementById('loading').style.display = 'none';
-    // Visa appens skal ändå så att Plats-vyn går att nå för nytt försök
-    document.getElementById('content').style.display = 'flex';
-    navigate('plats');
-  }
-}
-
-// ── SLICE ─────────────────────────────────────────────────────────────────────
-
-function sliceData(hours) {
-  if (window.customRangeWindow) {
-    const { start, end } = window.customRangeWindow;
-    return {
-      times: weatherData.times.slice(start, end),
-      data: Object.fromEntries(Object.entries(weatherData.data).map(([k,v]) => [k, v.slice(start, end)]))
-    };
-  }
-  const n = hours === 9999 ? weatherData.times.length : Math.min(weatherData.times.length, hours);
-  return {
-    times: weatherData.times.slice(0, n),
-    data: Object.fromEntries(Object.entries(weatherData.data).map(([k,v]) => [k, v.slice(0,n)]))
-  };
-}
-
-// ── RANGE ─────────────────────────────────────────────────────────────────────
-
-function clearAllRangeTabs() {
-  document.querySelectorAll('.range-tab:not(.source-tab)').forEach(b => b.classList.remove('active'));
-}
-
-// ── DEFAULT DAY RANGE ─────────────────────────────────────────────────────────
-// Called on first load: shows today by default.
-// If the current time is 20:00 or later, also includes tomorrow.
-
-function setDefaultDayRange() {
-  if (!weatherData) return;
-  clearAllRangeTabs();
-  selectedDays.clear();
-
-  function localMidnight(offsetDays) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + (offsetDays || 0));
-    return d;
-  }
-  function localEndOfDay(midnightDate) {
-    const d = new Date(midnightDate);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }
-
-  const now = new Date();
-  const startDate = localMidnight(0);
-  const endDate = now.getHours() >= 20
-    ? localEndOfDay(localMidnight(1))   // today + tomorrow
-    : localEndOfDay(startDate);          // today only
-
-  let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx   = weatherData.times.findIndex(t => t > endDate);
-  if (startIdx === -1) startIdx = 0;
-  if (endIdx   === -1) endIdx   = weatherData.times.length;
-
-  window.customRangeWindow = { start: startIdx, end: endIdx };
-  _refreshAll();
-}
-
-function applyDateTimeRange() {
-  if (!weatherData) return;
-  const startInput = document.getElementById('startDateTime').value;
-  const endInput = document.getElementById('endDateTime').value;
-  if (!startInput || !endInput) { showError('Välj både start- och sluttid'); return; }
-  const startDate = parseLocalDT(startInput), endDate = parseLocalDT(endInput);
-  if (startDate >= endDate) { showError('Starttiden måste vara före sluttiden'); return; }
-  let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx = weatherData.times.findIndex(t => t > endDate);
-  if (startIdx === -1) startIdx = 0;
-  if (endIdx === -1) endIdx = weatherData.times.length;
-  if (startIdx >= endIdx) { showError('Ingen data i det valda tidsintervallet'); return; }
-  clearAllRangeTabs();
-  selectedDays.clear();
-  window.customRangeWindow = { start: startIdx, end: endIdx };
-  _refreshAll();
-}
-
-function setRange(hours) {
-  window.customRangeWindow = null;
-  currentRange = hours;
-  clearAllRangeTabs();
-  selectedDays.clear();
-  const id = hours === 9999 ? 'btn-all' : `btn-${hours}`;
-  document.getElementById(id)?.classList.add('active');
-  _refreshAll();
-}
-
-// ── VYER / ROUTER ─────────────────────────────────────────────────────────────
-// Hash-routade vyer i samma fil: #/oversikt, #/grafer, #/tabell, #/plats.
-// Endast den aktiva vyn ritas om vid ändringar; övriga markeras "dirty"
-// och ritas först när de visas (Plotly mäter fel bredd i dolda element).
-
-const VIEWS = ['oversikt', 'grafer', 'tabell', 'plats'];
-const viewDirty = { oversikt: true, grafer: true, tabell: true };
-
-function currentView() {
-  const h = location.hash.replace(/^#\/?/, '');
-  return VIEWS.includes(h) ? h : 'oversikt';
-}
-
-function navigate(v) {
-  if (currentView() === v) { applyRoute(); return; }
-  location.hash = '#/' + v;
-}
-
-function applyRoute() {
-  const v = currentView();
-  VIEWS.forEach(x =>
-    document.getElementById('view-' + x)?.classList.toggle('active', x === v));
-  document.querySelectorAll('[data-nav]').forEach(b =>
-    b.classList.toggle('active', b.dataset.nav === v));
-  renderView(v);
-  window.scrollTo({ top: 0 });
-}
-
-function renderView(v) {
-  if (!weatherData) return;
-  if (v === 'oversikt') {
-    if (viewDirty.oversikt) { updateRiskBadges(); updateCurrentCards(); viewDirty.oversikt = false; }
-  } else if (v === 'grafer') {
-    if (viewDirty.grafer) { drawCharts(); viewDirty.grafer = false; }
-    else ['tempChart', 'windChart', 'precipChart'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.data) Plotly.Plots.resize(el); // fönstret kan ha ändrats medan vyn var dold
-    });
-  } else if (v === 'tabell') {
-    if (viewDirty.tabell) { updateTable(); viewDirty.tabell = false; }
-  }
-}
-
-window.addEventListener('hashchange', applyRoute);
-
-function _refreshAll() {
-  buildDayStrip();      // global – alltid synlig
-  syncDatePickers();    // globalt kontrollfält
-  viewDirty.oversikt = viewDirty.grafer = viewDirty.tabell = true;
-  renderView(currentView());
-}
-
-function syncDatePickers() {
-  if (!weatherData) return;
-  const s = sliceData(currentRange);
-  if (!s.times.length) return;
-  document.getElementById('startDateTime').value = toLocalDTString(s.times[0]);
-  document.getElementById('endDateTime').value   = toLocalDTString(s.times[s.times.length - 1]);
-}
-
-// ── CURRENT CARDS ─────────────────────────────────────────────────────────────
-
-function updateCurrentCards() {
-  const s = sliceData(currentRange);
-
-  const tm = s.data.temp;
-  const meanT = meanOf(tm), minT = minOf(tm), maxT = maxOf(tm);
-  document.getElementById('cTemp').textContent = meanT !== null ? `${meanT.toFixed(1)}°C` : '—';
-  document.getElementById('cTempRange').textContent = (minT !== null && maxT !== null)
-    ? `Min ${minT.toFixed(0)}°C, Max ${maxT.toFixed(0)}°C` : '—';
-
-  const wm = s.data.wind, gm = s.data.gust, wd = s.data.wind_direction;
-  const meanW = meanOf(wm), maxW = maxOf(wm), maxG = maxOf(gm);
-  const meanD = circularMeanDeg(wd); // vektormedel, inte aritmetiskt
-  document.getElementById('cWind').textContent = meanW !== null ? `${meanW.toFixed(1)} m/s` : '—';
-  document.getElementById('cWindsub').textContent =
-    `Max ${maxW !== null ? maxW.toFixed(0) : '—'}(${maxG !== null ? maxG.toFixed(0) : '—'}) m/s · ${meanD !== null ? getWindDirection(meanD) : '—'}`;
-
-  // Summera faktisk mängd per tidssteg (1h-värden + hela 6h-block), inte timtakten
-  const totalP = validVals(s.data.precip_step).reduce((a,b) => a+b, 0);
-  document.getElementById('cPrecip').textContent = `${totalP.toFixed(1)} mm`;
-  const compoundRisk = periodRisk(s, weatherData.persistenceL);
-  document.getElementById('cPrecipSub').innerHTML =
-    (compoundRisk !== null ? `Risk över perioden: ${compoundRisk}%` : '');
-
-  // ── ÅSKA (SMHI) ──
-  const thAll = s.data.thunder;
-  const thValid = thAll.filter(v => v !== null && v !== undefined);
-  if (thValid.length) {
-    const maxTh = Math.max(...thValid);
-    let maxIdx = -1;
-    for (let i = 0; i < thAll.length; i++) {
-      if (thAll[i] !== null && thAll[i] === maxTh) { maxIdx = i; break; }
-    }
-    document.getElementById('cThunder').textContent = `${Math.round(maxTh)}%`;
-    if (maxTh >= THUNDER_MED && maxIdx >= 0) {
-      const tStr = s.times[maxIdx].toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' });
-      document.getElementById('cThunderSub').textContent = `⚡ Störst risk ${tStr}`;
-    } else {
-      document.getElementById('cThunderSub').textContent = 'Låg åskrisk under perioden';
-    }
-  } else {
-    document.getElementById('cThunder').textContent = '—';
-    document.getElementById('cThunderSub').textContent = 'Ingen data (utanför SMHI-täckning)';
-  }
-
-  const meanC = meanOf(s.data.cloud), minC = minOf(s.data.cloud), maxC = maxOf(s.data.cloud);
-  document.getElementById('cCloud').textContent = meanC !== null ? `${meanC.toFixed(0)}%` : '—';
-  document.getElementById('cCloudRange').textContent = (minC !== null) ? `${minC.toFixed(0)}–${maxC.toFixed(0)}%` : '—';
-
-  const meanH = meanOf(s.data.humidity), minH = minOf(s.data.humidity), maxH = maxOf(s.data.humidity);
-  document.getElementById('cHumidity').textContent = meanH !== null ? `${meanH.toFixed(0)}%` : '—';
-  document.getElementById('cHumidityRange').textContent = (minH !== null) ? `${minH.toFixed(0)}–${maxH.toFixed(0)}%` : '—';
-
-  const maxUV = maxOf(s.data.uv), minUV = minOf(s.data.uv);
-  document.getElementById('cUV').textContent = maxUV !== null ? maxUV.toFixed(1) : '—';
-  document.getElementById('cUVRange').textContent = (minUV !== null) ? `${minUV.toFixed(1)}–${maxUV.toFixed(1)}` : '—';
-
-  const sc = { displayModeBar: false, responsive: true };
-  const sparkH = window.innerWidth >= 768 ? 56 : 40; // matchar CSS-höjden på desktop
-  const sl = {
-    margin: {t:2,r:2,b:2,l:2},
-    xaxis: { visible:false, fixedrange:true },
-    yaxis: { visible:false, fixedrange:true },
-    showlegend: false,
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    height: sparkH,
-    autosize: true,
-    dragmode: false,
-    hovermode: 'x'
-  };
-
-  const mk = (color, y, unit) => [{
-    x: s.times, y,
-    type: 'scatter', mode: 'lines',
-    fill: 'tozeroy',
-    line: { color, width: 1.5 },
-    fillcolor: color.replace(')', ',0.15)').replace('rgb','rgba'),
-    hovertemplate: `%{x|%b %d %H:%M}<br>%{y:.1f}${unit}<extra></extra>`
-  }];
-
-  const sp = chartColors().spark;
-  Plotly.newPlot('sparkTemp',     mk(sp.temp,     s.data.temp,     ' °C'),    sl, sc);
-  Plotly.newPlot('sparkWind',     mk(sp.wind,     s.data.wind,     ' m/s'),   sl, sc);
-  Plotly.newPlot('sparkPrecip',   mk(sp.precip,   s.data.precip,  ' mm'),    sl, sc);
-  Plotly.newPlot('sparkCloud',    mk(sp.cloud,    s.data.cloud,    '%'),      sl, sc);
-  Plotly.newPlot('sparkHumidity', mk(sp.humidity, s.data.humidity, '%'),      sl, sc);
-  Plotly.newPlot('sparkUV',       mk(sp.uv,       s.data.uv,       ''),       sl, sc);
-  if (thValid.length) {
-    Plotly.newPlot('sparkThunder', mk(sp.thunder, s.data.thunder, '%'), sl, sc);
-  } else {
-    Plotly.purge('sparkThunder');
-    document.getElementById('sparkThunder').innerHTML = '';
-  }
-}
-
-// ── RISK BADGES ──────────────────────────────────────────────────────────────
-
-function updateRiskBadges() {
-  if (!weatherData) return;
-  const nowIdx = findNowIndex();
-  if (nowIdx === null) return;
-
-  const d = weatherData.data;
-  const t0    = d.temp[nowIdx];
-  const f0    = d.feels_like[nowIdx];
-  const w0    = d.wind[nowIdx];
-  const g0    = d.gust[nowIdx];
-  const uv0   = d.uv[nowIdx];
-  const p0    = d.precip[nowIdx];
-  const prob0 = d.precip_prob[nowIdx];
-  const roll3h = d.rolling3h[nowIdx];
-  const th0   = d.thunder[nowIdx];
-
-  const timeStr = weatherData.times[nowIdx].toLocaleString('sv-SE', { weekday:'short', hour:'2-digit', minute:'2-digit' });
-  document.getElementById('nowSectionTitle').textContent = `Just nu · ${timeStr}`;
-
-  const badge = (icon, text, cls) =>
-    `<div class="risk-badge ${cls}"><span class="risk-badge-icon">${icon}</span>${text}</div>`;
-
-  // Badges utan data utelämnas i stället för att visa 0
-  let html = '';
-  if (t0 != null) html += badge('🌡️', `${t0.toFixed(1)}°C`,
-    t0 > 30 || t0 < -10 ? 'high' : t0 > 25 || t0 < 0 ? 'medium' : 'low');
-  if (f0 != null) html += badge('☝🏼', `${f0.toFixed(1)}°C`,
-    f0 > 30 || f0 < -10 ? 'high' : f0 > 25 || f0 < 0 ? 'medium' : 'low');
-  if (w0 != null) {
-    const gLabel = g0 != null ? ` (${g0.toFixed(1)})` : '';
-    html += badge('💨', `${w0.toFixed(1)}${gLabel} m/s`,
-      w0 > 15 || g0 > 20 ? 'high' : w0 > 10 || g0 > 15 ? 'medium' : 'low');
-  }
-  if (uv0 != null) html += badge('☀️', `UV ${uv0.toFixed(1)}`,
-    uv0 > 7 ? 'high' : uv0 > 3 ? 'medium' : 'low');
-  if (p0 != null) {
-    let precipLabel = `${p0.toFixed(1)} mm`;
-    if (prob0 !== null && prob0 !== undefined) precipLabel += ` · ${Math.round(prob0)}%`;
-    if (roll3h !== null) precipLabel += ` · 3h ${roll3h}%`;
-    html += badge('🌧️', precipLabel,
-      p0 > 10 ? 'high' : p0 > 2 ? 'medium' : 'low');
-  }
-  if (th0 !== null && th0 !== undefined) html += badge('⚡', `Åska ${Math.round(th0)}%`, thunderClass(th0));
-
-  document.getElementById('riskRow').innerHTML = html;
-}
-
-// ── CHARTS ────────────────────────────────────────────────────────────────────
-
-// ── GRAFER ────────────────────────────────────────────────────────────────────
-// Tre staplade grafer med samma tidsaxel och samma marginaler, så att en
-// tidpunkt hamnar på samma x-position i alla. Plotly ritar statiskt (ingen
-// egen hover/zoom); hårkors, detaljpanel och panorering sköts här. På så vis
-// scrollar en lodrät svepning sidan även när den börjar på en graf.
-
-const CHART_IDS = ['tempChart', 'windChart', 'precipChart'];
-// range: synligt fönster, extent: hela prognosen (ms). cursor: index som
-// detaljpanelen visar (null = "nu"). pinned: valt med tryck, ligger kvar.
-let chartView = null;
-
-// Tidsstegets längd i timmar (1h i början, 6h i svansen)
-function stepHoursAt(i) {
-  const d = weatherData.data.step_hours[i];
-  if (d) return d;
-  const t = weatherData.times;
-  if (i + 1 < t.length) return (t[i + 1] - t[i]) / 3600e3;
-  return i > 0 ? (t[i] - t[i - 1]) / 3600e3 : 1;
-}
-
-// Plotly tolkar Date som lokal väggklocka utan tidszon. Omräkningen behövs
-// för att pixel ↔ tid ska stämma även över sommartidsskiftet.
-const toNaive = ms => ms - new Date(ms).getTimezoneOffset() * 60000;
-const fromNaive = n => n + new Date(n).getTimezoneOffset() * 60000;
-
-// Tidsaxel i två nivåer utan lutande etiketter: timmar ("06", "12") och
-// veckodag vid midnatt ("lör 10"). Tätheten väljs efter fönstrets längd.
-const WEEKDAYS_SHORT = ['sön', 'mån', 'tis', 'ons', 'tors', 'fre', 'lör'];
-function buildTimeTicks(fromMs, toMs, windowH, isMobile) {
-  const steps = isMobile ? [[30, 6], [60, 12], [Infinity, 24]]
-                         : [[30, 3], [60, 6], [150, 12], [Infinity, 24]];
-  const step = steps.find(([lim]) => windowH <= lim)[1];
-  const vals = [], text = [], midnights = [];
-  const d0 = new Date(fromMs);
-  for (let day = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
-       day.getTime() <= toMs;
-       day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)) {
-    if (day.getTime() >= fromMs) midnights.push(day);
-    for (let h = 0; h < 24; h += step) {
-      const t = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h);
-      if (t.getTime() < fromMs || t.getTime() > toMs) continue;
-      vals.push(t);
-      text.push(h === 0 ? `<b>${WEEKDAYS_SHORT[t.getDay()]} ${t.getDate()}</b>` : String(h).padStart(2, '0'));
-    }
-  }
-  return { vals, text, midnights };
-}
-
-// Sammanfattning i graf-rubrikerna för vald period (samma period som
-// dagstripen och tabellen visar; följer med vid panorering)
-function updateChartSummaries(s) {
-  const hMeanT = meanOf(s.data.temp), hMinT = minOf(s.data.temp), hMaxT = maxOf(s.data.temp);
-  document.getElementById('chartTempLive').textContent = hMeanT !== null
-    ? `Ø ${hMeanT.toFixed(1)}°C · ${hMinT.toFixed(0)}° till ${hMaxT.toFixed(0)}°`
-    : '';
-  const hMeanW = meanOf(s.data.wind), hMaxW = maxOf(s.data.wind), hMaxG = maxOf(s.data.gust);
-  const hMeanD = circularMeanDeg(s.data.wind_direction);
-  document.getElementById('chartWindLive').textContent = hMeanW !== null
-    ? `Ø ${hMeanW.toFixed(1)} m/s · max ${hMaxW.toFixed(0)} (${hMaxG !== null ? hMaxG.toFixed(0) : '—'}) · ${hMeanD !== null ? getWindDirection(hMeanD) : '—'}`
-    : '';
-  const hTotalP = validVals(s.data.precip_step).reduce((a, b) => a + b, 0);
-  const hRisk = periodRisk(s, weatherData.persistenceL);
-  const hMaxTh = maxOf(s.data.thunder);
-  document.getElementById('chartPrecipLive').textContent =
-    `Σ ${hTotalP.toFixed(1)} mm` +
-    (hRisk !== null ? ` · risk ${hRisk}%` : '') +
-    (hMaxTh !== null ? ` · ⚡ max ${Math.round(hMaxTh)}%` : '');
-}
-
-// Legender: ordinarie innehåll, eller en källegend (met.no / SMHI) i Båda-läget
-const legendDefaults = {};
-function setChartLegends(both, showThunder) {
-  const swatch = (bg, w = 14) => `<span class="chart-legend-swatch" style="background:${bg};width:${w}px"></span>`;
-  const srcItems = (kind) => ['met', 'smhi'].map(id => kind === 'bar'
-    ? `<span class="chart-legend-item">${swatch(`var(--src-${id})`, 9)}${SOURCE_LABELS[id]}</span>`
-    : `<span class="chart-legend-item"><span class="chart-legend-line" style="background:var(--src-${id})"></span>${SOURCE_LABELS[id]}</span>`).join('');
-  const thunder = `<span class="chart-legend-item">${swatch('linear-gradient(90deg, rgba(var(--thunder-rgb),0.08), rgba(var(--thunder-rgb),0.9))')}Åska</span>`;
-  const bothHtml = {
-    legendTemp: srcItems('line'),
-    legendWind: srcItems('line') + '<span class="chart-legend-item">↓ Vindriktning</span>',
-    legendPrecip: srcItems('bar') + `<span class="chart-legend-item">${swatch('linear-gradient(90deg, rgba(128,128,128,0.1), rgba(128,128,128,0.8))')}Risk</span>` + (showThunder ? thunder : ''),
-  };
-  for (const id of Object.keys(bothHtml)) {
-    const el = document.getElementById(id);
-    if (legendDefaults[id] === undefined) legendDefaults[id] = el.innerHTML;
-    el.innerHTML = both ? bothHtml[id] : legendDefaults[id];
-  }
-  const lt = document.getElementById('legendThunder');
-  if (lt) lt.style.display = showThunder ? '' : 'none';
-}
-
-// Markera dagkorten som ingår i vald period
-function markDayStripActive() {
-  const strip = document.getElementById('dayStrip');
-  const days = new Set(sliceData(currentRange).times.map(t => t.toLocaleDateString('sv-SE')));
-  let first = null;
-  strip.querySelectorAll('.day-card').forEach(c => {
-    const on = days.has(c.dataset.date);
-    c.classList.toggle('active', on);
-    if (on && !first) first = c;
-  });
-  return first;
-}
-
-// Panorering gör det synliga fönstret till vald period: dagkort, datumfält,
-// graf-rubriker och (när de visas) översikt och tabell följer med.
-// Graferna ritas inte om, så panoreringen förblir mjuk.
-function syncPeriodToChartWindow() {
-  if (!chartView || !weatherData) return;
-  const T = weatherData.times;
-  const [a, b] = chartView.range;
-  let start = T.findIndex(t => t.getTime() >= a - 60e3);
-  let end = T.findIndex(t => t.getTime() >= b - 60e3);
-  if (start === -1) return;
-  if (end === -1) end = T.length;
-  if (end <= start) end = start + 1;
-  const cur = window.customRangeWindow;
-  if (cur && cur.start === start && cur.end === end) return;
-  window.customRangeWindow = { start, end };
-  clearAllRangeTabs();
-  const s = sliceData(currentRange);
-  selectedDays = new Set(s.times.map(t => t.toLocaleDateString('sv-SE')));
-  const first = markDayStripActive();
-  // Håll första valda dagkortet synligt i stripen (bara sidled, sidan scrollas inte)
-  const strip = document.getElementById('dayStrip');
-  if (first && (first.offsetLeft < strip.scrollLeft || first.offsetLeft > strip.scrollLeft + strip.clientWidth - first.offsetWidth)) {
-    strip.scrollTo({ left: Math.max(0, first.offsetLeft - 8), behavior: 'smooth' });
-  }
-  syncDatePickers();
-  updateChartSummaries(s);
-  viewDirty.oversikt = viewDirty.tabell = true;
-}
-
-function drawCharts() {
-  const s = sliceData(currentRange);          // vald period: rubrikvärden + startfönster
-  if (!s.times.length) return;
-  const T = weatherData.times, D = weatherData.data, n = T.length;
-  const isMobile = window.innerWidth < 640;
-  const cc = chartColors();
-
-  const extent = [T[0].getTime(), T[n - 1].getTime() + stepHoursAt(n - 1) * 3600e3];
-  const lastIdx = T.indexOf(s.times[s.times.length - 1]);
-  const range = [s.times[0].getTime(), s.times[s.times.length - 1].getTime() + stepHoursAt(lastIdx) * 3600e3];
-  const windowMs = range[1] - range[0];
-  chartView = { range, extent, cursor: null, pinned: false };
-
-  // Samma marginaler i alla tre; höger ger plats åt Beaufort-namnen
-  const margin = { t: 8, b: 24, l: isMobile ? 34 : 46, r: isMobile ? 40 : 66 };
-  const ticks = buildTimeTicks(extent[0], extent[1], windowMs / 3600e3, isMobile);
-  const cfg = { staticPlot: true, responsive: true, displayModeBar: false };
-
-  const dayLines = ticks.midnights.map(m => ({
-    type: 'line', xref: 'x', yref: 'paper', x0: m, x1: m, y0: 0, y1: 1,
-    line: { color: cc.dayLine, width: 1 }, layer: 'below' }));
-  const nightShapes = buildNightShapes();
-  const nightAnn = buildNightAnnotations(windowMs);
-  const nowIdx = findNowIndex();
-  const nowShape = nowIdx !== null ? [{
-    type: 'line', xref: 'x', yref: 'paper', x0: T[nowIdx], x1: T[nowIdx], y0: 0, y1: 1,
-    line: { color: cc.nowLine, width: 1.5, dash: 'dot' } }] : [];
-  const bgShapes = [...nightShapes, ...dayLines, ...nowShape];
-
-  const xaxis = {
-    type: 'date', range: range.map(t => new Date(t)), fixedrange: true,
-    tickmode: 'array', tickvals: ticks.vals, ticktext: ticks.text, tickangle: 0,
-    tickfont: { color: cc.tick, size: isMobile ? 9 : 10 },
-    gridcolor: cc.grid, linecolor: cc.axisLine, showgrid: true, zeroline: false,
-  };
-  const yBase = { gridcolor: cc.grid, linecolor: cc.axisLine, tickfont: { color: cc.tick, size: 9 }, fixedrange: true };
-  const layout = (height, extra) => ({
-    height, margin, autosize: true, showlegend: false, hovermode: false, dragmode: false,
-    plot_bgcolor: cc.bg, paper_bgcolor: cc.bg,
-    font: { family: 'Inter, sans-serif', size: 10, color: cc.font },
-    xaxis, ...extra,
-  });
-  const H = isMobile ? { temp: 190, wind: 200, precip: 230 } : { temp: 220, wind: 230, precip: 260 };
-
-  const both = weatherData.mode === 'both';
-  const SRC = both ? weatherData.sourceIds : [];
-  updateChartSummaries(s);
-  const showThunder = validVals(D.thunder).some(v => v >= THUNDER_MED);
-  setChartLegends(both, showThunder);
-
-  // ── TEMPERATUR ──
-
-  // Skalan räknas på hela prognosen så att den inte hoppar vid panorering.
-  // Minst ±10° kring mittpunkten, avrundat utåt till hela 5°-steg.
-  const tAll = [...validVals(D.temp), ...validVals(D.temp_p10), ...validVals(D.temp_p90), ...validVals(D.feels_like),
-                ...SRC.flatMap(id => validVals(D[`temp_src_${id}`]))];
-  let tempRange = null;
-  if (tAll.length) {
-    const tMin = Math.min(...validVals(D.temp)), tMax = Math.max(...validVals(D.temp));
-    const tMid = (tMin + tMax) / 2;
-    const lo = Math.min(tMid - 10, Math.min(...tAll) - 1);
-    const hi = Math.max(tMid + 10, Math.max(...tAll) + 1);
-    tempRange = [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5];
-  }
-
-  const srcLines = key => SRC.map(id => ({ x: T, y: D[`${key}_src_${id}`], type: 'scatter', mode: 'lines',
-    line: { color: cc.src[id], width: 2.25 } }));
-  const pTemp = Plotly.newPlot('tempChart', both ? srcLines('temp') : [
-    { x: T, y: D.temp_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
-    { x: T, y: D.temp_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.tempBandFill, line: { width: 1, color: cc.tempBandLine } },
-    { x: T, y: D.temp, type: 'scatter', mode: 'lines', line: { color: cc.temp, width: 2.5 } },
-    { x: T, y: D.feels_like, type: 'scatter', mode: 'lines', line: { color: cc.feels, width: 1.5, dash: 'dot' } },
-  ], layout(H.temp, {
-    yaxis: { ...yBase, title: { text: '°C', font: { size: 11, color: cc.tick } },
-      ...(tempRange ? { range: tempRange, dtick: 5, tick0: 0 } : {}),
-      zeroline: true, zerolinecolor: cc.zeroLine, zerolinewidth: 1.5 },  // 0°C (frysgräns)
-    shapes: bgShapes, annotations: nightAnn,
-  }), cfg);
-
-  // ── VIND ──
-
-  const maxGustAll = both
-    ? Math.max(...SRC.flatMap(id => validVals(D[`wind_src_${id}`])))
-    : Math.max(...validVals(D.gust), ...validVals(D.wind));
-  const yMax = Math.max(Math.ceil(maxGustAll * 1.15 / 5) * 5, 15);
-  const bf = buildBeaufortLines(yMax, isMobile);
-
-  // Riktningspilar i en egen rad överst, med jämnt avstånd anpassat till fönstret
-  const maxArrows = isMobile ? 8 : 14;
-  const arrowStepMs = [1, 2, 3, 4, 6, 12, 24].map(h => h * 3600e3)
-    .find(ms => windowMs / ms <= maxArrows) ?? 24 * 3600e3;
-  const windArrows = [];
-  let nextArrow = -Infinity;
-  for (let i = 0; i < n; i++) {
-    const tMs = T[i].getTime();
-    if (tMs < nextArrow || D.wind_direction[i] === null || D.wind_direction[i] === undefined) continue;
-    windArrows.push({
-      x: T[i], xref: 'x', y: 0.95, yref: 'paper', text: '↓', showarrow: false,
-      font: { size: isMobile ? 13 : 15, color: cc.windArrow },
-      textangle: D.wind_direction[i] % 360, xanchor: 'center', yanchor: 'middle',
-    });
-    nextArrow = tMs + arrowStepMs - 60e3;
-  }
-
-  const pWind = Plotly.newPlot('windChart', both ? srcLines('wind') : [
-    { x: T, y: D.wind_p10, type: 'scatter', mode: 'lines', line: { width: 0 } },
-    { x: T, y: D.wind_p90, type: 'scatter', mode: 'lines', fill: 'tonexty', fillcolor: cc.windBandFill, line: { width: 1, color: cc.windBandLine } },
-    { x: T, y: D.wind, type: 'scatter', mode: 'lines', line: { color: cc.wind, width: 2.5 } },
-    { x: T, y: D.gust, type: 'scatter', mode: 'lines', line: { color: cc.gust, width: 1.5, dash: 'dash' } },
-  ], layout(H.wind, {
-    yaxis: { ...yBase, title: { text: 'm/s', font: { size: 11, color: cc.tick } }, range: [0, yMax], domain: [0, 0.86] },
-    shapes: [...bgShapes, ...bf.shapes],
-    annotations: [...windArrows, ...bf.annotations],
-  }), cfg);
-
-  // ── NEDERBÖRD + RISKBAND ──
-
-  // Staplarna ritas mitt i sitt tidssteg (09–10 hamnar mellan 09 och 10)
-  const stepMs = T.map((_, i) => stepHoursAt(i) * 3600e3);
-  const mid = T.map((t, i) => new Date(t.getTime() + stepMs[i] / 2));
-  // P10–P90 som smal, blek bakgrundsstapel – dold när övre gränsen för
-  // steget är under 0,1 mm, så att torra timmar inte får små stubbar.
-  const band = T.map((_, i) => {
-    const p10 = D.precip_p10[i] ?? 0, p90 = D.precip_p90[i] ?? 0;
-    return p90 * stepHoursAt(i) < 0.1 ? null : { base: p10, h: Math.max(0, p90 - p10) };
-  });
-
-  // Riskband: 3h-risken där den finns (timsteg), annars stegets egen risk.
-  // Åskraden visas bara om åskrisken någon gång når "värt att hålla koll".
-  const alpha = (v, full) => !v ? 0 : 0.04 + 0.86 * Math.min(1, v / full);
-  // Riskrader uppifrån: en per källa i Båda-läget, annars en; åska sist
-  const riskRows = both
-    ? SRC.map(id => ({ label: SOURCE_LABELS[id], rgb: cc.srcRGB[id], vals: D[`precip_prob_src_${id}`], full: 100 }))
-    : [{ label: 'Risk', rgb: cc.riskRGB, vals: T.map((_, i) => D.rolling3h[i] ?? D.precip_prob[i] ?? null), full: 100 }];
-  if (showThunder) riskRows.push({ label: '⚡', rgb: cc.thunderRGB, vals: D.thunder, full: THUNDER_HIGH });
-  const rows = riskRows.length;
-  const ribbonH = 0.03 + 0.085 * rows;
-
-  const precipTraces = both
-    ? SRC.map((id, k) => ({
-        x: mid.map((m, i) => new Date(m.getTime() + (k === 0 ? -1 : 1) * stepMs[i] * 0.16)),
-        y: D[`precip_src_${id}`], type: 'bar', width: stepMs.map(w => w * 0.3),
-        marker: { color: `rgba(${cc.srcRGB[id]},0.8)` } }))
-    : [
-        { x: mid, y: band.map(b => b && b.h), base: band.map(b => b && b.base),
-          type: 'bar', width: stepMs.map(w => w * 0.26), marker: { color: cc.precipBand } },
-        { x: mid, y: D.precip, type: 'bar', width: stepMs.map(w => w * 0.6), marker: { color: cc.precipBar } },
-      ];
-  riskRows.forEach((r, k) => precipTraces.push({
-    x: mid, y: T.map(() => 1), base: T.map(() => rows - 1 - k), yaxis: 'y2', type: 'bar', width: stepMs,
-    marker: { color: T.map((_, i) => `rgba(${r.rgb},${alpha(r.vals[i], r.full)})`) } }));
-
-  const pVals = both ? SRC.flatMap(id => validVals(D[`precip_src_${id}`]))
-                     : [...validVals(D.precip_p90), ...validVals(D.precip)];
-  const pMax = Math.max(Math.max(...pVals, 0) * 1.05, 1);
-  const pPrecip = Plotly.newPlot('precipChart', precipTraces, layout(H.precip, {
-    barmode: 'overlay', bargap: 0,
-    xaxis: { ...xaxis, anchor: 'y2' },
-    yaxis: { ...yBase, title: { text: 'mm/h', font: { size: 11, color: cc.tick } },
-      range: [0, pMax], domain: [ribbonH + 0.06, 1] },
-    yaxis2: { ...yBase, domain: [0, ribbonH], range: [0, rows], showgrid: false, zeroline: false,
-      tickmode: 'array', tickvals: riskRows.map((_, k) => rows - 0.5 - k),
-      ticktext: riskRows.map(r => r.label) },
-    shapes: bgShapes, annotations: nightAnn,
-  }), cfg);
-
-  Promise.all([pTemp, pWind, pPrecip]).then(() => { updateCrosshair(); renderChartDetail(); });
-}
-
-// ── HÅRKORS, DETALJPANEL OCH PANORERING ──────────────────────────────────────
-
-// Index i detaljpanelen: valt med pekare/tryck, annars "nu" (eller fönstrets
-// början om "nu" ligger utanför).
-function detailIndex() {
-  if (chartView?.cursor !== null && chartView?.cursor !== undefined) return chartView.cursor;
-  const nowIdx = findNowIndex();
-  if (nowIdx !== null && chartView) {
-    const t = weatherData.times[nowIdx].getTime();
-    if (t >= chartView.range[0] && t <= chartView.range[1]) return nowIdx;
-  }
-  return chartView ? nearestIndex(chartView.range[0]) : nowIdx;
-}
-
-function nearestIndex(ms) {
-  const T = weatherData.times;
-  let best = 0, bestDiff = Infinity;
-  for (let i = 0; i < T.length; i++) {
-    const d = Math.abs(T[i].getTime() - ms);
-    if (d < bestDiff) { bestDiff = d; best = i; }
-  }
-  return best;
-}
-
-// x-position (px, relativt grafens vänsterkant) för en tidpunkt, eller null
-function chartPx(el, ms) {
-  const ax = el._fullLayout?.xaxis;
-  if (!ax || !chartView) return null;
-  const [n0, n1] = chartView.range.map(toNaive);
-  const f = (toNaive(ms) - n0) / (n1 - n0);
-  return f < 0 || f > 1 ? null : ax._offset + f * ax._length;
-}
-
-function updateCrosshair() {
-  CHART_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    const line = el?.parentElement.querySelector('.xhair');
-    if (!line) return;
-    const idx = chartView?.cursor;
-    const px = idx === null || idx === undefined ? null : chartPx(el, weatherData.times[idx].getTime());
-    const fl = el._fullLayout;
-    if (px === null || !fl) { line.style.display = 'none'; return; }
-    line.style.display = 'block';
-    line.style.left = px + 'px';
-    line.style.top = fl.margin.t + 'px';
-    line.style.height = (fl.height - fl.margin.t - fl.margin.b) + 'px';
-  });
-}
-
-function setCursorFromPointer(el, clientX, pin) {
-  const ax = el._fullLayout?.xaxis;
-  if (!ax || !chartView) return;
-  const px = clientX - el.getBoundingClientRect().left - ax._offset;
-  if (px < 0 || px > ax._length) return;
-  const [n0, n1] = chartView.range.map(toNaive);
-  const idx = nearestIndex(fromNaive(n0 + px / ax._length * (n1 - n0)));
-  if (pin) chartView.pinned = true;
-  if (idx === chartView.cursor) return;
-  chartView.cursor = idx;
-  updateCrosshair();
-  renderChartDetail();
-}
-
-function resetCursor() {
-  if (!chartView || chartView.pinned || chartView.cursor === null) return;
-  chartView.cursor = null;
-  updateCrosshair();
-  renderChartDetail();
-}
-
-let panFrame = null;
-function panCharts(range0, dxPx, el) {
-  const ax = el._fullLayout?.xaxis;
-  if (!ax || !chartView) return;
-  const span = range0[1] - range0[0];
-  const [e0, e1] = chartView.extent;
-  if (e1 - e0 <= span) return;
-  const a = Math.max(e0, Math.min(e1 - span, range0[0] - dxPx / ax._length * span));
-  chartView.range = [a, a + span];
-  if (panFrame) return;
-  panFrame = requestAnimationFrame(() => {
-    panFrame = null;
-    const r = chartView.range.map(t => new Date(t));
-    Promise.all(CHART_IDS.map(id => Plotly.relayout(id, { 'xaxis.range': r }))).then(() => {
-      // Ett hårkors som panorerats ut ur bild släpps, panelen visar då "nu"
-      const c = chartView.cursor;
-      if (c !== null && chartPx(el, weatherData.times[c].getTime()) === null) {
-        chartView.cursor = null;
-        chartView.pinned = false;
-      }
-      updateCrosshair();
-      renderChartDetail();
-      syncPeriodToChartWindow();
-    });
-  });
-}
-
-// Mus: peka = hårkors, dra = panorera. Pek: tryck = hårkors (ligger kvar),
-// svep i sidled = panorera, svep upp/ned = scrolla sidan (touch-action: pan-y).
-function setupChartInteraction() {
-  CHART_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    const wrap = el.parentElement;
-    let drag = null;
-    wrap.addEventListener('pointerdown', e => {
-      if (!chartView || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      drag = { id: e.pointerId, x0: e.clientX, range0: chartView.range.slice(), moved: false };
-      if (e.pointerType === 'mouse') wrap.setPointerCapture(e.pointerId);
-    });
-    wrap.addEventListener('pointermove', e => {
-      if (!chartView) return;
-      if (drag && drag.id === e.pointerId) {
-        const dx = e.clientX - drag.x0;
-        if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; wrap.classList.add('panning'); }
-        if (drag.moved) { panCharts(drag.range0, dx, el); return; }
-      }
-      if (e.pointerType === 'mouse' && !drag) setCursorFromPointer(el, e.clientX, false);
-    });
-    const end = e => {
-      if (!drag || drag.id !== e.pointerId) return;
-      // Tryck/klick sätter hårkorset; efter ett musdrag följer det pekaren igen
-      if (e.type === 'pointerup' && (!drag.moved || e.pointerType === 'mouse')) {
-        setCursorFromPointer(el, e.clientX, e.pointerType !== 'mouse');
-      }
-      drag = null;
-      wrap.classList.remove('panning');
-    };
-    wrap.addEventListener('pointerup', end);
-    wrap.addEventListener('pointercancel', end);
-    wrap.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) resetCursor(); });
-  });
-}
-
-function renderChartDetail() {
-  const el = document.getElementById('chartDetail');
-  if (!el || !weatherData) return;
-  const i = detailIndex();
-  if (i === null || i === undefined) { el.innerHTML = ''; return; }
-  const D = weatherData.data, t = weatherData.times[i];
-  const step = stepHoursAt(i);
-  const fmt1 = v => v.toFixed(1).replace('.', ',');
-  const hh = d => String(d.getHours()).padStart(2, '0');
-  const end = new Date(t.getTime() + step * 3600e3);
-  const day = t.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' });
-  const sym = D.symbols[i] && D.symbols[i] !== 'unknown' ? D.symbols[i] : null;
-  const isNow = i === findNowIndex();
-
-  // Temperatur: värde, känns som (om det skiljer), spann
-  const temp = D.temp[i];
-  let tempTxt = temp === null ? '—' : `<b>${fmt1(temp)}°</b>`;
-  const extraT = [];
-  const fl = D.feels_like[i];
-  if (fl !== null && fl !== undefined && temp !== null && Math.abs(fl - temp) >= 0.5) extraT.push(`känns ${fmt1(fl)}°`);
-  const t10 = D.temp_p10[i], t90 = D.temp_p90[i];
-  if (t10 !== null && t90 !== null && t90 - t10 >= 0.2) extraT.push(`${fmt1(t10)}–${fmt1(t90)}°`);
-  if (extraT.length) tempTxt += ` · ${extraT.join(' · ')}`;
-
-  // Vind: riktning + medel, byar, Beaufort
-  const w = D.wind[i], g = D.gust[i], dir = D.wind_direction[i];
-  let windTxt = w === null ? '—' : `<b>${dir !== null && dir !== undefined ? getWindDirection(dir) + ' ' : ''}${Math.round(w)} m/s</b>`;
-  if (g !== null && g !== undefined) windTxt += ` · byar ${Math.round(g)}`;
-  if (w !== null) windTxt += ` · ${beaufortName(w)}`;
-
-  // Nederbörd för steget, ett spann, risk och åska
-  const amt = D.precip_step[i];
-  let pTxt = amt === null || amt === undefined ? '—' : `<b>${fmt1(amt)} mm</b>`;
-  if (amt !== null && step !== 1) pTxt += ` på ${step} h`;
-  const lo = (D.precip_p10[i] ?? 0) * step, hi = (D.precip_p90[i] ?? 0) * step;
-  if (amt !== null && hi >= 0.1 && hi - lo >= 0.1) pTxt += ` (${fmt1(lo)}–${fmt1(hi)})`;
-  const prob = D.precip_prob[i], roll = D.rolling3h[i];
-  if (prob !== null && prob !== undefined) {
-    pTxt += step === 1
-      ? ` · risk ${Math.round(prob)} % (1 h)${roll !== null && roll !== undefined ? ` / ${Math.round(roll)} % (3 h)` : ''}`
-      : ` · risk ${Math.round(prob)} % (${step} h)`;
-  }
-  const th = D.thunder[i];
-  if (th !== null && th !== undefined) pTxt += ` · ⚡ ${Math.round(th)} %`;
-
-  if (weatherData.mode === 'both') {
-    const SRC = weatherData.sourceIds;
-    const tag = id => `<span class="src-dot" style="background:var(--src-${id})"></span>${SOURCE_LABELS[id]}`;
-    const num = v => v !== null && v !== undefined;
-    tempTxt = SRC.map(id => {
-      const tv = D[`temp_src_${id}`][i], fv = D[`feels_like_src_${id}`]?.[i];
-      if (!num(tv)) return `${tag(id)} —`;
-      return `${tag(id)} <b>${fmt1(tv)}°</b>${num(fv) && Math.abs(fv - tv) >= 0.5 ? ` (känns ${fmt1(fv)}°)` : ''}`;
-    }).join(' · ');
-    windTxt = (num(dir) ? `${getWindDirection(dir)} · ` : '') + SRC.map(id => {
-      const wv = D[`wind_src_${id}`][i], gv = D[`gust_src_${id}`][i];
-      return num(wv) ? `${tag(id)} <b>${Math.round(wv)} m/s</b>${num(gv) ? ` (byar ${Math.round(gv)})` : ''}` : `${tag(id)} —`;
-    }).join(' · ');
-    pTxt = SRC.map(id => {
-      const a = D[`precip_step_src_${id}`][i];
-      if (!num(a)) return `${tag(id)} —`;
-      const l = (D[`precip_p10_src_${id}`][i] ?? 0) * step, h = (D[`precip_p90_src_${id}`][i] ?? 0) * step;
-      const pr = D[`precip_prob_src_${id}`][i];
-      return `${tag(id)} <b>${fmt1(a)} mm</b>${h >= 0.1 && h - l >= 0.1 ? ` (${fmt1(l)}–${fmt1(h)})` : ''}${num(pr) ? ` risk ${Math.round(pr)} %` : ''}`;
-    }).join(' · ') + (num(th) ? ` · ⚡ ${Math.round(th)} %` : '');
-  }
-
-  el.innerHTML = `
-    <div class="chart-detail-head">
-      <span class="chart-detail-time">${day} · ${hh(t)}:00${step !== 1 ? `–${hh(end)}:00` : ''}</span>
-      ${sym ? `<span>${getWeatherEmoji(sym)} ${getWeatherDescription(sym)}</span>` : ''}
-      ${isNow ? '<span class="chart-detail-now">Nu</span>' : ''}
-    </div>
-    <div class="chart-detail-rows">
-      <div class="chart-detail-row">🌡️ ${tempTxt}</div>
-      <div class="chart-detail-row">💨 ${windTxt}</div>
-      <div class="chart-detail-row">💧 ${pTxt}</div>
-    </div>`;
-}
-
-// ── TABLE ─────────────────────────────────────────────────────────────────────
-
-function updateTable() {
-  const s = sliceData(currentRange);
-  const nowIdx = findNowIndex();
-  const tbody = document.getElementById('weatherDataBody');
-  tbody.innerHTML = '';
-  let lastDateStr = null;
-  const colCount = 9;
-  let nowRowEl = null;
-
-  for (let i = 0; i < s.times.length; i++) {
-    const t = s.times[i];
-    const dateStr = t.toLocaleDateString('sv-SE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-
-    if (dateStr !== lastDateStr) {
-      lastDateStr = dateStr;
-      const sepRow = tbody.insertRow();
-      sepRow.className = 'day-separator';
-      const sepCell = sepRow.insertCell();
-      sepCell.colSpan = colCount;
-      // Etiketten ligger i ett eget klistrat span: cellen själv fyller hela
-      // sin containing block (colspan) och kan därför inte klistras i sidled.
-      const sepLabel = document.createElement('span');
-      sepLabel.className = 'day-sep-label';
-      sepLabel.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-      sepCell.appendChild(sepLabel);
-    }
-
-    const row = tbody.insertRow();
-
-    let globalIdx = i;
-    if (window.customRangeWindow) {
-      globalIdx = window.customRangeWindow.start + i;
-    }
-    if (globalIdx === nowIdx) {
-      row.className = 'now-row';
-      nowRowEl = row;
-    }
-
-    const tc = row.insertCell();
-    tc.className = 'time-cell';
-    const timeStr = t.toLocaleString('sv-SE', { hour:'2-digit', minute:'2-digit' });
-    tc.textContent = globalIdx === nowIdx ? `▶ ${timeStr}` : timeStr;
-
-    const cc = row.insertCell();
-    cc.innerHTML = `<div class="cond-cell"><span>${getWeatherEmoji(s.data.symbols[i])}</span><span>${getWeatherDescription(s.data.symbols[i])}</span></div>`;
-
-    const tv = s.data.temp[i], tp10 = s.data.temp_p10[i], tp90 = s.data.temp_p90[i];
-    const tempCell = row.insertCell(); tempCell.className = 'highlight';
-    if (tv != null) {
-      const cls = tv > 25 ? 'temp-hot' : tv < 0 ? 'temp-cold' : 'temp-norm';
-      tempCell.innerHTML = `<span class="${cls}">${tv.toFixed(1)}</span> <span style="color:var(--muted);font-size:0.65rem">[${tp10.toFixed(1)}, ${tp90.toFixed(1)}]</span>`;
-    } else { tempCell.textContent = '—'; }
-
-    const fl = s.data.feels_like[i];
-    row.insertCell().textContent = fl != null ? fl.toFixed(1) : '—';
-
-    const pv = s.data.precip[i], pp10 = s.data.precip_p10[i], pp90 = s.data.precip_p90[i];
-    const pCell = row.insertCell();
-    if (pv != null) {
-      pCell.className = pv > 0.1 ? 'precip-wet' : '';
-      pCell.innerHTML = `${pv.toFixed(1)} <span style="color:var(--muted);font-size:0.65rem">[${pp10.toFixed(1)}, ${pp90.toFixed(1)}]</span>`;
-    } else { pCell.textContent = '—'; }
-
-    const r1h = s.data.precip_prob[i];
-    const r1hCell = row.insertCell();
-    if (r1h !== null && r1h !== undefined) {
-      r1hCell.textContent = `${r1h}%`;
-      r1hCell.style.color = r1h >= 70 ? 'var(--red)' : r1h >= 40 ? 'var(--amber)' : 'var(--text-dim)';
-    } else { r1hCell.textContent = '—'; }
-
-    // ── ÅSKA (SMHI) ──
-    const th = s.data.thunder[i];
-    const thCell = row.insertCell();
-    if (th !== null && th !== undefined) {
-      thCell.textContent = th >= THUNDER_MED ? `⚡ ${Math.round(th)}%` : `${Math.round(th)}%`;
-      thCell.style.color = th >= THUNDER_HIGH ? 'var(--red)' : th >= THUNDER_MED ? 'var(--amber)' : 'var(--text-dim)';
-      if (th >= THUNDER_MED) thCell.style.fontWeight = '600';
-    } else { thCell.textContent = '—'; }
-
-    const wv = s.data.wind[i], gv = s.data.gust[i], wdir = getWindDirection(s.data.wind_direction[i]);
-    const wCell = row.insertCell();
-    if (wv != null) {
-      wCell.className = wv > 15 ? 'wind-high' : wv > 10 ? 'wind-med' : '';
-      wCell.innerHTML = `${wv.toFixed(1)} <span style="color:var(--muted)">(${gv != null ? gv.toFixed(1) : '—'}) ${wdir}</span>`;
-    } else { wCell.textContent = '—'; }
-
-    row.insertCell().textContent = s.data.uv[i]?.toFixed(1) ?? '—';
-  }
-
-  // Dagrubrikerna klistras direkt under kolumnrubrikerna – mät deras höjd
-  // (varierar med typsnitt/radbrytning) och lägg den i --thead-h.
-  const thead = document.querySelector('#weatherDataTable thead');
-  if (thead && thead.offsetHeight) {
-    document.documentElement.style.setProperty('--thead-h', thead.offsetHeight + 'px');
-  }
-}
-
-
-// ── DAY SUMMARY STRIP ─────────────────────────────────────────────────────────
-
-function buildDayStrip() {
-  if (!weatherData) return;
-  const strip = document.getElementById('dayStrip');
-  strip.innerHTML = '';
-
-  const days = {};
-  weatherData.times.forEach((t, i) => {
-    const key = t.toLocaleDateString('sv-SE');
-    if (!days[key]) days[key] = { times: [], indices: [] };
-    days[key].times.push(t);
-    days[key].indices.push(i);
-  });
-
-  Object.entries(days).forEach(([dateKey, { indices }]) => {
-    const d = weatherData.data;
-    const temps  = indices.map(i => d.temp[i]).filter(v => v !== null);
-    const steps  = validVals(indices.map(i => d.precip_step[i]));
-    const thunds = indices.map(i => d.thunder[i]).filter(v => v !== null && v !== undefined);
-    const syms   = indices.map(i => d.symbols[i]).filter(s => s !== 'unknown');
-
-    if (!temps.length) return;
-
-    const hi   = Math.max(...temps);
-    const lo   = Math.min(...temps);
-    // Ackumulerad nederbörd för dygnet (1h-värden + hela 6h-block).
-    // Detaljer som sannolikheter finns i graferna/tabellen.
-    const dayPrecip = steps.length ? steps.reduce((a, b) => a + b, 0) : null;
-    const dayMaxThunder = thunds.length ? Math.max(...thunds) : null;
-
-    const middayIdx = indices.find(i => {
-      const h = weatherData.times[i].getHours();
-      return h >= 11 && h <= 14;
-    }) ?? indices[Math.floor(indices.length / 2)];
-    const sym = d.symbols[middayIdx] || 'unknown';
-
-    const date   = new Date(dateKey);
-    const today  = new Date(); today.setHours(0,0,0,0);
-    const isToday = date.toLocaleDateString('sv-SE') === today.toLocaleDateString('sv-SE');
-    const dayName = isToday ? 'Idag' : date.toLocaleDateString('sv-SE', { weekday: 'short' });
-
-    const sun = sunTimes[dateKey];
-    const fmtT = dt => dt.toLocaleTimeString('sv-SE', { hour:'2-digit', minute:'2-digit' });
-    const sunLine = (sun && sun.sunrise && sun.sunset)
-      ? `↑${fmtT(sun.sunrise)} ↓${fmtT(sun.sunset)}` : '';
-
-    const card = document.createElement('div');
-    card.className = 'day-card';
-    card.dataset.date = dateKey;
-    card.innerHTML = `
-      <div class="day-card-name">${dayName}</div>
-      <div class="day-card-icon">${getWeatherEmoji(sym)}</div>
-      <div class="day-card-temps">${Math.round(hi)}° <span>${Math.round(lo)}°</span></div>
-      <div class="day-card-precip ${dayPrecip !== null && dayPrecip >= 1 ? 'wet' : ''}">
-        ${dayPrecip !== null ? '💧 ' + (dayPrecip < 10 ? dayPrecip.toFixed(1) : Math.round(dayPrecip)) + ' mm' : '—'}
+</header>
+
+<section class="band" aria-label="Plats och dygn">
+  <div class="wrap">
+    <div class="locrow">
+      <div>
+        <h1><span id="locName">—</span><button class="fav" id="favBtn" type="button" aria-pressed="false" aria-label="Spara som favorit"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg></button></h1>
+        <div class="meta" id="meta"></div>
       </div>
-      <div class="day-card-thunder">${dayMaxThunder !== null && dayMaxThunder >= THUNDER_MED ? '⚡ ' + Math.round(dayMaxThunder) + '%' : ''}</div>
-      <div class="day-card-sun">${sunLine}</div>`;
+      <div class="now" id="now" aria-label="Just nu"></div>
+    </div>
+    <div class="days" id="days" role="group" aria-label="Välj dygn"></div>
+    <div class="ctpop" id="ctpop" hidden>
+      <label for="pFrom">Från</label><input type="datetime-local" id="pFrom">
+      <label for="pTo">till</label><input type="datetime-local" id="pTo">
+      <button class="btn" type="button" id="pApply">Visa</button>
+    </div>
+  </div>
+</section>
 
-    card.addEventListener('click', () => toggleDaySelection(dateKey));
+<main class="wrap" id="main">
+  <div class="notice" id="err" hidden role="alert"></div>
 
-    strip.appendChild(card);
+  <!-- ÖVERSIKT -->
+  <section class="view" id="view-oversikt">
+    <div class="head" data-head></div>
+    <div class="minis-box">
+      <div class="minis-h"><span><span id="minisPos">1–2 av 7</span><span class="mnote"><i></i>skuggat: troligt spann (80 %)</span></span>
+        <div class="minis-nav">
+          <button type="button" id="mPrev" aria-label="Föregående graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          <button type="button" id="mNext" aria-label="Nästa graf"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+      <div class="minis" id="minis" tabindex="0" aria-label="Små grafer för perioden, rulla i sidled"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+    <div>
+      <h3 class="sec">Prognos dygn för dygn</h3>
+      <div class="texts" id="texts"></div>
+    </div>
+    <div class="more"><a href="#diagram">Se diagram för perioden →</a><a href="#timmar">Se timme för timme →</a></div>
+  </section>
+
+  <!-- DIAGRAM -->
+  <section class="view" id="view-diagram" hidden>
+    <div class="head" data-head></div>
+    <p class="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Temperatur</h3><div class="legend" id="lgT"></div><span class="val" id="vT"></span></div>
+      <div class="chart bleed" id="mgT"></div>
+    </section>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Nederbörd</h3><div class="legend" id="lgP"></div><span class="val" id="vP"></span></div>
+      <div class="chart bleed" id="mgP"></div>
+    </section>
+    <section class="chart-sec">
+      <div class="chart-h"><h3>Vind</h3><div class="legend" id="lgW"></div><span class="val" id="vW"></span></div>
+      <div class="chart bleed" id="mgW"></div>
+    </section>
+  </section>
+
+  <!-- TIMME FÖR TIMME -->
+  <section class="view" id="view-timmar" hidden>
+    <div class="head" data-head></div>
+    <label class="tog"><input type="checkbox" id="unc"> Visa osäkerhet: det spann som 80 % av utfallen hamnar inom</label>
+    <div class="hm-wrap bleed"><table class="hm" id="hm"></table></div>
+    <div class="hm-legend"><span>Temperatur <span class="hm-scale" id="hmScale"></span> −20° till +30°</span><span>Nederbörd, risk, vind och byar blir starkare ju högre värdet är.</span></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
+  </div>
+</footer>
+
+<div class="loading" id="loading" hidden>Hämtar prognos …</div>
+
+<script src="forecast-sources.js"></script>
+<script src="js/core.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const H = WX.H;
+const THEME_KEY = 'wx.theme';
+WX.demoFallback = false;   // visa fel i stället för exempeldata om API:erna inte svarar
+WX.theme.init(THEME_KEY);
+
+const VIEWS = ['oversikt', 'diagram', 'timmar'];
+const dirty = {};
+const app = WX.createApp({
+  prefix: 'wx',
+  onData: () => { $('main').classList.remove('nodata'); $('err').hidden = true; renderBand(); markDirty(); renderView(); },
+  onPeriod: () => { renderDays(); markDirty(); renderView(); },
+  onLoading: on => { $('loading').hidden = !on; $('main').classList.toggle('busy', on); },
+  onError: msg => {
+    // Utan data: visa platsnamnet och felet, dölj de tomma sidorna
+    if (!S.wd) { $('main').classList.add('nodata'); $('locName').textContent = S.loc.name; }
+    $('err').hidden = false;
+    $('err').innerHTML = `<span>${WX.esc(msg)}.</span><span class="err-act">${!S.wd ? '<button type="button" class="btn" data-retry>Försök igen</button>' : ''}<button type="button" data-close aria-label="Stäng">✕</button></span>`;
+    $('err').querySelector('[data-close]').onclick = () => { $('err').hidden = true; };
+    $('err').querySelector('[data-retry]')?.addEventListener('click', () => app.load(S.loc));
+  },
+});
+const S = app.S;
+const markDirty = () => VIEWS.forEach(v => dirty[v] = true);
+
+const router = WX.router(VIEWS, v => {
+  VIEWS.forEach(x => $('view-' + x).hidden = x !== v);
+  document.querySelectorAll('.menu a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  renderView();
+});
+function renderView() {
+  if (!S.wd) return;
+  const v = router.current();
+  if (!dirty[v]) { if (v === 'diagram') mg.render(); return; }
+  dirty[v] = false;
+  renderHead();
+  ({ oversikt: renderOverview, diagram: renderDiagram, timmar: renderTable })[v]();
+}
+
+// ── Tema, sök, position, favorit ──
+const sunIc = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const moonIc = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="currentColor"/></svg>';
+function paintTheme() {
+  const dark = WX.theme.current() === 'dark';
+  $('themeBtn').innerHTML = dark ? sunIc : moonIc;
+  $('themeBtn').setAttribute('aria-label', dark ? 'Byt till ljust läge' : 'Byt till mörkt läge');
+}
+$('themeBtn').onclick = () => { WX.theme.toggle(THEME_KEY); paintTheme(); if (S.wd) { dirty.oversikt = true; renderView(); } };
+paintTheme();
+app.bindSearch($('q'), $('searchPop'));
+$('geoBtn').onclick = () => app.geolocate();
+$('favBtn').onclick = () => { app.toggleFav(); renderBand(); };
+$('pApply').onclick = () => {
+  const A = WX.parseLocalInput($('pFrom').value), B = WX.parseLocalInput($('pTo').value);
+  if (!(A < B)) return;
+  $('ctpop').hidden = true;
+  app.setRange(A.getTime(), B.getTime());
+};
+
+// ── Platsband: namn, just nu, dygnsflikar ──
+function renderBand() {
+  $('locName').textContent = S.loc.name;
+  document.title = `${S.loc.name} · Eriks Väder`;
+  $('favBtn').setAttribute('aria-pressed', String(app.isFav()));
+  $('favBtn').setAttribute('aria-label', app.isFav() ? 'Ta bort från favoriter' : 'Spara som favorit');
+  const eff = app.effectiveMode();
+  $('meta').innerHTML = `<span>Uppdaterad ${WX.hhmm(S.fetchedAt)}</span>`
+    + `<label>Källa <select id="src" title="Prognoskälla">${WX.MODES.map(m => `<option value="${m.id}" ${m.id === eff ? 'selected' : ''} ${app.modeAvailable(m.id) ? '' : 'disabled'}>${m.label}</option>`).join('')}</select></label>`
+    + (S.live ? '' : '<span class="demo" title="met.no och SMHI gick inte att nå härifrån. Visar påhittad exempeldata.">Exempeldata</span>');
+  $('src').onchange = e => app.setMode(e.target.value);
+  const wd = S.wd, D = wd.data, i = WX.nowIndex(wd), tv = D.temp[i];
+  $('now').innerHTML = `${WX.icon(D.symbols[i], 50)}<span class="t ${tv < 0 ? 'cold' : tv >= 20 ? 'warm' : ''}">${WX.fmtTemp(tv)}</span>
+    <span class="d"><span class="k">Just nu, ${WX.hh(wd.times[i])}:00</span><b>${WX.describe(D.symbols[i])}</b><span>Känns som ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</span></span>`;
+  renderDays();
+}
+function renderDays() {
+  $('days').innerHTML = S.days.map(d => {
+    const mm = d.precip ?? 0;
+    return `<button class="day" type="button" data-day="${d.key}" aria-pressed="${S.sel.has(d.key) && S.periodKind !== 'all'}" title="${WX.describe(d.symbol)}">
+      <b>${d.label}</b><small>${d.date.getDate()} ${WX.MONTHS[d.date.getMonth()]}</small>${WX.icon(d.symbol, 40)}
+      <span class="tt"><strong>${WX.fmtTemp(d.hi)}</strong> ${WX.fmtTemp(d.lo)}</span>
+      <span class="mm ${mm >= 0.1 ? 'wet' : ''}">${mm >= 0.1 ? WX.fmt(mm, mm < 10 ? 1 : 0) + ' mm' : '0 mm'}</span></button>`;
+  }).join('') + `<button class="day all" type="button" id="allDays" aria-pressed="${S.periodKind === 'all'}">Alla<br>dygn</button>`
+    + `<button class="day ct" type="button" id="ctBtn" aria-expanded="${!$('ctpop').hidden}" aria-pressed="${S.periodKind === 'custom'}" aria-controls="ctpop">Egna<br>tider</button>`;
+  $('days').querySelectorAll('[data-day]').forEach(b => b.onclick = () => app.toggleDay(b.dataset.day));
+  $('allDays').onclick = () => app.setAll();
+  $('ctBtn').onclick = () => {
+    const pop = $('ctpop'); pop.hidden = !pop.hidden;
+    $('ctBtn').setAttribute('aria-expanded', String(!pop.hidden));
+    if (!pop.hidden) {
+      const [a, b] = app.periodRange();
+      $('pFrom').value = WX.toLocalInput(new Date(a)); $('pTo').value = WX.toLocalInput(new Date(b));
+      $('pFrom').min = $('pTo').min = WX.toLocalInput(S.wd.times[0]);
+      $('pFrom').max = $('pTo').max = WX.toLocalInput(new Date(app.extent()[1]));
+    }
+  };
+}
+
+// Rubrik för varje sida: bara vald period, på en rad
+function renderHead() {
+  const sel = S.days.filter(d => d.last > S.period.start && d.first < S.period.end);
+  const title = S.periodKind === 'all' ? 'Alla dygn' : sel.length === 1 ? `${sel[0].labelLong} ${WX.dateShort(sel[0].date)}`
+    : sel.length ? `${sel[0].labelLong} – ${sel[sel.length - 1].labelLong.toLowerCase()}` : 'Vald period';
+  document.querySelectorAll('[data-head]').forEach(el => {
+    el.innerHTML = `<h2>${title}</h2><span class="sub num">${app.periodLabel()}</span>`;
   });
-
-  // Markera alla dagkort som ingår i det visade fönstret – en dag, ett
-  // flerdagarsval, eller hela spannet vid "Samtliga". Kortmarkeringen
-  // speglar alltid exakt vad graferna/tabellen visar.
-  markDayStripActive();
 }
 
-// ── DAGVAL (multi-select i dag-strippen) ─────────────────────────────────────
-// Tryck togglar en dag av/på. Fönstret blir spannet från tidigaste till
-// senaste valda dag, inklusive mellanliggande dagar. Tomt val => standard.
-let selectedDays = new Set();
-
-function toggleDaySelection(dateKey) {
-  if (!weatherData) return;
-  if (selectedDays.has(dateKey)) selectedDays.delete(dateKey);
-  else selectedDays.add(dateKey);
-
-  if (!selectedDays.size) { setDefaultDayRange(); return; }
-
-  const keys = [...selectedDays].sort();
-  const [y1, m1, d1] = keys[0].split('-').map(Number);
-  const [y2, m2, d2] = keys[keys.length - 1].split('-').map(Number);
-  const startDate = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
-  const endDate   = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
-
-  let startIdx = weatherData.times.findIndex(t => t >= startDate);
-  let endIdx   = weatherData.times.findIndex(t => t > endDate);
-  if (startIdx === -1) startIdx = 0;
-  if (endIdx   === -1) endIdx   = weatherData.times.length;
-
-  clearAllRangeTabs();
-  window.customRangeWindow = { start: startIdx, end: endIdx };
-  _refreshAll();
-}
-
-function parseLocalDT(s) {
-  const [date, time] = s.split('T');
-  const [y, mo, d]  = date.split('-').map(Number);
-  const [h, mi]     = (time || '00:00').split(':').map(Number);
-  return new Date(y, mo - 1, d, h, mi, 0, 0);
-}
-
-// ── DATE PICKER TOGGLE ───────────────────────────────────────────────────────
-function toggleDatePickers() {
-  const row = document.getElementById('datePickers');
-  const btn = document.getElementById('btn-datepicker');
-  const open = row.classList.toggle('open');
-  btn.classList.toggle('active', open);
-}
-
-// ── BOOT ──────────────────────────────────────────────────────────────────────
-setupChartInteraction();
-updateForecastSwitch();
-window.addEventListener('load', () => {
-  // Starta på Plats-vyn utan automatisk hämtning – användaren väljer plats,
-  // och vid lyckad hämtning hoppar appen själv vidare till Översikt.
-  navigate('plats');
-});
-
-// Hämta om data automatiskt när fliken blir synlig igen och datan är >30 min gammal
-const STALE_MS = 30 * 60 * 1000;
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && lastFetchTime &&
-      Date.now() - lastFetchTime.getTime() > STALE_MS) {
-    fetchWeather();
+// ═══ ÖVERSIKT ═══
+// Minimal linjegraf: en linje, punkter vid högsta/lägsta, dygnsgränser
+function miniLine(el, { ys, ys2, band, strip, area, color, areaColor, fmt, zero, floor0, scaleToLine, h = 42 }) {
+  const wd = S.wd, { start, end } = S.period;
+  const W = Math.max(120, el.clientWidth), Hh = h, padT = 11, padB = 12;
+  const a = wd.ms[start], b = wd.end(end - 1);
+  const xs = [], vals = [], vals2 = [];
+  for (let i = start; i < end; i++) { xs.push(wd.ms[i] + wd.step(i) * H / 2); vals.push(ys[i - start]); if (ys2) vals2.push(ys2[i - start]); }
+  const bLo = [], bHi = [];
+  if (band) for (let i = start; i < end; i++) { bLo.push(band[0][i - start]); bHi.push(band[1][i - start]); }
+  const all = WX.valid(scaleToLine ? [...vals, ...vals2] : [...vals, ...vals2, ...bLo, ...bHi]);
+  if (!all.length) { el.innerHTML = ''; return; }
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (floor0) lo = 0;
+  if (hi - lo < 1) { hi += 0.5; lo -= floor0 ? 0 : 0.5; }
+  if (scaleToLine) hi = Math.max(hi * 1.3, 1);   // lite luft ovanför linjen; bandet klipps i toppen
+  const X = t => 3 + (t - a) / (b - a) * (W - 6);
+  const Y = v => padT + (hi - v) / (hi - lo) * (Hh - padT - padB);
+  const path = arr => { let d = '', pen = false; arr.forEach((v, k) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(xs[k]).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; }); return d; };
+  let s = `<line class="ml-base" x1="0" x2="${W}" y1="${Hh - padB}" y2="${Hh - padB}"/>`;
+  if (zero && lo < 0 && hi > 0) s += `<line class="ml-zero" x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  // dygnsgränser + etiketter
+  const d0 = new Date(a); d0.setHours(0, 0, 0, 0);
+  for (let d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 1); d.getTime() < b; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    const x = X(d.getTime());
+    s += `<line class="ml-day" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${padT - 4}" y2="${Hh - padB + 3}"/>`;
+    if (x < W - 30) s += `<text class="ml-lab" x="${(x + 3).toFixed(1)}" y="${Hh - 1}">${WX.WEEKDAYS[d.getDay()]}</text>`;
   }
+  s += `<text class="ml-lab" x="0" y="${Hh - 1}">${WX.hh(new Date(a))}</text>`;
+  // Yta 0–100 % bakom linjen (används för nederbördsrisk), trappsteg per tidssteg
+  if (area) {
+    const top = padT - 2, base = Hh - padB;
+    let d = '';
+    for (let i = start; i < end; i++) {
+      const p = area[i - start]; if (p == null) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i)), y = base - p / 100 * (base - top);
+      d += `M${x0.toFixed(1)} ${base}V${y.toFixed(1)}H${x1.toFixed(1)}V${base}Z`;
+    }
+    s += `<path class="ml-area" d="${d}" style="--c:${areaColor || color}"/>`;
+  }
+  // Osäkerhetsband (80 % av utfallen) som ljus yta runt linjen
+  if (band) {
+    let d = '', seg = [];
+    const flush = () => {
+      if (seg.length > 1) d += 'M' + seg.map(k => `${X(xs[k]).toFixed(1)} ${Y(bHi[k]).toFixed(1)}`).join('L')
+        + 'L' + seg.slice().reverse().map(k => `${X(xs[k]).toFixed(1)} ${Y(bLo[k]).toFixed(1)}`).join('L') + 'Z';
+      seg = [];
+    };
+    xs.forEach((_, k) => { if (bLo[k] == null || bHi[k] == null) flush(); else seg.push(k); });
+    flush();
+    const cid = `mlc${Math.random().toString(36).slice(2, 8)}`;
+    s += `<clipPath id="${cid}"><rect x="0" y="${padT - 3}" width="${W}" height="${Hh - padB - padT + 3}"/></clipPath><path class="ml-band" clip-path="url(#${cid})" d="${d}" style="--c:${color}"/>`;
+  }
+  // Riskremsa längs botten: opacitet = sannolikhet
+  if (strip) {
+    const base = Hh - padB;
+    for (let i = start; i < end; i++) {
+      const p = strip[i - start]; if (p == null || p < 2) continue;
+      const x0 = X(wd.ms[i]), x1 = X(wd.end(i));
+      s += `<rect class="ml-strip" x="${x0.toFixed(1)}" y="${base - 4}" width="${Math.max(0.6, x1 - x0 - 0.4).toFixed(1)}" height="4" style="--c:${areaColor || color}" opacity="${Math.min(1, 0.1 + p / 100 * 0.9).toFixed(2)}"/>`;
+    }
+  }
+  if (ys2) s += `<path class="ml-line2" d="${path(vals2)}" style="--c:${color}"/>`;
+  s += `<path class="ml-line" d="${path(vals)}" style="--c:${color}"/>`;
+  const v = WX.valid(vals);
+  const iMax = vals.indexOf(Math.max(...v)), iMin = vals.indexOf(Math.min(...v));
+  const dot = (k, above) => {
+    const x = X(xs[k]), y = Y(vals[k]);
+    const anchor = x < 20 ? 'start' : x > W - 20 ? 'end' : 'middle';
+    return `<circle class="ml-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" style="--c:${color}"/><text class="ml-val" x="${x.toFixed(1)}" y="${(above ? y - 4 : y + 12).toFixed(1)}" text-anchor="${anchor}">${fmt(vals[k])}</text>`;
+  };
+  if (iMax >= 0) s += dot(iMax, true);
+  if (iMin >= 0 && iMin !== iMax && !floor0 && Y(vals[iMin]) + 13 < Hh - padB) s += dot(iMin, false);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" aria-hidden="true">${s}</svg>`;
+}
+
+function renderOverview() {
+  const wd = S.wd, D = wd.data, st = app.stats(), { start, end } = S.period;
+  const sl = k => D[k].slice(start, end);
+  // Ackumulerad nederbörd ger en lugn linje som visar när och hur mycket
+  const m = (k, v, sub, id, lg = '') => `<div class="mini"><div class="k">${k}</div><div class="v">${v}<small>${sub}</small></div><div id="${id}"></div>${lg}</div>`;
+  const hasTh = st.thMax != null;
+  const lg = (...xs) => `<span class="mlg">${xs.map(([c, t, cls]) => `<span><i class="${cls || ''}" style="--c:${c}"></i>${t}</span>`).join('')}</span>`;
+  // Samma grafer och ordning som i nuvarande app
+  const items = [
+    ['Temperatur', WX.fmtTemp(st.tMean, 1), `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`, 'miT', { ys: sl('temp'), band: [sl('temp_p10'), sl('temp_p90')], color: 'var(--cold)', fmt: v => WX.fmtTemp(v), zero: true }, ''],
+    ['Vind', `${WX.fmt(st.wMean, 1)} m/s`, `max ${WX.fmt(st.wMax)} (${WX.fmt(st.gMax)}) · ${WX.windDir(st.wDir)}`, 'miW', { ys: sl('wind'), ys2: sl('gust'), band: [sl('wind_p10'), sl('wind_p90')], color: 'var(--wind)', fmt: v => WX.fmt(v) }, lg(['var(--wind)', 'medel'], ['var(--wind)', 'byar', 'd'])],
+    ['Nederbörd, totalt', `${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm`, `risk ${st.pRisk ?? '—'} %`, 'miP', { ys: sl('precip'), band: [sl('precip_p10'), sl('precip_p90')], strip: sl('precip_prob'), scaleToLine: true, color: 'var(--precip)', fmt: v => WX.fmt(v, 1) + ' mm/h', floor0: true }, lg(['var(--precip)', 'mm/h'], ['var(--precip)', 'risk', 's'])],
+    ['Åskrisk', hasTh ? `${Math.round(st.thMax)} %` : '—', !hasTh ? 'ingen data utanför SMHI:s område' : st.thMax >= WX.THUNDER_MED ? `högst · störst ${WX.dayLabel(st.thAt).toLowerCase()} ${WX.hh(st.thAt)}:00` : 'högst · låg risk', 'miTh', hasTh ? { ys: sl('thunder'), color: 'var(--thunder)', fmt: v => Math.round(v) + ' %', floor0: true } : null],
+    ['UV-index', WX.fmt(st.uvMax, 1), `högst · ${WX.fmt(st.uvMin, 1)}–${WX.fmt(st.uvMax, 1)}`, 'miU', { ys: sl('uv'), color: 'var(--ic-sun)', fmt: v => WX.fmt(v, 1), floor0: true }],
+    ['Molnighet', `${WX.fmt(st.cMean)} %`, `i snitt · ${WX.fmt(st.cMin)}–${WX.fmt(st.cMax)} %`, 'miC', { ys: sl('cloud'), color: 'var(--cloud)', fmt: v => WX.fmt(v) + ' %', floor0: true }],
+    ['Luftfuktighet', `${WX.fmt(st.hMean)} %`, `i snitt · ${WX.fmt(st.hMin)}–${WX.fmt(st.hMax)} %`, 'miH', { ys: sl('humidity'), color: 'var(--feels)', fmt: v => WX.fmt(v) + ' %' }],
+  ];
+  const sc = $('minis'), keep = sc.scrollLeft;
+  sc.innerHTML = items.map(([k, v, sub, id, , l]) => m(k, v, sub, id, l)).join('');
+  items.forEach(it => { if (it[4]) miniLine($(it[3]), it[4]); else $(it[3]).innerHTML = '<svg height="42" width="10" aria-hidden="true"></svg>'; });
+  sc.scrollLeft = keep;
+  updateMiniNav();
+
+  const sel = S.days.filter(d => d.last > start && d.first < end);
+  const notes = WX.highlights(wd, sel, S.period);
+  const ic = { wind: 'cloudy', thunder: 'rainandthunder', freeze: 'lightsleet', trend: 'partlycloudy_day' };
+  $('notes').innerHTML = notes.map(n => `<div class="note" data-level="${n.level}">${WX.icon(n.kind === 'precip' ? n.sym : ic[n.kind], 32)}<div><b>${WX.esc(n.title)}</b><span>${WX.esc(n.text)}</span></div></div>`).join('');
+  $('notes').hidden = !notes.length;
+  $('texts').innerHTML = sel.map(d => {
+    const t = WX.dayText(wd, d);
+    return `<div class="tx">${WX.icon(d.symbol, 46)}<h4>${d.labelLong}<small>${WX.dateShort(d.date)} · ${WX.fmtTemp(d.lo)} / ${WX.fmtTemp(d.hi)}</small></h4><p><b>${WX.esc(t.lead)}</b> ${WX.esc(t.text.slice(t.lead.length).trim())}</p></div>`;
+  }).join('');
+}
+
+// ═══ DIAGRAM: så stora som möjligt, särskilt på mobil ═══
+const isPhone = w => w < 600;
+const vh = () => window.innerHeight || 800;
+// Värdeetiketter i graferna: tid + värden vid hårkorset, punkter på kurvorna
+const D_ = () => S.wd.data;
+const both = () => S.wd.mode === 'both';
+const srcVals = (key, i, f) => S.wd.sourceIds.map(id => `<span style="color:var(--src-${id})">●</span> <b>${f(D_()[`${key}_src_${id}`][i])}</b>`).join('  ');
+const tipTime = i => {
+  const wd = S.wd, t = wd.times[i], st = wd.step(i);
+  return `${WX.dayLabel(t)} ${WX.hh(t)}:00${st > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}`;
+};
+const mg = WX.chart.group({
+  panels: [
+    { el: $('mgT'), kind: 'temp', opts: {
+      icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('temp', i, v => WX.fmtTemp(v, 1))
+        : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`
+          + (D.temp_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.temp_p10[i], 1)} till ${WX.fmtTemp(D.temp_p90[i], 1)}</b>` : '')); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`temp_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().temp[i], c: D_().temp[i] < 0 ? 'var(--cold)' : 'var(--warm)' }, { v: D_().feels_like[i], c: 'var(--feels)' }],
+    } },
+    { el: $('mgP'), kind: 'precip', opts: {
+      axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200,
+      tip: i => { const D = D_(), st = S.wd.step(i); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('precip_step', i, v => WX.fmt(v, 1) + ' mm')
+        : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`
+          + ((D.precip_p90[i] ?? 0) * st >= 0.1 ? `<br>troligen <b>${WX.fmt((D.precip_p10[i] ?? 0) * st, 1)}–${WX.fmt(D.precip_p90[i] * st, 1)} mm</b>` : ''))
+        + `<br>risk <b>${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</b>${D.rolling3h[i] != null ? ` · 3 h ${D.rolling3h[i]} %` : ''}${D.thunder[i] != null ? ` · åska ${Math.round(D.thunder[i])} %` : ''}`; },
+    } },
+    { el: $('mgW'), kind: 'wind', opts: {
+      axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230,
+      tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('wind', i, v => WX.fmt(v) + ' m/s')
+        : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`
+          + (D.wind_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.wind_p10[i])}–${WX.fmt(D.wind_p90[i])} m/s</b>` : '')); },
+      dots: i => both() ? S.wd.sourceIds.map(id => ({ v: D_()[`wind_src_${id}`][i], c: `var(--src-${id})` }))
+        : [{ v: D_().wind[i], c: 'var(--wind)' }, { v: D_().gust[i], c: 'var(--gust)' }],
+    } },
+  ],
+  getCtx: () => {
+    const w = $('mgT').clientWidth || 600;
+    return S.wd && { wd: S.wd, night: S.night, nowMs: Date.now(), ml: isPhone(w) ? 32 : 40, mr: isPhone(w) ? 10 : 64 };
+  },
+  onRange: r => app.setRange(r[0], r[1], 'pan'),
 });
+function renderDiagram() {
+  const L = (c, t, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${t}</span>`;
+  const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
+  $('lgT').innerHTML = both() ? srcs() : L('var(--warm)', 'Över 0°') + L('var(--cold)', 'Under 0°') + L('var(--feels)', 'Känns som', 'dot') + L('var(--band-temp)', 'Osäkerhet (80 %)', 'box');
+  $('lgP').innerHTML = (both() ? srcs('box') : L('var(--precip)', 'mm/h', 'box') + L('var(--precip-soft)', 'Kan bli upp till', 'box')) + L('var(--precip)', 'Risk', 'box');
+  $('lgW').innerHTML = both() ? srcs() + '<span>streckad: byar</span>' : L('var(--wind)', 'Medelvind') + L('var(--band-wind)', 'Osäkerhet (80 %)', 'box') + L('var(--gust)', 'Byar', 'dash');
+  const st = app.stats();
+  $('vT').textContent = `${WX.fmtTemp(st.tMin)} till ${WX.fmtTemp(st.tMax)}`;
+  $('vP').textContent = `${WX.fmt(st.pSum, 1)} mm, risk ${st.pRisk ?? '—'} %`;
+  $('vW').textContent = `max ${WX.fmt(st.wMax)} m/s, byar ${WX.fmt(st.gMax)}`;
+  mg.cursor = null; mg.pinned = false;
+  mg.setRange(app.periodRange(), app.extent());
+}
+
+// ═══ TIMME FÖR TIMME ═══
+const UNC_KEY = 'wx.unc';
+$('unc').checked = WX.store.get(UNC_KEY, true);
+$('unc').onchange = () => { WX.store.set(UNC_KEY, $('unc').checked); renderTable(); };
+function renderTable() {
+  const unc = $('unc').checked;
+  const wd = S.wd, D = wd.data, { start, end } = S.period, nowI = WX.nowIndex(wd);
+  const idx = []; for (let i = start; i < end; i++) idx.push(i);
+  const newDay = i => i === start || WX.dateKey(wd.times[i]) !== WX.dateKey(wd.times[i - 1]);
+  const nd = i => (newDay(i) ? ' nd' : '') + (i === nowI ? ' cur' : '');
+  let dayRow = '<tr class="dayrow"><th class="rl">Dygn</th>';
+  for (let k = 0; k < idx.length;) {
+    let n = 1; while (k + n < idx.length && !newDay(idx[k + n])) n++;
+    const t = wd.times[idx[k]];
+    dayRow += `<th colspan="${n}"><span>${n > 3 ? WX.dayLabel(t, true) + ' ' + WX.dateShort(t) : WX.dayLabel(t)}</span></th>`;
+    k += n;
+  }
+  const row = (label, unit, fn, cls = '') => `<tr class="${cls}"><th class="rl">${label}${unit ? `<small>${unit}</small>` : ''}</th>${idx.map(i => fn(i, nd(i))).join('')}</tr>`;
+  const shade = (v, max, cvar) => v == null || v <= 0 ? '' : `background:color-mix(in srgb, var(${cvar}) ${Math.round(Math.min(1, v / max) * 55)}%, transparent)`;
+  $('hm').innerHTML = '<tbody>' + dayRow + '</tr>'
+    + row('Tid', '', (i, c) => `<td class="${c}">${WX.hh(wd.times[i])}${wd.step(i) > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</td>`, 'hourrow')
+    + row('Väder', '', (i, c) => `<td class="ic${c}" title="${WX.describe(D.symbols[i])}">${WX.icon(D.symbols[i], 28)}</td>`)
+    + row('Temperatur', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.temp[i], .28)}"><b>${WX.fmt(D.temp[i])}</b></td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p90[i])}</td>`, 'unc') : '')
+    + row('Känns som', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.feels_like[i], .13)}">${WX.fmt(D.feels_like[i])}</td>`)
+    + row('Nederbörd', 'mm', (i, c) => `<td class="${c}${(D.precip_step[i] ?? 0) < 0.05 ? ' dim' : ''}" style="${shade(D.precip[i], 2, '--precip')}">${(D.precip_step[i] ?? 0) < 0.05 ? '·' : WX.fmt(D.precip_step[i], 1)}</td>`)
+    + (unc ? row('kan bli upp till', '', (i, c) => { const v = (D.precip_p90[i] ?? 0) * wd.step(i); return `<td class="${c}">${v < 0.05 ? '·' : WX.fmt(v, 1)}</td>`; }, 'unc') : '')
+    + row('Risk', '%', (i, c) => `<td class="${c}" style="${shade(D.precip_prob[i], 100, '--precip')}">${D.precip_prob[i] == null ? '—' : Math.round(D.precip_prob[i])}</td>`)
+    + row('Risk 3 h', '%', (i, c) => `<td class="dim${c}">${D.rolling3h[i] ?? ''}</td>`)
+    + row('Åska', '%', (i, c) => `<td class="${c}${(D.thunder[i] ?? 0) < 1 ? ' dim' : ''}" style="${shade(D.thunder[i], 50, '--thunder')}">${D.thunder[i] == null ? '—' : Math.round(D.thunder[i])}</td>`)
+    + row('Vind', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.wind[i] - 3, 14, '--wind')}">${WX.fmt(D.wind[i])}</td>`)
+    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p10[i])}</td>`, 'unc')
+      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p90[i])}</td>`, 'unc') : '')
+    + row('Byar', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.gust[i] - 8, 18, '--gust')}">${WX.fmt(D.gust[i])}</td>`)
+    + row('Riktning', '', (i, c) => `<td class="${c}" title="${WX.windDir(D.wind_direction[i])}">${WX.windArrow(D.wind_direction[i], 15)}</td>`)
+    + row('Moln', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.cloud[i])}</td>`)
+    + row('Fukt', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.humidity[i])}</td>`)
+    + row('UV', '', (i, c) => `<td class="dim${c}">${WX.fmt(D.uv[i], 1)}</td>`)
+    + row('Tryck', 'hPa', (i, c) => `<td class="dim${c}">${WX.fmt(D.pressure[i])}</td>`)
+    + '</tbody>';
+  $('hmScale').style.background = `linear-gradient(90deg, ${[-20, -10, 0, 10, 20, 30].map(t => WX.tempTint(t, .8)).join(',')})`;
+}
+
+// Rullande rad med små grafer: pilar och "1–2 av 9"
+function miniStep() { const f = $('minis').querySelector('.mini'); return f ? f.getBoundingClientRect().width : 200; }
+function updateMiniNav() {
+  const sc = $('minis'), n = sc.children.length; if (!n) return;
+  const w = miniStep(), first = Math.round(sc.scrollLeft / w) + 1;
+  const vis = Math.max(1, Math.floor((sc.clientWidth + 2) / w));
+  const last = Math.min(n, first + vis - 1);
+  $('minisPos').textContent = `${first}${last > first ? '–' + last : ''} av ${n}`;
+  $('mPrev').disabled = sc.scrollLeft < 4;
+  $('mNext').disabled = sc.scrollLeft + sc.clientWidth >= sc.scrollWidth - 4;
+}
+$('mPrev').onclick = () => $('minis').scrollBy({ left: -miniStep(), behavior: 'smooth' });
+$('mNext').onclick = () => $('minis').scrollBy({ left: miniStep(), behavior: 'smooth' });
+$('minis').addEventListener('scroll', () => requestAnimationFrame(updateMiniNav), { passive: true });
+
+let rt = null;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.wd && router.current() === 'oversikt') renderOverview(); }, 150); });
+router.apply();
+app.load(S.loc);
+})();
 </script>
 </body>
 </html>
