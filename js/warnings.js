@@ -6,9 +6,9 @@
 // start och slut, berörda kommuner/län och områdets form som GeoJSON-polygon
 // (EPSG:4326, [lon, lat]). Appen visar de områden som innehåller vald plats.
 //
-// Formatet är hämtat från SMHI:s API-dokumentation och kontrollerat mot två
-// fristående projekt som läser samma tjänst. Läsningen är försiktig: saknade
-// fält ger tomma värden i stället för fel.
+// Formatet är kontrollerat mot ett riktigt svar (november 2026, se
+// tests/fixtures/smhi-ibww-live-2026-11.json). Läsningen är försiktig:
+// saknade fält ger tomma värden i stället för fel.
 
 (function (root) {
 'use strict';
@@ -105,11 +105,14 @@ WX.warningSpan = w => {
     : `${d(w.start)} ${t(w.start)} – ${d(w.end)} ${t(w.end)}`;
 };
 
-// Högsta varning som berör ett dygn ([dygnets början, nästa midnatt))
+// Högsta varning som berör ett dygn ([dygnets början, nästa midnatt)).
+// Meddelanden räknas inte: de kan pågå i månader utan slutdatum (t.ex. risk
+// för vattenbrist) och skulle då markera varje dygn.
 WX.warningForDay = (list, date) => {
   const a = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const b = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime();
-  return (list || []).filter(w => (w.start ? w.start.getTime() : -Infinity) < b && (w.end ? w.end.getTime() : Infinity) > a)
+  return (list || []).filter(w => w.code !== 'MESSAGE')
+    .filter(w => (w.start ? w.start.getTime() : -Infinity) < b && (w.end ? w.end.getTime() : Infinity) > a)
     .sort((x, y) => y.rank - x.rank)[0] || null;
 };
 
