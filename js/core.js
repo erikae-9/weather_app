@@ -1,7 +1,7 @@
-// ── WX: gemensam kärna för UI-utkasten ───────────────────────────────────────
+// ── WX: gemensam kärna för appen och UI-utkasten ─────────────────────────────
 // Datalager (hämtning, viktning via ForecastSources, statistik), solberäkning,
 // väderikoner som SVG och ett SVG-meteogram med hårkors och panorering.
-// Utkasten i drafts/*.html står bara för layout och utseende.
+// index.html och utkasten i drafts/*.html står för layout och utseende.
 //
 // Kräver: forecast-sources.js (ForecastSources). demo.js används som reserv
 // när met.no/SMHI inte går att nå.
@@ -702,7 +702,9 @@ async function fetchJson(url, ms = 9000) {
 }
 
 // Returnerar { raw: {met, smhi}, live: bool }. Svarar ingen av källorna
-// används demodata, så att utkasten alltid går att titta på.
+// används demodata om WX.demoFallback är sant (utkasten, så att de går att
+// titta på överallt); annars kastas ett fel. ?demo=1 ger alltid demodata.
+WX.demoFallback = true;
 WX.fetchForecast = async (lat, lon, { demo = false } = {}) => {
   if (!demo) {
     const [met, smhi] = await Promise.allSettled([
@@ -716,6 +718,7 @@ WX.fetchForecast = async (lat, lon, { demo = false } = {}) => {
       } };
     }
   }
+  if (!demo && !WX.demoFallback) throw new Error('varken met.no eller SMHI svarar just nu. Försök igen om en stund');
   return { live: false, raw: root.WXDemo.generate(lat, lon, Date.now()) };
 };
 WX.wantsDemo = () => /[?&]demo(=1)?\b/.test(location.search);
