@@ -1,0 +1,66 @@
+[
+  {
+    "id": 1001,
+    "event": { "sv": "Snö", "en": "Snow" },
+    "warningAreas": [
+      {
+        "id": 11,
+        "approximateStart": "2026-11-13T05:00:00.000Z",
+        "approximateEnd": "2026-11-13T17:00:00.000Z",
+        "published": "2026-11-12T09:12:00.000Z",
+        "warningLevel": { "code": "YELLOW", "sv": "Gul varning", "en": "Yellow warning" },
+        "eventDescription": { "sv": "Mycket snö", "en": "Heavy snow" },
+        "areaName": { "sv": "Kustland i Västerbotten", "en": "Coast of Västerbotten" },
+        "affectedAreas": [ { "id": 24, "sv": "Västerbottens län", "en": "Västerbotten County" } ],
+        "area": { "type": "Feature", "properties": {}, "geometry": { "type": "Polygon",
+          "coordinates": [[[20.0, 64.3], [21.6, 64.3], [21.6, 65.1], [20.0, 65.1], [20.0, 64.3]],
+                          [[20.55, 64.6], [20.7, 64.6], [20.7, 64.7], [20.55, 64.7], [20.55, 64.6]]] } },
+        "descriptions": [
+          { "title": { "sv": "Vad händer", "en": "What happens" }, "text": { "sv": "10–20 cm snö.", "en": "10–20 cm of snow." } },
+          { "title": { "sv": "Tom", "en": "Empty" }, "text": { "sv": "", "en": "" } }
+        ]
+      },
+      {
+        "id": 12,
+        "approximateStart": "2026-11-13T05:00:00.000Z",
+        "approximateEnd": "2026-11-13T17:00:00.000Z",
+        "published": "2026-11-12T09:12:00.000Z",
+        "warningLevel": { "code": "ORANGE", "sv": "Orange varning", "en": "Orange warning" },
+        "eventDescription": { "sv": "Mycket snö", "en": "Heavy snow" },
+        "areaName": { "sv": "Fjällen i Norrbotten", "en": "Mountains of Norrbotten" },
+        "affectedAreas": [],
+        "area": { "type": "Feature", "geometry": { "type": "MultiPolygon",
+          "coordinates": [ [[[17.0, 67.0], [18.5, 67.0], [18.5, 68.0], [17.0, 68.0], [17.0, 67.0]]],
+                           [[[10.0, 60.0], [11.0, 60.0], [11.0, 61.0], [10.0, 61.0], [10.0, 60.0]]] ] } },
+        "descriptions": []
+      }
+    ]
+  },
+  {
+    "id": 1002,
+    "event": { "sv": "Vind", "en": "Wind" },
+    "warningAreas": [
+      {
+        "id": 21,
+        "approximateStart": "2026-11-12T12:00:00.000Z",
+        "published": "2026-11-12T08:00:00.000Z",
+        "warningLevel": { "code": "RED", "sv": "Röd varning", "en": "Red warning" },
+        "eventDescription": { "sv": "Mycket hård vind", "en": "Very strong wind" },
+        "areaName": { "sv": "Västerbottens kust", "en": "Coast" },
+        "area": { "type": "Polygon", "coordinates": [[[20.0, 64.3], [21.6, 64.3], [21.6, 65.1], [20.0, 65.1], [20.0, 64.3]]] },
+        "descriptions": []
+      },
+      {
+        "id": 22,
+        "approximateStart": "2026-11-10T06:00:00.000Z",
+        "approximateEnd": "2026-11-11T06:00:00.000Z",
+        "published": "2026-11-09T08:00:00.000Z",
+        "warningLevel": { "code": "YELLOW", "sv": "Gul varning", "en": "Yellow warning" },
+        "eventDescription": { "sv": "Hård vind", "en": "Strong wind" },
+        "areaName": { "sv": "Västerbottens kust", "en": "Coast" },
+        "area": { "type": "Polygon", "coordinates": [[[20.0, 64.3], [21.6, 64.3], [21.6, 65.1], [20.0, 65.1], [20.0, 64.3]]] },
+        "descriptions": []
+      }
+    ]
+  }
+]

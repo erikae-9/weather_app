@@ -175,5 +175,36 @@ function generate(lat, lon, nowMs) {
   return { met, smhi };
 }
 
-root.WXDemo = { generate };
+// Exempelvarningar i SMHI:s format: en gul snövarning imorgon 06–18 över
+// en ruta runt platsen, och ett meddelande långt bort (ska inte visas).
+function warnings(lat, lon, nowMs) {
+  const t = new Date(nowMs);
+  const day = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  const at = h => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h).toISOString();
+  const box = (la, lo, r) => ({ type: 'Feature', geometry: { type: 'Polygon',
+    coordinates: [[[lo - r, la - r], [lo + r, la - r], [lo + r, la + r], [lo - r, la + r], [lo - r, la - r]]] } });
+  return [
+    { id: 9001, event: { sv: 'Snö', en: 'Snow' }, warningAreas: [{
+      id: 1, approximateStart: at(6), approximateEnd: at(18), published: new Date(nowMs - 3 * 3600e3).toISOString(),
+      warningLevel: { code: 'YELLOW', sv: 'Gul varning', en: 'Yellow warning' },
+      eventDescription: { sv: 'Mycket snö', en: 'Heavy snow' },
+      areaName: { sv: 'Exempelområde runt vald plats', en: 'Example area' },
+      affectedAreas: [{ id: 24, sv: 'Västerbottens län', en: 'Västerbotten County' }],
+      area: box(lat, lon, 0.6),
+      descriptions: [
+        { title: { sv: 'Vad händer', en: 'What happens' }, text: { sv: 'Under dagen väntas 10–20 cm snö, lokalt mer. Det blåser samtidigt friskt och snön kan driva.', en: '' } },
+        { title: { sv: 'Hur kan det påverka', en: 'Possible impact' }, text: { sv: 'Besvärliga förhållanden i trafiken med risk för längre restider. Vissa vägar kan bli svårframkomliga.', en: '' } },
+      ],
+    }] },
+    { id: 9002, event: { sv: 'Brandrisk', en: 'Fire risk' }, warningAreas: [{
+      id: 2, approximateStart: at(0), published: new Date(nowMs).toISOString(),
+      warningLevel: { code: 'MESSAGE', sv: 'Meddelande', en: 'Message' },
+      eventDescription: { sv: 'Risk för gräsbrand', en: 'Risk of grass fire' },
+      areaName: { sv: 'Långt bort', en: 'Far away' }, affectedAreas: [],
+      area: box(lat - 8, lon - 8, 0.5), descriptions: [],
+    }] },
+  ];
+}
+
+root.WXDemo = { generate, warnings };
 })(typeof window !== 'undefined' ? window : globalThis);

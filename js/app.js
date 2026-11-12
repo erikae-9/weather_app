@@ -6,13 +6,14 @@
 'use strict';
 const WX = root.WX, H = WX.H;
 
-WX.createApp = ({ prefix, onData, onPeriod, onLoading, onError }) => {
+WX.createApp = ({ prefix, onData, onPeriod, onLoading, onError, onWarnings }) => {
   const S = {
     loc: WX.store.get(`${prefix}.loc`, WX.PRESETS[0]),
     mode: WX.store.get(`${prefix}.mode`, 'met'),
     favs: WX.store.get(`${prefix}.favs`, WX.PRESETS.slice()),
     recent: WX.store.get(`${prefix}.recent`, []),
     raw: null, live: true, wd: null, days: [], night: [],
+    warnings: [], warningsOk: null,   // SMHI-varningar för platsen; warningsOk: null = ej hämtat än
     period: null,          // { start, end } index, end exklusivt
     sel: new Set(),        // valda dygn (dateKey)
     periodKind: 'days',    // 'days' | 'all' | 'custom' | 'pan'
@@ -47,8 +48,21 @@ WX.createApp = ({ prefix, onData, onPeriod, onLoading, onError }) => {
     S.recent = [S.loc, ...S.recent.filter(r => !sameLoc(r, S.loc))].slice(0, 6);
     WX.store.set(`${prefix}.recent`, S.recent);
     onLoading?.(true);
+    const token = ++loadSeq;
+    // Varningar hämtas parallellt och får aldrig fördröja eller stoppa prognosen
+    S.warnings = []; S.warningsOk = null;
+    const warnP = WX.fetchWarnings
+      ? WX.fetchWarnings(S.loc.lat, S.loc.lon, { demo: WX.wantsDemo(), all: WX.wantsAllWarnings() })
+        .catch(e => { console.warn('SMHI-varningar kunde inte hämtas:', e); return null; })
+      : null;
+    warnP?.then(r => {
+      if (token !== loadSeq) return;            // en annan plats har valts under tiden
+      S.warnings = r ? r.list : []; S.warningsOk = !!r;
+      onWarnings?.();
+    });
     try {
       const r = await WX.fetchForecast(S.loc.lat, S.loc.lon, { demo: WX.wantsDemo() });
+      if (token !== loadSeq) return;
       S.raw = r.raw; S.live = r.live; S.fetchedAt = new Date();
       rebuild();
       app.setDefaultPeriod(true);
@@ -57,6 +71,8 @@ WX.createApp = ({ prefix, onData, onPeriod, onLoading, onError }) => {
       onError?.(`Kunde inte hämta prognosen: ${e.message}`);
     } finally { onLoading?.(false); }
   };
+
+  let loadSeq = 0;
 
   app.reloadIfStale = () => {
     if (S.fetchedAt && Date.now() - S.fetchedAt > 30 * 60e3) app.load(S.loc);
