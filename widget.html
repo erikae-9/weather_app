@@ -223,7 +223,7 @@ function drawPlot(el, wd, i0, hours) {
   const pTop = tTop + tH + 6, pH = Math.max(8, Hh - axisH - pTop - 5);
   let s = '';
 
-  // Natt och varningar (bakgrund), varningsremsa överst
+  // Natt och varningar (bakgrund)
   for (const [n0, n1] of WX.nightIntervals(a, b, loc.lat, loc.lon)) {
     const x0 = Math.max(0, X(n0)), x1 = Math.min(W, X(n1));
     if (x1 > x0) s += `<rect class="p-night" x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${Hh - axisH}"/>`;
@@ -232,8 +232,8 @@ function drawPlot(el, wd, i0, hours) {
     if (w.code === 'MESSAGE') continue;
     const x0 = Math.max(0, X(w.start ? w.start.getTime() : a)), x1 = Math.min(W, X(w.end ? w.end.getTime() : b));
     if (x1 <= x0) continue;
-    s += `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${Hh - axisH}" fill="${WCOL[w.code]}" opacity=".1"/>`
-      + `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="3" rx="1.5" fill="${WCOL[w.code]}"/>`;
+    // Bara en svag ton över varningens timmar (ingen linje); varningen syns i chippet
+    s += `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${Hh - axisH}" fill="${WCOL[w.code]}" opacity=".08"/>`;
   }
 
   // Temperatur: spann (P10–P90) som band, linjen byter färg vid noll
