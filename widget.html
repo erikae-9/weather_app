@@ -10,12 +10,20 @@
    widget). Platsen anges i adressen, eftersom widgetappen inte delar
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
-   Valfritt: &kalla=met|smhi|blend, &tema=ljus|mork, &bakgrund=genomskinlig,
-   &demo=1. Kortet anpassar sig efter widgetens storlek:
+   Valfritt: &storlek=2x4|4x2|auto, &kalla=met|smhi|blend, &tema=ljus|mork,
+   &bakgrund=genomskinlig, &demo=1.
+
+   Widgetappar som tar en skärmbild av sidan (t.ex. AnyWidget) visar sidan i
+   telefonens storlek och beskär. Därför ritas kortet i en fast ram med
+   widgetens form: 2x4 (två rutor bred, fyra hög, förval) eller 4x2. Under
+   ramen finns en knapp till hela sajten. storlek=auto låter kortet fylla
+   fönstret, för appar som ger sidan widgetens egen storlek.
+   Innehållet anpassas efter ramens storlek (container queries):
      låg (< 150 px):  plats, nu-värden
      mellan:          + meteogram för närmaste dygnet
      hög (≥ 270 px):  + kommande timmar */
 :root {
+  --page: #eef2f6; --accent-ink: #ffffff;
   --bg: #ffffff; --ink: #142235; --ink-2: #46566b; --ink-3: #68788b; --line: #dde3ea;
   --accent: #1a5cbd; --warm: #d0412e; --cold: #2a6fc4; --precip: #2c84d4; --band: rgba(42,111,196,.16);
   --night: rgba(28,48,78,.06);
@@ -26,6 +34,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --page: #070b10; --accent-ink: #0b1320;
     --bg: #0e141b; --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9; --line: #233040;
     --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff; --band: rgba(108,176,255,.18);
     --night: rgba(0,0,0,.25);
@@ -36,6 +45,7 @@
   }
 }
 :root[data-theme="dark"] {
+  --page: #070b10; --accent-ink: #0b1320;
   --bg: #0e141b; --ink: #e7edf4; --ink-2: #b0bfcf; --ink-3: #8696a9; --line: #233040;
   --accent: #6ea8ff; --warm: #ff7d69; --cold: #6cb0ff; --precip: #58acff; --band: rgba(108,176,255,.18);
   --night: rgba(0,0,0,.25);
@@ -44,11 +54,23 @@
   --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
   color-scheme: dark;
 }
-:root[data-bg="clear"] { --bg: transparent; }
+:root[data-bg="clear"] { --bg: transparent; --page: transparent; }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--ink); font: 400 14px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+html, body { margin: 0; }
+body { background: var(--page); color: var(--ink); font: 400 14px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+/* Ramen har widgetens form; allt innehåll anpassas efter ramen */
+.frame { container-type: size; width: var(--fw); height: var(--fh); background: var(--bg); overflow: hidden; }
+:root[data-size="2x4"] { --fw: 200px; --fh: 440px; }
+:root[data-size="4x2"] { --fw: 400px; --fh: 200px; }
+:root[data-size="2x4"] body, :root[data-size="4x2"] body { padding: 12px; }
+:root[data-size="auto"] .frame { width: 100vw; height: 100vh; }
+:root[data-size="auto"] body { overflow: hidden; background: var(--bg); }
+:root[data-size="auto"] .open { display: none; }
+.open { display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; width: var(--fw); margin-top: 12px; padding: 11px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: .95rem; text-decoration: none; }
+.open:active { opacity: .85; }
+.hint { width: var(--fw); margin-top: 8px; font-size: .74rem; color: var(--ink-3); line-height: 1.4; }
+:root[data-size="auto"] .hint { display: none; }
 a.w { --wc: transparent; display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8px 12px 6px; color: inherit; text-decoration: none; box-shadow: inset 0 3px 0 var(--wc); }
 a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --wc: var(--w-orange); } a.w[data-warn="RED"] { --wc: var(--w-red); }
 .num { font-variant-numeric: tabular-nums; }
@@ -93,12 +115,23 @@ a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --w
 .msg { margin: auto; text-align: center; color: var(--ink-2); font-size: .85rem; }
 
 /* Storlekar */
-@media (max-height: 149px) { .plot { display: none; } a.w { justify-content: center; gap: 6px; } }
-@media (max-height: 269px) { .hours { display: none; } }
-@media (max-height: 90px) { .top { display: none; } }
-@media (max-width: 250px) { .d { display: none; } .upd { display: none; } .warn span { display: none; } .warn { padding: 3px; } }
+@container (max-height: 149px) { .plot { display: none; } a.w { justify-content: center; gap: 6px; } }
+@container (max-height: 269px) { .hours { display: none; } }
+@container (max-height: 90px) { .top { display: none; } }
+@container (max-width: 250px) { .d { display: none; } .upd { display: none; } .warn span { display: none; } .warn { padding: 3px; } }
+/* Smal och hög (2x4): beskrivningen under temperaturen, varningen på egen rad */
+@container (max-width: 250px) and (min-height: 300px) {
+  .top { flex-wrap: wrap; row-gap: 3px; }
+  .upd { display: block; }
+  .warn { order: 3; flex-basis: 100%; padding: 2px 8px 2px 5px; }
+  .warn span { display: inline; }
+  .main { flex-wrap: wrap; row-gap: 4px; }
+  .d { display: flex; flex-basis: 100%; margin-left: 0; }
+  .t { font-size: 2.3rem; }
+}
 /* Hög sida (appen visar hela webbsidan): kortet stannar kompakt överst */
-@media (min-height: 420px) { a.w { height: auto; } .plot { flex: none; height: 120px; } }
+:root[data-size="auto"] .tallpage a.w { height: auto; }
+:root[data-size="auto"] .tallpage .plot { flex: none; height: 120px; }
 
 .wxi-sun { fill: var(--ic-sun); }
 .wxi-ray { stroke: var(--ic-sun); stroke-width: 2.8; stroke-linecap: round; fill: none; }
@@ -111,7 +144,9 @@ a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --w
 </style>
 </head>
 <body>
-<a class="w" id="w" href="./" target="_blank" rel="noopener"><span class="msg">Hämtar prognos …</span></a>
+<div class="frame" id="frame"><a class="w" id="w" href="./" target="_blank" rel="noopener"><span class="msg">Hämtar prognos …</span></a></div>
+<a class="open" href="./#oversikt">Öppna Eriks Väder <span aria-hidden="true">→</span></a>
+<p class="hint">Rutan ovanför är widgeten. Rama in den i widgetappen.</p>
 
 <script src="forecast-sources.js"></script>
 <script src="js/core.js"></script>
@@ -125,6 +160,11 @@ const q = new URLSearchParams(location.search);
 const $w = document.getElementById('w');
 WX.demoFallback = false;
 
+const SIZE = ['2x4', '4x2', 'auto'].includes(q.get('storlek')) ? q.get('storlek') : '2x4';
+document.documentElement.dataset.size = SIZE;
+const $frame = document.getElementById('frame');
+// I läge auto med en hög sida (appen visar hela sidan) hålls kortet kompakt överst
+if (SIZE === 'auto' && window.innerHeight >= 420) $frame.classList.add('tallpage');
 if (q.get('tema') === 'ljus') document.documentElement.dataset.theme = 'light';
 if (q.get('tema') === 'mork' || q.get('tema') === 'mörk') document.documentElement.dataset.theme = 'dark';
 if (/^(genomskinlig|transparent)$/.test(q.get('bakgrund') || '')) document.documentElement.dataset.bg = 'clear';
@@ -227,12 +267,13 @@ function render() {
   // Varningar som gäller nu eller inom ett dygn färgar widgetens överkant
   const soon = warnings.filter(w => w.code !== 'MESSAGE' && (!w.start || w.start.getTime() < Date.now() + 24 * H));
   $w.dataset.warn = soon[0]?.code || '';
-  const cols = Math.max(3, Math.min(8, Math.floor(window.innerWidth / 52)));
+  const FW = $frame.clientWidth, FH = $frame.clientHeight;
+  const cols = Math.max(3, Math.min(8, Math.floor(FW / 52)));
   const hours = [];
   for (let k = i + 2; k < wd.n && hours.length < cols; k += 2) {
     hours.push(`<div class="h"><span>${WX.hh(wd.times[k])}</span>${WX.icon(D.symbols[k], 22)}<span class="tt">${WX.fmtTemp(D.temp[k])}</span></div>`);
   }
-  const big = Math.max(36, Math.min(56, Math.round(window.innerHeight * 0.26)));
+  const big = Math.max(36, Math.min(56, Math.round((FW < 250 ? FW * 0.28 : FH * 0.26))));
   const p10 = D.temp_p10[i], p90 = D.temp_p90[i];
   $w.innerHTML = `
     <div class="top"><span class="place">${WX.esc(loc.name)}</span>
@@ -246,7 +287,7 @@ function render() {
     <div class="plot" id="plot"></div>
     <div class="hours num">${hours.join('')}</div>`;
   const plot = document.getElementById('plot');
-  if (plot.offsetParent !== null) drawPlot(plot, wd, i, window.innerWidth >= 480 ? 36 : 24);
+  if (getComputedStyle(plot).display !== 'none') drawPlot(plot, wd, i, FW >= 480 ? 36 : 24);
 }
 
 async function load() {
