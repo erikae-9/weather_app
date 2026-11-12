@@ -343,7 +343,11 @@ table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-
 footer { border-top: 1px solid var(--line); background: var(--band); color: var(--ink-3); font-size: .78rem; padding-block: 20px 30px; }
 footer p { margin: 0 0 4px; max-width: 75ch; }
 footer a { color: var(--ink-2); }
-.wlink { margin-top: 12px !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.wdetails { margin-top: 12px; }
+.wdetails summary { cursor: pointer; color: var(--ink-2); font-weight: 500; width: fit-content; }
+.wdetails summary:hover { color: var(--ink); }
+.wdetails[open] summary { margin-bottom: 6px; }
+.wlink { margin-top: 0 !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .wlink code { font-size: .74rem; background: var(--page); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; max-width: 100%; overflow-wrap: anywhere; user-select: all; }
 .wlink select { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 2px 4px; font-size: .78rem; }
 .wlink button { border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 6px; padding: 3px 10px; font-size: .78rem; }
@@ -474,7 +478,11 @@ footer a { color: var(--ink-2); }
 <footer>
   <div class="wrap">
     <p>Prognosdata från <a href="https://api.met.no/" target="_blank" rel="noopener">Meteorologisk institutt (met.no)</a>, CC BY 4.0, och <a href="https://opendata.smhi.se/" target="_blank" rel="noopener">SMHI Öppna data</a>. Platssökning via OpenStreetMap Nominatim.</p>
-    <p class="wlink"><span>Hemskärmswidget för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <label>Tema <select id="wlinkTheme"><option value="mork">mörkt</option><option value="ljus">ljust</option><option value="">följ telefonen</option></select></label> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
+    <details class="wdetails">
+      <summary>Hemskärmswidget</summary>
+      <p class="wlink"><span>Länk för <span id="wlinkPlace">platsen</span>:</span> <code id="wlink"></code> <label>Tema <select id="wlinkTheme"><option value="mork">mörkt</option><option value="neutral">neutralt</option><option value="ljus">ljust</option><option value="">följ telefonen</option></select></label> <button type="button" id="wlinkCopy">Kopiera länk</button></p>
+      <p>Öppna länken i en widgetapp, till exempel AnyWidget, välj skrivbordsvy och rama in rutan.</p>
+    </details>
   </div>
 </footer>
 
