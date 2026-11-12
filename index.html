@@ -22,6 +22,7 @@
   --wind: #16805c; --gust: #b8740f; --band-wind: rgba(22,128,92,.12); --thunder: #7a4fd0; --cloud: #7b8796;
   --night: rgba(28,48,78,.05);
   --src-met: #1b6fd1; --src-smhi: #d0601a;
+  --w-yellow: #e9b800; --w-orange: #ec7a00; --w-red: #d2232f; --w-msg: #5b7290; --w-ink-light: #1d1600; --w-ink-dark: #ffffff;
   --ok: #1f7f55; --warn: #a96c12; --crit: #c0352b;
   --ic-sun: #f0a500; --ic-moon: #95a7bf; --ic-cloud: #c4cedb; --ic-cloud-dark: #8293a8;
   --ic-rain: #2c84d4; --ic-snow: #5d98d6; --ic-bolt: #f0b000; --ic-fog: #98a5b4;
@@ -42,6 +43,8 @@
     --wind: #4cd09f; --gust: #efb24a; --band-wind: rgba(76,208,159,.14); --thunder: #b48cff; --cloud: #9aa7b6;
     --night: rgba(0,0,0,.22);
     --src-met: #58acff; --src-smhi: #ff9a4d;
+  --w-yellow: #f2c83a; --w-orange: #ff9634; --w-red: #ff5a64; --w-msg: #8ea3be;
+    --w-yellow: #f2c83a; --w-orange: #ff9634; --w-red: #ff5a64; --w-msg: #8ea3be;
     --ok: #4cd09f; --warn: #efb24a; --crit: #ff7b72;
     --ic-sun: #ffc22e; --ic-moon: #c8d3e1; --ic-cloud: #cfd8e3; --ic-cloud-dark: #8a9bb0;
     --ic-rain: #58acff; --ic-snow: #cfe3ff; --ic-bolt: #ffc22e; --ic-fog: #8e9cad;
@@ -291,6 +294,27 @@ table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-
 .wxi-fog { stroke: var(--ic-fog); stroke-width: 3; stroke-linecap: round; fill: none; }
 .wxa path { fill: var(--ink-2); }
 
+.warns { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+.wv { --wc: var(--w-msg); --wi: var(--w-ink-dark); border: 1px solid color-mix(in srgb, var(--wc) 55%, var(--line)); border-left: 5px solid var(--wc); border-radius: 8px; background: color-mix(in srgb, var(--wc) 10%, var(--page)); }
+.wv[data-code="YELLOW"] { --wc: var(--w-yellow); --wi: var(--w-ink-light); }
+.wv[data-code="ORANGE"] { --wc: var(--w-orange); --wi: var(--w-ink-light); }
+.wv[data-code="RED"] { --wc: var(--w-red); --wi: var(--w-ink-dark); }
+.wv-head { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 14px; border: 0; background: none; text-align: left; color: var(--ink); }
+.wv-badge { flex: none; font-size: .74rem; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 4px; background: var(--wc); color: var(--wi); }
+.wv-title { flex: 1 1 220px; min-width: 0; font-size: .92rem; }
+.wv-title b { font-weight: 700; margin-right: 8px; }
+.wv-title span { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wv-more { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: .82rem; color: var(--accent); font-weight: 500; }
+.wv-more svg { transition: transform .2s; }
+.wv-head[aria-expanded="true"] .wv-more svg { transform: rotate(180deg); }
+.wv-body { padding: 0 14px 14px 14px; font-size: .9rem; color: var(--ink-2); max-width: 75ch; }
+.wv-body h4 { margin: 10px 0 2px; font: 600 .86rem var(--font-ui); color: var(--ink); }
+.wv-body p { margin: 0; line-height: 1.55; }
+.wv-body .src { margin-top: 10px; font-size: .78rem; color: var(--ink-3); }
+.wv-body a { color: var(--accent); }
+.wdot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: 1px; background: var(--wc); transform: rotate(45deg); }
+.wdot[data-code="YELLOW"] { --wc: var(--w-yellow); } .wdot[data-code="ORANGE"] { --wc: var(--w-orange); }
+.wdot[data-code="RED"] { --wc: var(--w-red); } .wdot[data-code="MESSAGE"] { --wc: var(--w-msg); }
 .notice { border: 1px solid var(--crit); color: var(--crit); border-radius: 8px; padding: 9px 12px; font-size: .86rem; display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
 .notice { align-items: center; }
 .notice [data-close] { border: 0; background: none; color: inherit; }
@@ -374,6 +398,7 @@ footer a { color: var(--ink-2); }
 </section>
 
 <main class="wrap" id="main">
+  <section class="warns" id="warns" hidden aria-label="Vädervarningar från SMHI"></section>
   <div class="notice" id="err" hidden role="alert"></div>
 
   <!-- ÖVERSIKT -->
@@ -434,6 +459,7 @@ footer a { color: var(--ink-2); }
 <script src="forecast-sources.js"></script>
 <script src="js/core.js"></script>
 <script src="js/demo.js"></script>
+<script src="js/warnings.js"></script>
 <script src="js/app.js"></script>
 <script>
 (() => {
@@ -450,6 +476,7 @@ const app = WX.createApp({
   prefix: 'wx',
   onData: () => { $('main').classList.remove('nodata'); $('err').hidden = true; renderBand(); markDirty(); renderView(); },
   onPeriod: () => { renderDays(); markDirty(); renderView(); },
+  onWarnings: () => { renderWarnings(); if (S.wd) renderDays(); },
   onLoading: on => { $('loading').hidden = !on; $('main').classList.toggle('busy', on); },
   onError: msg => {
     // Utan data: visa platsnamnet och felet, dölj de tomma sidorna
@@ -513,11 +540,41 @@ function renderBand() {
     <span class="d"><span class="k">Just nu, ${WX.hh(wd.times[i])}:00</span><b>${WX.describe(D.symbols[i])}</b><span>Känns som ${WX.fmtTemp(D.feels_like[i])} · ${WX.windDir(D.wind_direction[i])} ${WX.fmt(D.wind[i])} m/s</span></span>`;
   renderDays();
 }
+// ── Varningar från SMHI: en rad per varning, öppnas för detaljer ──
+function renderWarnings() {
+  const box = $('warns'), list = S.warnings || [];
+  box.hidden = !list.length;
+  if (!list.length) { box.innerHTML = ''; return; }
+  const all = WX.wantsAllWarnings();
+  const chev = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  box.innerHTML = list.map((w, k) => {
+    const areas = [w.area, ...w.affected.filter(a => a !== w.area)].filter(Boolean).join(', ');
+    const pub = w.published ? `Utfärdad ${WX.WEEKDAYS[w.published.getDay()]} ${w.published.getDate()} ${WX.MONTHS[w.published.getMonth()]} ${WX.hhmm(w.published)}` : 'Utfärdad';
+    return `<div class="wv" data-code="${w.code}">
+      <button class="wv-head" type="button" aria-expanded="false" aria-controls="wvb${k}">
+        <span class="wv-badge">${WX.esc(w.level)}</span>
+        <span class="wv-title"><b>${WX.esc(w.title)}</b><span>${WX.esc(WX.warningSpan(w))}${all && w.area ? ' · ' + WX.esc(w.area) : ''}</span></span>
+        <span class="wv-more">Läs mer ${chev}</span>
+      </button>
+      <div class="wv-body" id="wvb${k}" hidden>
+        ${areas ? `<p><b>Gäller:</b> ${WX.esc(areas)}</p>` : ''}
+        ${w.texts.map(t => `${t.title ? `<h4>${WX.esc(t.title)}</h4>` : ''}<p>${WX.esc(t.text)}</p>`).join('')}
+        <p class="src">${pub} av SMHI${S.live ? '' : ' (exempel)'} · <a href="https://www.smhi.se/" target="_blank" rel="noopener">smhi.se</a></p>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.wv-head').forEach(b => b.onclick = () => {
+    const body = $(b.getAttribute('aria-controls')), open = body.hidden;
+    body.hidden = !open; b.setAttribute('aria-expanded', String(open));
+    b.querySelector('.wv-more').firstChild.textContent = open ? 'Visa mindre ' : 'Läs mer ';
+  });
+}
+
 function renderDays() {
   $('days').innerHTML = S.days.map(d => {
     const mm = d.precip ?? 0;
     return `<button class="day" type="button" data-day="${d.key}" aria-pressed="${S.sel.has(d.key) && S.periodKind !== 'all'}" title="${WX.describe(d.symbol)}">
-      <b>${d.label}</b><small>${d.date.getDate()} ${WX.MONTHS[d.date.getMonth()]}</small>${WX.icon(d.symbol, 40)}
+      <b>${(() => { const w = WX.warningForDay(S.warnings, d.date); return w ? `<i class="wdot" data-code="${w.code}" title="${WX.esc(w.level + ': ' + w.title)}"></i>` : ''; })()}${d.label}</b><small>${d.date.getDate()} ${WX.MONTHS[d.date.getMonth()]}</small>${WX.icon(d.symbol, 40)}
       <span class="tt"><strong>${WX.fmtTemp(d.hi)}</strong> ${WX.fmtTemp(d.lo)}</span>
       <span class="mm ${mm >= 0.1 ? 'wet' : ''}">${mm >= 0.1 ? WX.fmt(mm, mm < 10 ? 1 : 0) + ' mm' : '0 mm'}</span></button>`;
   }).join('') + `<button class="day all" type="button" id="allDays" aria-pressed="${S.periodKind === 'all'}">Alla<br>dygn</button>`
