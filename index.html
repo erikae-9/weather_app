@@ -831,21 +831,25 @@ function renderTable() {
   }
   const row = (label, unit, fn, cls = '') => `<tr class="${cls}"><th class="rl">${label}${unit ? `<small>${unit}</small>` : ''}</th>${idx.map(i => fn(i, nd(i))).join('')}</tr>`;
   const shade = (v, max, cvar) => v == null || v <= 0 ? '' : `background:color-mix(in srgb, var(${cvar}) ${Math.round(Math.min(1, v / max) * 55)}%, transparent)`;
+  const uncRow = (label, f) => unc ? row(label, '', (i, c) => `<td class="${c}">${f(i)}</td>`, 'unc') : '';
+  const mm = v => v < 0.05 ? '·' : WX.fmt(v, 1);
   $('hm').innerHTML = '<tbody>' + dayRow + '</tr>'
     + row('Tid', '', (i, c) => `<td class="${c}">${WX.hh(wd.times[i])}${wd.step(i) > 1 ? '–' + WX.hh(new Date(wd.end(i))) : ''}</td>`, 'hourrow')
     + row('Väder', '', (i, c) => `<td class="ic${c}" title="${WX.describe(D.symbols[i])}">${WX.icon(D.symbols[i], 28)}</td>`)
+    // Osäkerhet: "högst trolig" ovanför och "lägst trolig" under prognosvärdet
+    + uncRow('högst trolig', i => WX.fmt(D.temp_p90[i]))
     + row('Temperatur', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.temp[i], .28)}"><b>${WX.fmt(D.temp[i])}</b></td>`)
-    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p10[i])}</td>`, 'unc')
-      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.temp_p90[i])}</td>`, 'unc') : '')
+    + uncRow('lägst trolig', i => WX.fmt(D.temp_p10[i]))
     + row('Känns som', '°C', (i, c) => `<td class="${c}" style="background:${WX.tempTint(D.feels_like[i], .13)}">${WX.fmt(D.feels_like[i])}</td>`)
+    + uncRow('högst trolig', i => mm((D.precip_p90[i] ?? 0) * wd.step(i)))
     + row('Nederbörd', 'mm', (i, c) => `<td class="${c}${(D.precip_step[i] ?? 0) < 0.05 ? ' dim' : ''}" style="${shade(D.precip[i], 2, '--precip')}">${(D.precip_step[i] ?? 0) < 0.05 ? '·' : WX.fmt(D.precip_step[i], 1)}</td>`)
-    + (unc ? row('kan bli upp till', '', (i, c) => { const v = (D.precip_p90[i] ?? 0) * wd.step(i); return `<td class="${c}">${v < 0.05 ? '·' : WX.fmt(v, 1)}</td>`; }, 'unc') : '')
+    + uncRow('lägst trolig', i => mm((D.precip_p10[i] ?? 0) * wd.step(i)))
     + row('Risk', '%', (i, c) => `<td class="${c}" style="${shade(D.precip_prob[i], 100, '--precip')}">${D.precip_prob[i] == null ? '—' : Math.round(D.precip_prob[i])}</td>`)
     + row('Risk 3 h', '%', (i, c) => `<td class="dim${c}">${D.rolling3h[i] ?? ''}</td>`)
     + row('Åska', '%', (i, c) => `<td class="${c}${(D.thunder[i] ?? 0) < 1 ? ' dim' : ''}" style="${shade(D.thunder[i], 50, '--thunder')}">${D.thunder[i] == null ? '—' : Math.round(D.thunder[i])}</td>`)
+    + uncRow('högst trolig', i => WX.fmt(D.wind_p90[i]))
     + row('Vind', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.wind[i] - 3, 14, '--wind')}">${WX.fmt(D.wind[i])}</td>`)
-    + (unc ? row('lägst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p10[i])}</td>`, 'unc')
-      + row('högst trolig', '', (i, c) => `<td class="${c}">${WX.fmt(D.wind_p90[i])}</td>`, 'unc') : '')
+    + uncRow('lägst trolig', i => WX.fmt(D.wind_p10[i]))
     + row('Byar', 'm/s', (i, c) => `<td class="${c}" style="${shade(D.gust[i] - 8, 18, '--gust')}">${WX.fmt(D.gust[i])}</td>`)
     + row('Riktning', '', (i, c) => `<td class="${c}" title="${WX.windDir(D.wind_direction[i])}">${WX.windArrow(D.wind_direction[i], 15)}</td>`)
     + row('Moln', '%', (i, c) => `<td class="dim${c}">${WX.fmt(D.cloud[i])}</td>`)
