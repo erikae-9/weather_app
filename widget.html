@@ -202,8 +202,11 @@ if (/^(genomskinlig|transparent)$/.test(q.get('bakgrund') || '')) document.docum
 
 // Plats: från adressen, annars senast visade i samma webbläsare, annars förvalet
 const lat = parseFloat(q.get('lat')), lon = parseFloat(q.get('lon'));
+// Länkar från det borttagna positionsexperimentet (plats=position&namn=…)
+// visar reservplatsen med sitt namn
+const placeParam = /^(position|min-position|gps)$/i.test(q.get('plats') || '') ? q.get('namn') : q.get('plats');
 const loc = Number.isFinite(lat) && Number.isFinite(lon)
-  ? { name: q.get('plats') || `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon }
+  ? { name: placeParam || `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon }
   : WX.store.get('wx.loc', WX.PRESETS[0]);
 const mode = ['met', 'smhi', 'blend'].includes(q.get('kalla')) ? q.get('kalla') : 'met';
 $w.href = './#oversikt';
