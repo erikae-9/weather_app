@@ -628,14 +628,14 @@ WX.spanText = (a, b) => {
 
 // ── PLATSER ──────────────────────────────────────────────────────────────────
 WX.PRESETS = [
-  { name: 'Sjungande dalen', detail: 'Skellefteå', lat: 64.762528, lon: 20.923429 },
   { name: 'Skråmträsk', detail: 'Skellefteå', lat: 64.661972, lon: 20.624056 },
+  { name: 'Skellefteå', detail: 'Västerbottens län', lat: 64.7507, lon: 20.9528 },
   { name: 'Stockholm', detail: 'Stockholms län', lat: 59.3293, lon: 18.0686 },
   { name: 'Skarja, Sarek', detail: 'Jokkmokk', lat: 67.377503, lon: 17.644642 },
 ];
 // Liten reservlista när sökningen (Nominatim) inte går att nå
 const GAZETTEER = [
-  ['Skellefteå', 'Västerbottens län', 64.7507, 20.9528], ['Umeå', 'Västerbottens län', 63.8258, 20.2630],
+  ['Umeå', 'Västerbottens län', 63.8258, 20.2630],
   ['Luleå', 'Norrbottens län', 65.5848, 22.1547], ['Kiruna', 'Norrbottens län', 67.8558, 20.2253],
   ['Jokkmokk', 'Norrbottens län', 66.6066, 19.8227], ['Abisko', 'Norrbottens län', 68.3495, 18.8312],
   ['Östersund', 'Jämtlands län', 63.1792, 14.6357], ['Åre', 'Jämtlands län', 63.3990, 13.0815],
