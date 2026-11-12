@@ -10,12 +10,12 @@
    widget). Platsen anges i adressen, eftersom widgetappen inte delar
    lagring med webbläsaren:
      widget.html?plats=Skråmträsk&lat=64.662&lon=20.624
-   Valfritt: &storlek=2x4|4x2|auto, &kalla=met|smhi|blend, &tema=ljus|mork,
+   Valfritt: &storlek=4x2|2x4|auto, &kalla=met|smhi|blend, &tema=ljus|mork,
    &bakgrund=genomskinlig, &demo=1.
 
    Widgetappar som tar en skärmbild av sidan (t.ex. AnyWidget) visar sidan i
    telefonens storlek och beskär. Därför ritas kortet i en fast ram med
-   widgetens form: 2x4 (två rutor bred, fyra hög, förval) eller 4x2. Under
+   widgetens form: 4x2 (fyra rutor bred, två hög, förval) eller 2x4. Under
    ramen finns en knapp till hela sajten. storlek=auto låter kortet fylla
    fönstret, för appar som ger sidan widgetens egen storlek.
    Innehållet anpassas efter ramens storlek (container queries):
@@ -160,7 +160,7 @@ const q = new URLSearchParams(location.search);
 const $w = document.getElementById('w');
 WX.demoFallback = false;
 
-const SIZE = ['2x4', '4x2', 'auto'].includes(q.get('storlek')) ? q.get('storlek') : '2x4';
+const SIZE = ['2x4', '4x2', 'auto'].includes(q.get('storlek')) ? q.get('storlek') : '4x2';
 document.documentElement.dataset.size = SIZE;
 const $frame = document.getElementById('frame');
 // I läge auto med en hög sida (appen visar hela sidan) hålls kortet kompakt överst
