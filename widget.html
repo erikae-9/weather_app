@@ -56,10 +56,10 @@
 }
 :root[data-theme="neutral"] {
   /* Mellanton: skiffergrå med ljus text, mjukare mot ljusa bakgrundsbilder */
-  --page: #3f4955; --accent: #a9cdff; --accent-ink: #13202f;
-  --bg: #5a6676; --ink: #f4f6f9; --ink-2: #dde3ea; --ink-3: #bcc5d0; --line: rgba(255,255,255,.18);
-  --warm: #ffb4a3; --cold: #b6dcff; --precip: #a6d0ff; --band: rgba(255,255,255,.17);
-  --night: rgba(20,28,40,.16);
+  --page: #5f6a78; --accent: #c4dcff; --accent-ink: #13202f;
+  --bg: #76828f; --ink: #ffffff; --ink-2: #eef1f5; --ink-3: #e0e5eb; --line: #96a1ad;   /* täckande linjer */
+  --warm: #ffd3c8; --cold: #dcedff; --precip: #d9ebff; --band: rgba(255,255,255,.2);
+  --night: rgba(20,28,40,.13);
   --w-yellow: #ffd24a; --w-orange: #ffa64d; --w-red: #ff7b80;
   --ic-sun: #ffcf3f; --ic-moon: #e6ecf3; --ic-cloud: #e9eef4; --ic-cloud-dark: #b9c4d1;
   --ic-rain: #a6d0ff; --ic-snow: #e3f0ff; --ic-bolt: #ffcf3f; --ic-fog: #c6cfd9;
@@ -86,8 +86,7 @@ body { background: var(--page); color: var(--ink); font: 400 14px/1.3 system-ui,
 .open:active { opacity: .85; }
 .hint { width: var(--fw); margin-top: 8px; font-size: .74rem; color: var(--ink-3); line-height: 1.4; }
 :root[data-size="auto"] .hint { display: none; }
-a.w { --wc: transparent; display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8px 12px 6px; color: inherit; text-decoration: none; box-shadow: inset 0 3px 0 var(--wc); }
-a.w[data-warn="YELLOW"] { --wc: var(--w-yellow); } a.w[data-warn="ORANGE"] { --wc: var(--w-orange); } a.w[data-warn="RED"] { --wc: var(--w-red); }
+a.w { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8px 12px 6px; color: inherit; text-decoration: none; }
 .num { font-variant-numeric: tabular-nums; }
 
 .top { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--ink-2); min-width: 0; flex: none; }
@@ -296,9 +295,6 @@ function render() {
   const wd = WX.build(raw, mode), D = wd.data, i = WX.nowIndex(wd), tv = D.temp[i];
   const today = WX.days(wd, loc.lat, loc.lon)[0];
   const top = warnings.find(w => w.code !== 'MESSAGE');
-  // Varningar som gäller nu eller inom ett dygn färgar widgetens överkant
-  const soon = warnings.filter(w => w.code !== 'MESSAGE' && (!w.start || w.start.getTime() < Date.now() + 24 * H));
-  $w.dataset.warn = soon[0]?.code || '';
   const FW = $frame.clientWidth, FH = $frame.clientHeight;
   const cols = Math.max(3, Math.min(8, Math.floor(FW / 52)));
   const hours = [];
