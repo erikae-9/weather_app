@@ -294,7 +294,22 @@ table.hm { border-collapse: separate; border-spacing: 0; font-size: .8rem; font-
 .wxi-fog { stroke: var(--ic-fog); stroke-width: 3; stroke-linecap: round; fill: none; }
 .wxa path { fill: var(--ink-2); }
 
-.warns { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+.warns { margin-bottom: 22px; }
+/* Hopfälld rad "Varningar" med symbol och antal per nivå; öppnas till listan */
+.wbar { --wc: var(--w-msg); border: 1px solid color-mix(in srgb, var(--wc) 55%, var(--line)); border-left: 5px solid var(--wc); border-radius: 8px; background: color-mix(in srgb, var(--wc) 8%, var(--page)); }
+.wbar[data-code="YELLOW"] { --wc: var(--w-yellow); } .wbar[data-code="ORANGE"] { --wc: var(--w-orange); } .wbar[data-code="RED"] { --wc: var(--w-red); }
+.wbar-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 14px; border: 0; background: none; color: var(--ink); text-align: left; }
+.wbar-lab { font: 700 .95rem var(--font-display); flex: none; }
+.wbar-sym { display: inline-flex; align-items: center; gap: 10px; flex: none; font-size: .86rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wbar-sym span { display: inline-flex; align-items: center; }
+.wbar-top { flex: 1; min-width: 0; font-size: .86rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wbar-act { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: .82rem; font-weight: 500; color: var(--accent); }
+.wbar-act svg { transition: transform .2s; }
+.wbar-head[aria-expanded="true"] .wbar-act svg { transform: rotate(180deg); }
+.wbar-list { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 10px; }
+.wbar-list .wv { background: var(--page); }
+.wbar-head[aria-expanded="true"] .wbar-top { visibility: hidden; }   /* står redan överst i listan */
+@media (max-width: 640px) { .wbar-top { display: none; } }
 .wv { --wc: var(--w-msg); --wi: var(--w-ink-dark); border: 1px solid color-mix(in srgb, var(--wc) 55%, var(--line)); border-left: 5px solid var(--wc); border-radius: 8px; background: color-mix(in srgb, var(--wc) 10%, var(--page)); }
 .wv[data-code="YELLOW"] { --wc: var(--w-yellow); --wi: var(--w-ink-light); }
 .wv[data-code="ORANGE"] { --wc: var(--w-orange); --wi: var(--w-ink-light); }
@@ -541,13 +556,14 @@ function renderBand() {
   renderDays();
 }
 // ── Varningar från SMHI: en rad per varning, öppnas för detaljer ──
+const WARN_OPEN_KEY = 'wx.warnOpen';
 function renderWarnings() {
   const box = $('warns'), list = S.warnings || [];
   box.hidden = !list.length;
   if (!list.length) { box.innerHTML = ''; return; }
   const all = WX.wantsAllWarnings();
   const chev = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-  box.innerHTML = list.map((w, k) => {
+  const rows = list.map((w, k) => {
     const areas = [w.area, ...w.affected.filter(a => a !== w.area)].filter(Boolean).join(', ');
     const pub = w.published ? `Utfärdad ${WX.WEEKDAYS[w.published.getDay()]} ${w.published.getDate()} ${WX.MONTHS[w.published.getMonth()]} ${WX.hhmm(w.published)}` : 'Utfärdad';
     return `<div class="wv" data-code="${w.code}">
@@ -563,10 +579,36 @@ function renderWarnings() {
       </div>
     </div>`;
   }).join('');
+
+  // Sammanfattning: antal per nivå, allvarligast först; listan är redan sorterad
+  const NAMES = { RED: ['röd', 'röda'], ORANGE: ['orange', 'orange'], YELLOW: ['gul', 'gula'], MESSAGE: ['meddelande', 'meddelanden'] };
+  const counts = ['RED', 'ORANGE', 'YELLOW', 'MESSAGE'].map(c => [c, list.filter(w => w.code === c).length]).filter(([, n]) => n);
+  const spoken = counts.map(([c, n]) => `${n} ${NAMES[c][n > 1 ? 1 : 0]}`).join(', ');
+  const top = list[0];
+  // Öppen som standard på bred skärm, stängd på mobil; valet sparas per enhet
+  const open = WX.store.get(WARN_OPEN_KEY, window.innerWidth > 640);
+  box.innerHTML = `<div class="wbar" data-code="${top.code}">
+    <button class="wbar-head" type="button" aria-expanded="${open}" aria-controls="wbarList" aria-label="Varningar: ${spoken}. ${open ? 'Dölj' : 'Visa'}">
+      <span class="wbar-lab">Varningar</span>
+      <span class="wbar-sym" aria-hidden="true">${counts.map(([c, n]) => `<span><i class="wdot" data-code="${c}"></i>${n}</span>`).join('')}</span>
+      <span class="wbar-top">${WX.esc(top.level)}: ${WX.esc(top.title)}, ${WX.esc(WX.warningSpan(top))}</span>
+      <span class="wbar-act">${open ? 'Dölj' : 'Visa'} ${chev}</span>
+    </button>
+    <div class="wbar-list" id="wbarList" ${open ? '' : 'hidden'}>${rows}</div>
+  </div>`;
+  const head = box.querySelector('.wbar-head');
+  head.onclick = () => {
+    const now = head.getAttribute('aria-expanded') !== 'true';
+    WX.store.set(WARN_OPEN_KEY, now);
+    head.setAttribute('aria-expanded', String(now));
+    head.setAttribute('aria-label', `Varningar: ${spoken}. ${now ? 'Dölj' : 'Visa'}`);
+    $('wbarList').hidden = !now;
+    head.querySelector('.wbar-act').firstChild.textContent = now ? 'Dölj ' : 'Visa ';
+  };
   box.querySelectorAll('.wv-head').forEach(b => b.onclick = () => {
-    const body = $(b.getAttribute('aria-controls')), open = body.hidden;
-    body.hidden = !open; b.setAttribute('aria-expanded', String(open));
-    b.querySelector('.wv-more').firstChild.textContent = open ? 'Visa mindre ' : 'Läs mer ';
+    const body = $(b.getAttribute('aria-controls')), isOpen = body.hidden;
+    body.hidden = !isOpen; b.setAttribute('aria-expanded', String(isOpen));
+    b.querySelector('.wv-more').firstChild.textContent = isOpen ? 'Visa mindre ' : 'Läs mer ';
   });
 }
 
