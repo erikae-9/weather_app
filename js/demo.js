@@ -196,6 +196,14 @@ function warnings(lat, lon, nowMs) {
         { title: { sv: 'Hur kan det påverka', en: 'Possible impact' }, text: { sv: 'Besvärliga förhållanden i trafiken med risk för längre restider. Vissa vägar kan bli svårframkomliga.', en: '' } },
       ],
     }] },
+    { id: 9003, event: { sv: 'Vind', en: 'Wind' }, warningAreas: [{
+      id: 3, approximateStart: at(9), approximateEnd: at(21), published: new Date(nowMs - 2 * 3600e3).toISOString(),
+      warningLevel: { code: 'ORANGE', sv: 'Orange varning', en: 'Orange warning' },
+      eventDescription: { sv: 'Mycket hårda vindbyar', en: 'Very strong gusts' },
+      areaName: { sv: 'Exempelområde runt vald plats', en: 'Example area' }, affectedAreas: [],
+      area: box(lat, lon, 0.4),
+      descriptions: [{ title: { sv: 'Vad händer', en: '' }, text: { sv: 'Vindbyar upp till 30 m/s, främst på höjder och längs kusten.', en: '' } }],
+    }] },
     { id: 9002, event: { sv: 'Brandrisk', en: 'Fire risk' }, warningAreas: [{
       id: 2, approximateStart: at(0), published: new Date(nowMs).toISOString(),
       warningLevel: { code: 'MESSAGE', sv: 'Meddelande', en: 'Message' },
