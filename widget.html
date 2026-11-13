@@ -123,6 +123,8 @@ a.w { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 8p
 .p-lab { fill: var(--ink-2); font: 600 9.5px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .p-tick { fill: var(--ink-3); font: 500 9px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .p-mm, .p-lab { paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.p-arrow { fill: var(--ink-2); }
+.p-wind { fill: var(--ink-2); font: 600 9px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .p-mm { fill: var(--precip); font: 600 9px system-ui, sans-serif; }
 
 .hours { display: flex; justify-content: space-between; gap: 2px; border-top: 1px solid var(--line); padding-top: 4px; flex: none; }
@@ -223,9 +225,12 @@ function drawPlot(el, wd, i0, hours) {
   const D = wd.data, a = wd.ms[i0], b = a + hours * H;
   const idx = []; for (let i = i0; i < wd.n && wd.ms[i] < b; i++) idx.push(i);
   const X = t => (t - a) / (b - a) * W;
-  const axisH = 11, top = 5;
-  const tTop = top + 10, tH = Math.max(14, (Hh - axisH - top) * 0.56 - 10);
-  const pTop = tTop + tH + 6, pH = Math.max(8, Hh - axisH - pTop - 5);
+  const axisH = 11, top = 3;
+  // Rader för vädersymboler (överst) och vind (ovanför tidsaxeln), om det finns plats
+  const iconH = Hh >= 70 ? 16 : 0, windH = Hh >= 80 ? 13 : 0;
+  const tTop = top + iconH + 9, tH = Math.max(12, (Hh - axisH - windH - top - iconH) * 0.55 - 9);
+  const pTop = tTop + tH + 5, pH = Math.max(7, Hh - axisH - windH - pTop - 5);
+  const wTop = Hh - axisH - windH;
   let s = '';
 
   // Natt och varningar (bakgrund)
@@ -282,6 +287,43 @@ function drawPlot(el, wd, i0, hours) {
   });
   const sum = idx.reduce((acc, i) => acc + (D.precip_step[i] ?? 0), 0);
   if (sum >= 0.1) s += `<text class="p-mm" x="${W - 2}" y="${pTop + 8}" text-anchor="end">${WX.fmt(sum, sum < 10 ? 1 : 0)} mm/${hours} h</text>`;
+
+  // Vädersymboler och vind som "brytpunkter": en ny symbol bara där vädret
+  // ändras (dag och natt räknas som samma väder) och en ny pil bara där
+  // vinden byter riktning eller ändras minst 3 m/s. Kommer en ändring för tätt
+  // inpå den förra väntar den tills det finns plats.
+  const mid = i => X(wd.ms[i] + Math.min(wd.step(i), 1) * H / 2);
+  if (iconH) {
+    const kind = sym => sym.replace(/_(day|night|polartwilight)$/, '');
+    const sz = 15, gap = 22;
+    let last = null, lastX = -99;
+    for (const i of idx) {
+      const sym = D.symbols[i];
+      if (!sym || sym === 'unknown') continue;
+      const cx = mid(i);
+      if (cx > W - sz / 2) break;
+      if (kind(sym) === last || cx - lastX < gap) continue;
+      s += `<g transform="translate(${Math.max(0, cx - sz / 2).toFixed(1)} ${top})">${WX.icon(sym, sz).replace('<svg ', '<svg x="0" y="0" ')}</g>`;
+      last = kind(sym); lastX = cx;
+    }
+  }
+  if (windH) {
+    const gap = 30;
+    let lastDir = null, lastSpd = null, lastX = -99;
+    for (const i of idx) {
+      const dir = D.wind_direction[i], spd = D.wind[i];
+      if (dir == null || spd == null) continue;
+      const cx = mid(i);
+      if (cx > W - 14) break;
+      const d8 = Math.round(dir / 45) % 8;
+      const changed = lastDir === null || d8 !== lastDir || Math.abs(spd - lastSpd) >= 3;
+      if (!changed || cx - lastX < gap) continue;
+      const x0 = Math.max(0, cx - 5);
+      s += `<g transform="translate(${x0.toFixed(1)} ${wTop + 2}) rotate(${((dir + 180) % 360).toFixed(0)} 5 5)"><path class="p-arrow" d="M5 .5l3.2 8.5-3.2-1.9-3.2 1.9z"/></g>`
+        + `<text class="p-wind" x="${(x0 + 11).toFixed(1)}" y="${wTop + 10}">${Math.round(spd)}</text>`;
+      lastDir = d8; lastSpd = spd; lastX = cx;
+    }
+  }
 
   // Tidsaxel: var sjätte timme, veckodag vid midnatt
   for (let t = Math.ceil(a / (3 * H)) * 3 * H; t < b; t += 3 * H) {
