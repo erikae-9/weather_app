@@ -1095,8 +1095,12 @@ chart.draw = (el, kind, ctx, opts = {}) => {
 // Grupp av synkade paneler med gemensamt hårkors och panorering.
 // panels: [{ el, kind, opts }]. getCtx(): { wd, nowMs, night, ml, mr }.
 // onCursor(index|null, pinned), onRange([a, b]) anropas vid ändring.
-chart.group = ({ panels, getCtx, onCursor, onRange }) => {
-  const g = { range: null, extent: null, cursor: null, pinned: false, frames: [] };
+// onTap(index, event) får hantera ett tryck själv (returnera true), t.ex. för
+// att markera en sträcka. g.sel = { a, b } (index, b kan saknas) ritas som en
+// skuggad sträcka med kantlinjer och, om panelen har opts.selTip(a, b), en
+// etikett över sträckan. g.measuring döljer de vanliga värdeetiketterna.
+chart.group = ({ panels, getCtx, onCursor, onRange, onTap }) => {
+  const g = { range: null, extent: null, cursor: null, pinned: false, frames: [], sel: null, measuring: false };
   let raf = null;
 
   g.render = () => {
@@ -1105,6 +1109,40 @@ chart.group = ({ panels, getCtx, onCursor, onRange }) => {
     g.frames = panels.map(p => chart.draw(p.el, p.kind, { ...ctx, range: g.range }, p.opts));
     g.ctx = ctx;
     g.updateCursor();
+    g.updateSel();
+  };
+  g.updateSel = () => {
+    const wd = g.ctx?.wd;
+    panels.forEach((p, k) => {
+      const f = g.frames[k], plot = p.el.querySelector(':scope > .mg-plot');
+      if (!f || !plot) return;
+      let box = plot.querySelector(':scope > .mg-selbox');
+      if (!box) { box = document.createElement('div'); box.className = 'mg-selbox'; plot.appendChild(box); }
+      const sel = g.sel;
+      if (!sel || sel.a == null || !wd) { box.innerHTML = ''; return; }
+      const clampX = v => Math.max(f.m.l, Math.min(f.m.l + f.pw, v));
+      const xa = f.x(wd.ms[sel.a]);
+      const top = `top:${f.m.t}px;height:${f.ph}px`;
+      let html = '';
+      if (sel.b == null) {
+        if (xa >= f.m.l && xa <= f.m.l + f.pw) html = `<span class="mg-sel-edge" style="left:${xa}px;${top}"></span>`;
+        box.innerHTML = html;
+        return;
+      }
+      const x0 = clampX(xa), x1 = clampX(f.x(wd.end(sel.b)));
+      if (x1 > x0) html += `<span class="mg-sel" style="left:${x0}px;width:${x1 - x0}px;${top}"></span>`;
+      for (const xe of [xa, f.x(wd.end(sel.b))]) if (xe >= f.m.l && xe <= f.m.l + f.pw) html += `<span class="mg-sel-edge" style="left:${xe}px;${top}"></span>`;
+      const tipHtml = p.opts?.selTip?.(sel.a, sel.b);
+      if (tipHtml) html += `<div class="mg-seltip">${tipHtml}</div>`;
+      box.innerHTML = html;
+      const tip = box.querySelector('.mg-seltip');
+      if (tip) {
+        // Centrerad över sträckan, men alltid inom grafen
+        const w = tip.offsetWidth, mid = (Math.max(x0, f.m.l) + Math.min(x1, f.m.l + f.pw)) / 2;
+        tip.style.left = `${Math.max(f.m.l, Math.min(f.m.l + f.pw - w, mid - w / 2))}px`;
+        tip.style.top = `${f.m.t + 4}px`;
+      }
+    });
   };
   g.setRange = (range, extent) => {
     g.extent = extent || g.extent;
@@ -1123,6 +1161,7 @@ chart.group = ({ panels, getCtx, onCursor, onRange }) => {
       if (p.opts?.dots && !dots) { dots = document.createElement('div'); dots.className = 'mg-dots'; plot.appendChild(dots); }
       const hide = () => { xh.hidden = true; if (tip) tip.hidden = true; if (dots) dots.innerHTML = ''; };
       if (g.cursor === null || !wd) return hide();
+      if (g.measuring) { if (tip) tip.hidden = true; if (dots) dots.innerHTML = ''; }
       const px = f.x(wd.ms[g.cursor]);
       if (px < f.m.l || px > f.m.l + f.pw) return hide();
       xh.hidden = false;
@@ -1130,6 +1169,7 @@ chart.group = ({ panels, getCtx, onCursor, onRange }) => {
       xh.style.top = `${f.m.t}px`;
       xh.style.height = `${f.ph}px`;
       xh.classList.toggle('pinned', g.pinned);
+      if (g.measuring) return;
       if (dots) {
         dots.innerHTML = p.opts.dots(g.cursor).filter(d => d.v !== null && d.v !== undefined && !Number.isNaN(d.v))
           .map(d => `<span class="mg-dot" style="left:${px}px;top:${Math.max(f.m.t, Math.min(f.m.t + f.ph, f.y(d.v))).toFixed(1)}px;--c:${d.c}"></span>`).join('');
@@ -1198,6 +1238,7 @@ chart.group = ({ panels, getCtx, onCursor, onRange }) => {
         onRange?.(g.range);
       } else if (e.type === 'pointerup') {
         const i = indexAt(el, e.clientX, k);
+        if (i !== null && onTap?.(i, e)) { down = null; return; }
         if (g.pinned && i === g.cursor) { g.pinned = false; g.cursor = e.pointerType === 'mouse' ? i : null; }
         else { g.cursor = i; g.pinned = i !== null; }
         g.updateCursor();
