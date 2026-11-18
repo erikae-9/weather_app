@@ -244,6 +244,27 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .legend i.dot { border-top-style: dotted; } .legend i.dash { border-top-style: dashed; }
 .chart { min-width: 0; }
 .tiphint { margin: -16px 0 0; font-size: .82rem; color: var(--ink-3); }
+/* Mät mellan två tider */
+.measure { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: -8px; }
+.mbtn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--page); color: var(--ink-2); border-radius: 999px; padding: 6px 14px 6px 11px; font-size: .86rem; font-weight: 500; }
+.mbtn:hover { color: var(--ink); border-color: var(--line-strong); }
+.mbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.mtext { font-size: .86rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mtext b { color: var(--ink); }
+.mg-selbox { position: absolute; inset: 0; pointer-events: none; }
+.mg-sel { position: absolute; background: var(--accent-soft); box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--accent) 6%, transparent); }
+.mg-sel-edge { position: absolute; width: 0; border-left: 2px solid var(--accent); margin-left: -1px; }
+.mg-seltip { position: absolute; z-index: 4; background: var(--page); color: var(--ink-2); border: 1.5px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 22px -10px rgba(0,0,0,.4); padding: 6px 10px; font-size: .78rem; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mg-seltip b { color: var(--ink); font-weight: 600; }
+.mg-seltip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--accent); }
+.mg-seltip .big { font: 700 1.02rem var(--font-display); color: var(--ink); }
+.mpanel { border: 1.5px solid var(--accent); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--page); }
+.mpanel h3 { margin: 0; font: 700 1rem var(--font-display); color: var(--accent); }
+.mpanel .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 24px; }
+.mpanel h4 { margin: 0 0 2px; font: 600 .74rem var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.mpanel p { margin: 0; font-size: .88rem; line-height: 1.55; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mpanel p b { color: var(--ink); }
+@media (max-width: 640px) { .mg-seltip { white-space: normal; max-width: 230px; } }
 .mg-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--page); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.35); padding: 6px 9px; font-size: .78rem; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mg-tip b { color: var(--ink); font-weight: 600; }
 .mg-tip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--ink); }
@@ -479,7 +500,12 @@ footer a { color: var(--ink-2); }
   <!-- DIAGRAM -->
   <section class="view" id="view-diagram" hidden>
     <div class="head" data-head></div>
-    <p class="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
+    <p class="tiphint" id="tiphint">Peka i en graf, eller tryck på mobil, så visas värdena vid linjen. Dra i sidled för att bläddra i tiden.</p>
+    <div class="measure" id="measure">
+      <button type="button" class="mbtn" id="measureBtn" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="5" width="13" height="6" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 5v2.5M7 5v1.6M9.5 5v2.5M12 5v1.6" stroke="currentColor" stroke-width="1.2"/></svg><span>Mät mellan två tider</span></button>
+      <span class="mtext" id="measureText" aria-live="polite"></span>
+      <button type="button" class="linkbtn" id="measureUse" hidden>Använd som period</button>
+    </div>
     <section class="chart-sec" id="secT">
       <div class="chart-h"><h3>Temperatur</h3><div class="legend" id="lgT"></div><span class="val" id="vT"></span></div>
       <div class="chart bleed" id="mgT"></div>
@@ -496,6 +522,7 @@ footer a { color: var(--ink-2); }
       <div class="chart-h"><h3 id="ttlX"></h3><div class="legend" id="lgX"></div><span class="val" id="vX"></span><button class="x" type="button" id="closeX" aria-label="Dölj grafen">✕</button></div>
       <div class="chart bleed" id="mgX"></div>
     </section>
+    <section class="mpanel" id="measurePanel" hidden aria-label="Sammanfattning för den markerade sträckan"></section>
     <div class="more-charts" id="moreCharts" role="group" aria-label="Fler grafer"></div>
   </section>
 
@@ -915,10 +942,82 @@ function openChart(miniId) {
   else router.go('diagram');
 }
 
+// ── MÄT MELLAN TVÅ TIDER ──
+// Visningen jämförs i två varianter: etiketter i graferna (förval) eller en
+// panel under graferna (?matvy=panel).
+const MEASURE_VIEW = new URLSearchParams(location.search).get('matvy') === 'panel' ? 'panel' : 'tips';
+let measuring = false, msel = null, mselWd = null;   // msel = { a, b } index, b kan saknas
+const when = d => `${WX.WEEKDAYS[d.getDay()]} ${WX.hh(d)}:00`;
+const sgn = (v, d = 0) => (v > 0 ? '+' : '') + WX.fmt(v, d);
+// Siffror för sträckan a..b (index, båda med)
+function rangeStats(a, b) {
+  const wd = S.wd, D = wd.data, end = b + 1, st = WX.periodStats(wd, a, end);
+  const idx = []; for (let i = a; i <= b; i++) idx.push(i);
+  const hrs = i => wd.step(i);
+  const sumH = f => idx.reduce((acc, i) => acc + (f(i) ? hrs(i) : 0), 0);
+  const argOf = (key, fn) => { let best = null; for (const i of idx) { const v = D[key][i]; if (v != null && (best === null || fn(v, D[key][best]))) best = i; } return best; };
+  const t0 = wd.ms[a], t1 = wd.end(b);
+  const nightMs = S.night.reduce((acc, [n0, n1]) => acc + Math.max(0, Math.min(t1, n1) - Math.max(t0, n0)), 0);
+  const snow = idx.reduce((acc, i) => acc + ((D.temp[i] ?? 9) < -0.5 ? (D.precip_step[i] ?? 0) : 0), 0);
+  return {
+    st, from: new Date(t0), to: new Date(t1), hours: Math.round((t1 - t0) / WX.H),
+    coarse: idx.some(i => hrs(i) > 1),
+    tMinAt: argOf('temp', (v, w) => v < w), tMaxAt: argOf('temp', (v, w) => v > w),
+    p10: WX.min(idx.map(i => D.temp_p10[i])), p90: WX.max(idx.map(i => D.temp_p90[i])),
+    below0: sumH(i => D.temp[i] != null && D.temp[i] < 0),
+    tChange: D.temp[b] != null && D.temp[a] != null ? D.temp[b] - D.temp[a] : null,
+    pHi: idx.reduce((acc, i) => acc + Math.max(D.precip_p90[i] ?? 0, D.precip[i] ?? 0) * hrs(i), 0),
+    wetH: sumH(i => (D.precip_step[i] ?? 0) >= 0.1),
+    pMaxAt: argOf('precip', (v, w) => v > w),
+    snow,
+    wMaxAt: argOf('wind', (v, w) => v > w), gMaxAt: argOf('gust', (v, w) => v > w),
+    freshH: sumH(i => (D.wind[i] ?? 0) >= 7.9),
+    dayH: Math.max(0, Math.round((t1 - t0 - nightMs) / WX.H * 10) / 10),
+  };
+}
+// Texter per område; används både av etiketterna och av panelen
+const mtxt = {
+  head: r => `${when(r.from)} – ${when(r.to)} · ${r.hours} h`,
+  temp: r => {
+    const D = D_(), st = r.st;
+    return [`<span class="big">Ø ${WX.fmtTemp(st.tMean, 1)}</span> lägst <b>${WX.fmtTemp(st.tMin)}</b> (${when(S.wd.times[r.tMinAt])}) · högst <b>${WX.fmtTemp(st.tMax)}</b> (${when(S.wd.times[r.tMaxAt])})`,
+      `känns som lägst <b>${WX.fmtTemp(st.fMin)}</b>${r.p10 != null ? ` · troligen <b>${WX.fmt(r.p10)}…${WX.fmtTemp(r.p90)}</b>` : ''}`,
+      `under 0° i <b>${WX.fmt(r.below0)} h</b>${r.tChange != null ? ` · <b>${sgn(r.tChange)}°</b> från start till slut` : ''}`];
+  },
+  precip: r => {
+    const st = r.st, D = D_();
+    const lines = [`<span class="big">${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm</span>${r.pHi >= st.pSum + 0.2 ? ` (upp till ${WX.fmt(r.pHi, r.pHi < 10 ? 1 : 0)})` : ''} · risk <b>${st.pRisk ?? '—'} %</b>`];
+    if (r.wetH > 0) lines.push(`nederbörd i <b>${WX.fmt(r.wetH)} h</b> · mest <b>${WX.fmt(D.precip[r.pMaxAt], 1)} mm/h</b> (${when(S.wd.times[r.pMaxAt])})`);
+    else lines.push('ingen nederbörd väntas');
+    if (r.snow >= 1) lines.push(`ungefär <b>${Math.round(r.snow)} cm snö</b>`);
+    return lines;
+  },
+  wind: r => {
+    const st = r.st, D = D_(), pr = st.prLast != null && st.prFirst != null ? st.prLast - st.prFirst : null;
+    return [`<span class="big">Ø ${WX.fmt(st.wMean, 1)} m/s</span>${st.wDir != null ? ` mest ${WX.windDirLong(st.wDir)}` : ''}`,
+      `max <b>${WX.fmt(st.wMax)} m/s</b> (${when(S.wd.times[r.wMaxAt])}) · byar <b>${WX.fmt(st.gMax)}</b> (${when(S.wd.times[r.gMaxAt])})`,
+      `${r.freshH > 0 ? `frisk vind eller mer i <b>${WX.fmt(r.freshH)} h</b>` : 'som mest måttlig vind'}${pr != null ? ` · lufttrycket ${pr > 1 ? 'stiger' : pr < -1 ? 'faller' : 'oförändrat'} <b>${sgn(pr)} hPa</b>` : ''}`];
+  },
+  other: r => {
+    const st = r.st;
+    return [`dagsljus <b>${WX.fmt(r.dayH, r.dayH < 10 && r.dayH % 1 ? 1 : 0)} h</b> · molnighet Ø <b>${WX.fmt(st.cMean)} %</b>`,
+      `UV högst <b>${WX.fmt(st.uvMax, 1)}</b>${st.thMax != null ? ` · åska högst <b>${Math.round(st.thMax)} %</b>` : ''} · fukt Ø <b>${WX.fmt(st.hMean)} %</b>`];
+  },
+  extra: r => {
+    const c = EXTRAS[extra], v = WX.valid(D_()[c.key].slice(r.st.start, r.st.end));
+    if (!v.length) return ['ingen data för sträckan'];
+    const mean = v.reduce((x, y) => x + y, 0) / v.length;
+    return [`<span class="big">Ø ${c.tipFmt(mean)}</span> · ${c.tipFmt(Math.min(...v))} till ${c.tipFmt(Math.max(...v))}`];
+  },
+};
+const tipFor = key => MEASURE_VIEW === 'tips'
+  ? (a, b) => { const r = rangeStats(a, b); return (key === 'temp' ? `<span class="tm">${mtxt.head(r)}</span>` : '') + mtxt[key](r).join('<br>'); }
+  : undefined;
+
 const mg = WX.chart.group({
   panels: [
     { el: $('mgT'), kind: 'temp', opts: {
-      icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300,
+      icons: true, axis: 'days', height: w => isPhone(w) ? Math.max(300, Math.round(vh() * 0.5)) : 300, selTip: tipFor('temp'),
       tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('temp', i, v => WX.fmtTemp(v, 1))
         : `<span class="big">${WX.fmtTemp(D.temp[i], 1)}</span> ${WX.describe(D.symbols[i]).toLowerCase()}<br>känns som <b>${WX.fmtTemp(D.feels_like[i])}</b>`
           + (D.temp_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.temp_p10[i], 1)} till ${WX.fmtTemp(D.temp_p90[i], 1)}</b>` : '')); },
@@ -926,14 +1025,14 @@ const mg = WX.chart.group({
         : [{ v: D_().temp[i], c: D_().temp[i] < 0 ? 'var(--cold)' : 'var(--warm)' }, { v: D_().feels_like[i], c: 'var(--feels)' }],
     } },
     { el: $('mgP'), kind: 'precip', opts: {
-      axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200,
+      axis: 'hours', height: w => isPhone(w) ? Math.max(220, Math.round(vh() * 0.34)) : 200, selTip: tipFor('precip'),
       tip: i => { const D = D_(), st = S.wd.step(i); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('precip_step', i, v => WX.fmt(v, 1) + ' mm')
         : `<span class="big">${WX.fmt(D.precip_step[i], 1)} mm</span>${st > 1 ? ` på ${st} h` : ''}`
           + ((D.precip_p90[i] ?? 0) * st >= 0.1 ? `<br>troligen <b>${WX.fmt((D.precip_p10[i] ?? 0) * st, 1)}–${WX.fmt(D.precip_p90[i] * st, 1)} mm</b>` : ''))
         + `<br>risk <b>${D.precip_prob[i] != null ? Math.round(D.precip_prob[i]) : '—'} %</b>${D.rolling3h[i] != null ? ` · 3 h ${D.rolling3h[i]} %` : ''}${D.thunder[i] != null ? ` · åska ${Math.round(D.thunder[i])} %` : ''}`; },
     } },
     { el: $('mgW'), kind: 'wind', opts: {
-      axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230,
+      axis: 'hours', bft: w => !isPhone(w), height: w => isPhone(w) ? Math.max(240, Math.round(vh() * 0.38)) : 230, selTip: tipFor('wind'),
       tip: i => { const D = D_(); return `<span class="tm">${tipTime(i)}</span>` + (both() ? srcVals('wind', i, v => WX.fmt(v) + ' m/s')
         : `<span class="big">${WX.fmt(D.wind[i])} m/s</span> från ${WX.windDir(D.wind_direction[i])}<br>byar <b>${WX.fmt(D.gust[i])} m/s</b> · ${WX.beaufort(D.wind[i])?.name.toLowerCase() ?? ''}`
           + (D.wind_p10[i] != null ? `<br>troligen <b>${WX.fmt(D.wind_p10[i])}–${WX.fmt(D.wind_p90[i])} m/s</b>` : '')); },
@@ -947,7 +1046,59 @@ const mg = WX.chart.group({
     return S.wd && { wd: S.wd, night: S.night, nowMs: Date.now(), ml: isPhone(w) ? 32 : 40, mr: isPhone(w) ? 10 : 64 };
   },
   onRange: r => app.setRange(r[0], r[1], 'pan'),
+  onTap: (i, e) => {
+    // Skift-klick med ett fäst värde: mät direkt mellan de två tiderna
+    if (!measuring && e.shiftKey && mg.pinned && mg.cursor != null && mg.cursor !== i) {
+      setMeasuring(true);
+      setSel(Math.min(mg.cursor, i), Math.max(mg.cursor, i));
+      return true;
+    }
+    if (!measuring) return false;
+    if (!msel || msel.b != null) setSel(i, null);
+    else setSel(Math.min(msel.a, i), Math.max(msel.a, i));
+    return true;
+  },
 });
+// Extra grafen (åska, UV …) får också en etikett för sträckan
+if (MEASURE_VIEW === 'tips') extraPanel.opts.selTip = (a, b) => extra ? mtxt.extra(rangeStats(a, b)).join('<br>') : '';
+
+function setMeasuring(on) {
+  measuring = on;
+  mg.measuring = on;
+  if (on) { mg.pinned = false; mg.cursor = null; mg.updateCursor(); }
+  else setSel(null, null);
+  $('measureBtn').setAttribute('aria-pressed', String(on));
+  $('measureBtn').querySelector('span').textContent = on ? 'Avsluta mätning' : 'Mät mellan två tider';
+  renderMeasure();
+}
+function setSel(a, b) {
+  msel = a == null ? null : { a, b };
+  mselWd = S.wd;
+  mg.sel = msel;
+  mg.updateSel();
+  renderMeasure();
+}
+function renderMeasure() {
+  const r = msel && msel.b != null ? rangeStats(msel.a, msel.b) : null;
+  $('measureText').innerHTML = !measuring ? ''
+    : !msel ? 'Tryck på starttiden i en graf.'
+    : msel.b == null ? `Start <b>${when(S.wd.times[msel.a])}</b>. Tryck på sluttiden.`
+    : `<b>${mtxt.head(r)}</b>${MEASURE_VIEW === 'tips' ? ' · ' + mtxt.other(r).join(' · ') : ''}${r.coarse ? ' · efter 2,5 dygn räknas hela 6-timmarsblock' : ''}`;
+  $('measureUse').hidden = !r;
+  const panel = $('measurePanel');
+  panel.hidden = !(r && MEASURE_VIEW === 'panel');
+  if (!panel.hidden) {
+    const col = (h, lines) => `<div><h4>${h}</h4><p>${lines.join('<br>')}</p></div>`;
+    panel.innerHTML = `<h3>${mtxt.head(r)}</h3><div class="cols">${col('Temperatur', mtxt.temp(r))}${col('Nederbörd', mtxt.precip(r))}${col('Vind och tryck', mtxt.wind(r))}${col('Övrigt', mtxt.other(r))}${extra ? col(EXTRAS[extra].title, mtxt.extra(r)) : ''}</div>`;
+  }
+}
+$('measureBtn').onclick = () => setMeasuring(!measuring);
+$('measureUse').onclick = () => {
+  if (!msel || msel.b == null) return;
+  const a = S.wd.ms[msel.a], b = S.wd.end(msel.b);
+  setMeasuring(false);
+  app.setRange(a, b, 'custom');
+};
 function renderDiagram() {
   const L = (c, t, cls = '') => `<span><i class="${cls}" style="${cls === 'box' ? 'background' : 'border-color'}:${c}"></i>${t}</span>`;
   const srcs = cls => S.wd.sourceIds.map(id => L(`var(--src-${id})`, WX.SOURCE_LABELS[id], cls)).join('');
@@ -960,6 +1111,9 @@ function renderDiagram() {
   $('vW').textContent = `max ${WX.fmt(st.wMax)} m/s, byar ${WX.fmt(st.gMax)}`;
   renderExtra();
   mg.cursor = null; mg.pinned = false;
+  // En sträcka gäller bara den prognos den markerades i (byte av källa/plats nollställer)
+  if (msel && mselWd !== S.wd) { msel = null; mg.sel = null; }
+  renderMeasure();
   mg.setRange(app.periodRange(), app.extent());
 }
 
