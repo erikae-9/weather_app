@@ -1137,6 +1137,8 @@ chart.group = ({ panels, getCtx, onCursor, onRange, onTap }) => {
       box.innerHTML = html;
       const tip = box.querySelector('.mg-seltip');
       if (tip) {
+        // Tryck i etiketten (t.ex. "mer") ska inte räknas som ett tryck i grafen
+        for (const ev of ['pointerdown', 'pointerup']) tip.addEventListener(ev, e => e.stopPropagation());
         // Centrerad över sträckan, men alltid inom grafen
         const w = tip.offsetWidth, mid = (Math.max(x0, f.m.l) + Math.min(x1, f.m.l + f.pw)) / 2;
         tip.style.left = `${Math.max(f.m.l, Math.min(f.m.l + f.pw - w, mid - w / 2))}px`;
