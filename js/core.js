@@ -467,6 +467,49 @@ WX.days = (wd, lat, lon) => {
   return out;
 };
 
+// ── SNÖ ──────────────────────────────────────────────────────────────────────
+// Andel av stegets nederbörd som faller som snö (0–1):
+//   1. SMHI:s egen snöandel (precipitation_frozen_part) när den finns
+//   2. annars vädersymbolen: snö 1, snöblandat 0,5, regn 0
+//   3. annars temperaturen: helt snö vid −1° och kallare, inget vid +2°
+WX.snowShare = (wd, i) => {
+  const D = wd.data, fz = D.frozen?.[i];
+  if (fz != null) return Math.min(1, Math.max(0, fz / 100));
+  const type = WX.parseSymbol(D.symbols[i]).type;
+  if (type === 'snow') return 1;
+  if (type === 'sleet') return 0.5;
+  if (type === 'rain') return 0;
+  const t = D.temp[i];
+  return t == null ? 0 : Math.min(1, Math.max(0, (2 - t) / 3));
+};
+// Centimeter snö per millimeter smältvatten: blöt snö nära noll ger mindre,
+// torr snö i kyla mer (0,7 vid −1° och varmare, 1,0 vid −5°, 1,5 vid −12°)
+WX.snowRatio = t => {
+  if (t == null || t >= -1) return 0.7;
+  if (t >= -5) return 0.7 + (-1 - t) / 4 * 0.3;
+  if (t >= -12) return 1.0 + (-5 - t) / 7 * 0.5;
+  return 1.5;
+};
+// Snö för stegen [start, end): cm, mm som snö och total mm
+WX.snowEstimate = (wd, start, end) => {
+  const D = wd.data;
+  let cm = 0, snowMm = 0, totalMm = 0;
+  for (let i = start; i < end; i++) {
+    const mm = D.precip_step[i] ?? 0;
+    if (mm <= 0) continue;
+    const share = WX.snowShare(wd, i);
+    totalMm += mm; snowMm += mm * share;
+    cm += mm * share * WX.snowRatio(D.temp[i]);
+  }
+  return { cm, snowMm, totalMm, mixed: totalMm > 0 && snowMm / totalMm < 0.8 && snowMm / totalMm > 0.05 };
+};
+// "ungefär 12 cm snö", med "blandat med regn" när en del faller som regn
+WX.snowText = (est, short) => {
+  if (est.cm < 1) return '';
+  const cm = Math.round(est.cm);
+  return short ? `≈ ${cm} cm snö` : `ungefär ${cm} cm snö${est.mixed ? ', blandat med regn' : ''}`;
+};
+
 // ── "PROGNOSEN I KORTHET": automatiska noteringar ────────────────────────────
 // Letar efter det som är värt att lyfta: nederbördsperioder, hård vind,
 // åska, temperatur kring noll och kraftiga temperaturomslag.
@@ -509,7 +552,8 @@ WX.highlights = (wd, days, range) => {
     const noun = p.type === 'snow' ? 'Snöfall' : p.type === 'sleet' ? 'Snöblandat regn' : 'Regn';
     r.level = r.sum >= 15 ? 'high' : r.sum >= 5 ? 'medium' : 'low';
     r.title = `${noun} ${WX.spanText(r.from, r.to)}`;
-    r.text = `Totalt omkring ${WX.fmt(r.sum, r.sum < 10 ? 1 : 0)} mm${p.type === 'snow' ? ` (ungefär ${Math.round(r.sum)} cm snö)` : ''}.`;
+    const snow = WX.snowText(WX.snowEstimate(wd, r.i0, r.i1 + 1));
+    r.text = `Totalt omkring ${WX.fmt(r.sum, r.sum < 10 ? 1 : 0)} mm${snow ? ` (${snow})` : ''}.`;
     r.icon = r.sym;
   });
 
@@ -611,7 +655,8 @@ WX.dayText = (wd, day) => {
     const span = Math.round(wMin) === Math.round(wMax) ? `${WX.fmt(wMax)} m/s` : `${WX.fmt(wMin)}–${WX.fmt(wMax)} m/s`;
     s.push(cap(`${adj}${dir ? dir + ' ' : ''}vind ${span}`) + (day.gustMax != null && day.gustMax >= wMax + 3 ? `, i byarna upp till ${WX.fmt(day.gustMax)} m/s` : '') + '.');
   }
-  if (total >= 0.1) s.push(`Totalt ${WX.fmt(total, total < 10 ? 1 : 0)} mm${type === 'snow' && total >= 1 ? `, ungefär ${Math.round(total)} cm snö` : ''}${day.risk != null ? ` (risk ${day.risk} %)` : ''}.`);
+  const snow = WX.snowText(WX.snowEstimate(wd, day.first, day.last));
+  if (total >= 0.1) s.push(`Totalt ${WX.fmt(total, total < 10 ? 1 : 0)} mm${snow ? `, ${snow}` : ''}${day.risk != null ? ` (risk ${day.risk} %)` : ''}.`);
   else if ((day.risk ?? 0) >= 20) s.push(`Mestadels uppehåll, ${day.risk} % risk för nederbörd.`);
   else s.push('Uppehåll.');
   if ((day.thunder ?? 0) >= WX.THUNDER_MED) s.push(`Risk för åska, upp till ${Math.round(day.thunder)} %.`);

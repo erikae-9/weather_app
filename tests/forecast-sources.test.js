@@ -156,7 +156,7 @@ test('SMHI-adaptern läser ett riktigt snow1g-svar', () => {
   // Första posten har sitt eget intervall (12–13) och tas med
   assert.deepEqual(src.periods[0], {
     start: Date.parse('2025-09-04T12:00:00Z'), end: Date.parse('2025-09-04T13:00:00Z'),
-    amount: 0, min: 0, max: 0, prob: 0, symbol: 'partlycloudy_day',
+    amount: 0, min: 0, max: 0, prob: 0, symbol: 'partlycloudy_day', frozen: null,
   });
   assert.equal(src.periods.length, 2);
 });
