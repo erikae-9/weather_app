@@ -258,13 +258,9 @@ h3.sec { margin: 0 0 12px; font: 700 1.05rem var(--font-display); }
 .mg-seltip b { color: var(--ink); font-weight: 600; }
 .mg-seltip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--accent); }
 .mg-seltip .big { font: 700 1.02rem var(--font-display); color: var(--ink); }
-.mpanel { border: 1.5px solid var(--accent); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--page); }
-.mpanel h3 { margin: 0; font: 700 1rem var(--font-display); color: var(--accent); }
-.mpanel .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 24px; }
-.mpanel h4 { margin: 0 0 2px; font: 600 .74rem var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
-.mpanel p { margin: 0; font-size: .88rem; line-height: 1.55; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.mpanel p b { color: var(--ink); }
-@media (max-width: 640px) { .mg-seltip { white-space: normal; max-width: 230px; } }
+.mg-selbox .mg-seltip { pointer-events: auto; }
+.mg-seltip .more { display: block; margin-top: 2px; border: 0; background: none; padding: 2px 0 0; color: var(--accent); font: 600 .74rem var(--font-ui); cursor: pointer; }
+@media (max-width: 640px) { .mg-seltip { white-space: normal; max-width: 240px; } }
 .mg-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--page); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.35); padding: 6px 9px; font-size: .78rem; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mg-tip b { color: var(--ink); font-weight: 600; }
 .mg-tip .tm { display: block; font: 700 .8rem var(--font-display); color: var(--ink); }
@@ -522,7 +518,6 @@ footer a { color: var(--ink-2); }
       <div class="chart-h"><h3 id="ttlX"></h3><div class="legend" id="lgX"></div><span class="val" id="vX"></span><button class="x" type="button" id="closeX" aria-label="Dölj grafen">✕</button></div>
       <div class="chart bleed" id="mgX"></div>
     </section>
-    <section class="mpanel" id="measurePanel" hidden aria-label="Sammanfattning för den markerade sträckan"></section>
     <div class="more-charts" id="moreCharts" role="group" aria-label="Fler grafer"></div>
   </section>
 
@@ -943,10 +938,10 @@ function openChart(miniId) {
 }
 
 // ── MÄT MELLAN TVÅ TIDER ──
-// Visningen jämförs i två varianter: etiketter i graferna (förval) eller en
-// panel under graferna (?matvy=panel).
-const MEASURE_VIEW = new URLSearchParams(location.search).get('matvy') === 'panel' ? 'panel' : 'tips';
+// Siffrorna för sträckan visas som en etikett i varje graf. På mobil är
+// etiketten kort (två rader) och "mer" fäller ut resten.
 let measuring = false, msel = null, mselWd = null;   // msel = { a, b } index, b kan saknas
+const mOpen = new Set();                             // utfällda etiketter på mobil
 const when = d => `${WX.WEEKDAYS[d.getDay()]} ${WX.hh(d)}:00`;
 const sgn = (v, d = 0) => (v > 0 ? '+' : '') + WX.fmt(v, d);
 // Siffror för sträckan a..b (index, båda med)
@@ -1010,9 +1005,29 @@ const mtxt = {
     return [`<span class="big">Ø ${c.tipFmt(mean)}</span> · ${c.tipFmt(Math.min(...v))} till ${c.tipFmt(Math.max(...v))}`];
   },
 };
-const tipFor = key => MEASURE_VIEW === 'tips'
-  ? (a, b) => { const r = rangeStats(a, b); return (key === 'temp' ? `<span class="tm">${mtxt.head(r)}</span>` : '') + mtxt[key](r).join('<br>'); }
-  : undefined;
+// Korta versioner för mobil: det viktigaste på två rader
+const mshort = {
+  temp: r => [`<span class="big">Ø ${WX.fmtTemp(r.st.tMean, 1)}</span> · ${WX.fmtTemp(r.st.tMin)} till ${WX.fmtTemp(r.st.tMax)}`],
+  precip: r => [`<span class="big">${WX.fmt(r.st.pSum, r.st.pSum < 10 ? 1 : 0)} mm</span> · risk ${r.st.pRisk ?? '—'} %${r.snow >= 1 ? ` · ≈ ${Math.round(r.snow)} cm snö` : ''}`],
+  wind: r => [`<span class="big">Ø ${WX.fmt(r.st.wMean, 1)} m/s</span> · max ${WX.fmt(r.st.wMax)} (${WX.fmt(r.st.gMax)})`],
+};
+const compactTips = () => isPhone($('mgT').clientWidth || window.innerWidth);
+const tipFor = key => (a, b) => {
+  const r = rangeStats(a, b);
+  const head = key === 'temp' ? `<span class="tm">${mtxt.head(r)}</span>` : '';
+  if (!compactTips()) return head + mtxt[key](r).join('<br>');
+  const open = mOpen.has(key);
+  return head + (open ? mtxt[key](r) : mshort[key](r)).join('<br>')
+    + `<button type="button" class="more" data-mkey="${key}" aria-expanded="${open}">${open ? 'mindre ▴' : 'mer ▾'}</button>`;
+};
+// "mer"/"mindre" i en etikett
+document.addEventListener('click', e => {
+  const btn = e.target.closest?.('.mg-seltip [data-mkey]');
+  if (!btn) return;
+  const k = btn.dataset.mkey;
+  if (mOpen.has(k)) mOpen.delete(k); else mOpen.add(k);
+  mg.updateSel();
+});
 
 const mg = WX.chart.group({
   panels: [
@@ -1060,7 +1075,7 @@ const mg = WX.chart.group({
   },
 });
 // Extra grafen (åska, UV …) får också en etikett för sträckan
-if (MEASURE_VIEW === 'tips') extraPanel.opts.selTip = (a, b) => extra ? mtxt.extra(rangeStats(a, b)).join('<br>') : '';
+extraPanel.opts.selTip = (a, b) => extra ? mtxt.extra(rangeStats(a, b)).join('<br>') : '';
 
 function setMeasuring(on) {
   measuring = on;
@@ -1083,14 +1098,8 @@ function renderMeasure() {
   $('measureText').innerHTML = !measuring ? ''
     : !msel ? 'Tryck på starttiden i en graf.'
     : msel.b == null ? `Start <b>${when(S.wd.times[msel.a])}</b>. Tryck på sluttiden.`
-    : `<b>${mtxt.head(r)}</b>${MEASURE_VIEW === 'tips' ? ' · ' + mtxt.other(r).join(' · ') : ''}${r.coarse ? ' · efter 2,5 dygn räknas hela 6-timmarsblock' : ''}`;
+    : `<b>${mtxt.head(r)}</b> · ${mtxt.other(r).join(' · ')}${r.coarse ? ' · efter 2,5 dygn räknas hela 6-timmarsblock' : ''}`;
   $('measureUse').hidden = !r;
-  const panel = $('measurePanel');
-  panel.hidden = !(r && MEASURE_VIEW === 'panel');
-  if (!panel.hidden) {
-    const col = (h, lines) => `<div><h4>${h}</h4><p>${lines.join('<br>')}</p></div>`;
-    panel.innerHTML = `<h3>${mtxt.head(r)}</h3><div class="cols">${col('Temperatur', mtxt.temp(r))}${col('Nederbörd', mtxt.precip(r))}${col('Vind och tryck', mtxt.wind(r))}${col('Övrigt', mtxt.other(r))}${extra ? col(EXTRAS[extra].title, mtxt.extra(r)) : ''}</div>`;
-  }
 }
 $('measureBtn').onclick = () => setMeasuring(!measuring);
 $('measureUse').onclick = () => {
