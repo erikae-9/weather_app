@@ -953,7 +953,7 @@ function rangeStats(a, b) {
   const argOf = (key, fn) => { let best = null; for (const i of idx) { const v = D[key][i]; if (v != null && (best === null || fn(v, D[key][best]))) best = i; } return best; };
   const t0 = wd.ms[a], t1 = wd.end(b);
   const nightMs = S.night.reduce((acc, [n0, n1]) => acc + Math.max(0, Math.min(t1, n1) - Math.max(t0, n0)), 0);
-  const snow = idx.reduce((acc, i) => acc + ((D.temp[i] ?? 9) < -0.5 ? (D.precip_step[i] ?? 0) : 0), 0);
+  const snow = WX.snowEstimate(wd, a, end);
   return {
     st, from: new Date(t0), to: new Date(t1), hours: Math.round((t1 - t0) / WX.H),
     coarse: idx.some(i => hrs(i) > 1),
@@ -984,7 +984,8 @@ const mtxt = {
     const lines = [`<span class="big">${WX.fmt(st.pSum, st.pSum < 10 ? 1 : 0)} mm</span>${r.pHi >= st.pSum + 0.2 ? ` (upp till ${WX.fmt(r.pHi, r.pHi < 10 ? 1 : 0)})` : ''} · risk <b>${st.pRisk ?? '—'} %</b>`];
     if (r.wetH > 0) lines.push(`nederbörd i <b>${WX.fmt(r.wetH)} h</b> · mest <b>${WX.fmt(D.precip[r.pMaxAt], 1)} mm/h</b> (${when(S.wd.times[r.pMaxAt])})`);
     else lines.push('ingen nederbörd väntas');
-    if (r.snow >= 1) lines.push(`ungefär <b>${Math.round(r.snow)} cm snö</b>`);
+    const sn = WX.snowText(r.snow);
+    if (sn) lines.push(sn.replace(/(\d+ cm snö)/, '<b>$1</b>'));
     return lines;
   },
   wind: r => {
@@ -1008,7 +1009,7 @@ const mtxt = {
 // Korta versioner för mobil: det viktigaste på två rader
 const mshort = {
   temp: r => [`<span class="big">Ø ${WX.fmtTemp(r.st.tMean, 1)}</span> · ${WX.fmtTemp(r.st.tMin)} till ${WX.fmtTemp(r.st.tMax)}`],
-  precip: r => [`<span class="big">${WX.fmt(r.st.pSum, r.st.pSum < 10 ? 1 : 0)} mm</span> · risk ${r.st.pRisk ?? '—'} %${r.snow >= 1 ? ` · ≈ ${Math.round(r.snow)} cm snö` : ''}`],
+  precip: r => [`<span class="big">${WX.fmt(r.st.pSum, r.st.pSum < 10 ? 1 : 0)} mm</span> · risk ${r.st.pRisk ?? '—'} %${r.snow.cm >= 1 ? ` · ${WX.snowText(r.snow, true)}` : ''}`],
   wind: r => [`<span class="big">Ø ${WX.fmt(r.st.wMean, 1)} m/s</span> · max ${WX.fmt(r.st.wMax)} (${WX.fmt(r.st.gMax)})`],
 };
 const compactTips = () => isPhone($('mgT').clientWidth || window.innerWidth);

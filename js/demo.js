@@ -167,6 +167,8 @@ function generate(lat, lon, nowMs) {
       precipitation_amount_min: g.sum > 0 ? r1(g.sum * 0.6 + 0.1) : 0,
       precipitation_amount_max: g.sum > 0 ? r1(g.sum * 2 + 0.3) : 0,
       probability_of_precipitation: Math.round(g.prob),
+      // Snöandel i %, som SMHI: −9 utan nederbörd
+      precipitation_frozen_part: g.sum > 0 ? Math.round(Math.min(1, Math.max(0, (1.5 - p.temp) / 2.5)) * 100) : -9,
       symbol_code: WSYMB[symName] ?? 6,
     } };
   });

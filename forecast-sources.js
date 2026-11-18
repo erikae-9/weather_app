@@ -61,6 +61,7 @@ function normalizeMet(json) {
         max:    block.details?.precipitation_amount_max ?? null,
         prob:   block.details?.probability_of_precipitation ?? null,
         symbol: block.summary?.symbol_code ?? null,
+        frozen: null,                               // met.no anger ingen snöandel
       });
     }
   }
@@ -94,6 +95,7 @@ const SMHI_PARAMS = {
   precip_min:     'precipitation_amount_min',
   precip_max:     'precipitation_amount_max',
   precip_prob:    'probability_of_precipitation',
+  frozen:         'precipitation_frozen_part',   // andel som faller som snö, %; -9 utan nederbörd
   symbol:         'symbol_code',
 };
 const SMHI_CLOUD_IN_OCTAS = true;        // enligt parameter.json
@@ -173,6 +175,7 @@ function normalizeSmhi(json) {
       max:    band.hi,
       prob,
       symbol: code === null ? null : (SMHI_SYMBOLS[Math.round(code)] ?? null),
+      frozen: get(d, 'frozen'),
     });
   }
   return { id: 'smhi', label: 'SMHI', points, periods };
@@ -241,6 +244,7 @@ function aggregatePeriods(periods, t0, t1) {
   let covered = 0, amount = 0, min = 0, max = 0, prob = null;
   let haveAmount = true, haveMin = true, haveMax = true;
   let symbol = null, symbolOverlap = 0;
+  let fzSum = 0, fzW = 0;                           // snöandel, viktad efter mängd
   for (const p of periods) {
     const ov = Math.min(p.end, t1) - Math.max(p.start, t0);
     if (ov <= 0) continue;
@@ -255,6 +259,10 @@ function aggregatePeriods(periods, t0, t1) {
     // (index.html:s unionProb vore mer korrekt men kräver persistens-L.)
     if (p.prob !== null) prob = prob === null ? p.prob : Math.max(prob, p.prob);
     if (p.symbol && ov > symbolOverlap) { symbol = p.symbol; symbolOverlap = ov; }
+    if (p.frozen !== null && p.frozen !== undefined) {
+      const w = (p.amount ?? 0) * frac || frac * 1e-6;   // utan mängd: väg efter överlapp
+      fzSum += p.frozen * w; fzW += w;
+    }
   }
   if (covered < (t1 - t0) * 0.99) return null;
   return {
@@ -262,12 +270,13 @@ function aggregatePeriods(periods, t0, t1) {
     min: haveMin ? min : null,
     max: haveMax ? max : null,
     prob, symbol,
+    frozen: fzW > 0 ? fzSum / fzW : null,
   };
 }
 
 function sampleSource(src, grid) {
   const out = { precip_amount: [], precip_min: [], precip_max: [], precip_prob: [],
-                symbol: [], wind_direction: [] };
+                symbol: [], wind_direction: [], frozen: [] };
   for (const k of INSTANT_KEYS) out[k] = [];
   for (const { t, stepH } of grid) {
     for (const k of INSTANT_KEYS) out[k].push(interpInstant(src.points, t, k));
@@ -278,6 +287,7 @@ function sampleSource(src, grid) {
     out.precip_max.push(agg?.max ?? null);
     out.precip_prob.push(agg?.prob ?? null);
     out.symbol.push(agg?.symbol ?? null);
+    out.frozen.push(agg?.frozen ?? null);
   }
   return out;
 }
@@ -392,7 +402,7 @@ function blend(sources, grid, scheme, nowMs) {
     temp: [], temp_p10: [], temp_p90: [], wind: [], wind_p10: [], wind_p90: [],
     gust: [], wind_direction: [], precip_amount: [], precip_min: [], precip_max: [],
     precip_prob: [], thunder: [], humidity: [], pressure: [], cloud: [], uv: [],
-    symbol: [], prob6h: [], prob12h: [],
+    symbol: [], prob6h: [], prob12h: [], frozen: [],
     weight_share: Object.fromEntries(ids.map(id => [id, []])),  // för UI: källans andel (temp)
   };
 
@@ -418,6 +428,8 @@ function blend(sources, grid, scheme, nowMs) {
     // bättre än att t.ex. multiplicera ihop källorna.
     out.precip_prob.push(wmean(participants(ids, sampled, 'precip_prob', i, w('precip_prob')), sampled, 'precip_prob', i));
     out.thunder.push(wmean(participants(ids, sampled, 'thunder', i, w('thunder')), sampled, 'thunder', i));
+    // Snöandel finns bara hos SMHI och lånas därifrån även i met.no-läget
+    out.frozen.push(wmean(participants(ids, sampled, 'frozen', i, w('precip')), sampled, 'frozen', i));
 
     for (const k of ['gust', 'humidity', 'pressure', 'cloud', 'uv']) {
       out[k].push(wmean(participants(ids, sampled, k, i, w(k)), sampled, k, i));
@@ -477,6 +489,7 @@ function buildForecast(mode, raw, { nowMs = Date.now(), weights } = {}) {
     precip_p10: perHour(b.precip_min),
     precip_p90: perHour(b.precip_max),
     precip_prob: b.precip_prob,
+    frozen: b.frozen,                          // % av nederbörden som snö (SMHI), annars null
     prob6h: b.prob6h, prob12h: b.prob12h,
     step_hours: grid.map(g => g.stepH),
     cloud: b.cloud, humidity: b.humidity, pressure: b.pressure, uv: b.uv,
